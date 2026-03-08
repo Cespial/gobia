@@ -17,41 +17,38 @@ La plataforma integra 6 módulos: Hacienda Dashboard, Seguimiento PDM, Estatuto 
 - **Utilidades**: clsx + tailwind-merge (helper `cn()` en `src/lib/utils.ts`)
 - **Deploy**: Vercel
 
-## Design tokens (heredados de inplux-web + tribai.co)
+## Design tokens — Monochromatic + single accent
 
 ### Paleta de colores
 
 | Token | Valor | Uso |
 |-------|-------|-----|
-| `--navy` | #0F1D31 | Fondos hero, headings, CTA primario |
-| `--navy-light` | #1a2d4a | Gradientes |
-| `--blue` | #2563EB | CTA hover, links, acentos interactivos |
-| `--blue-soft` | #EFF6FF | Fondos hover suaves |
-| `--teal` | #0d7d74 | Acento principal (herencia inplux) |
-| `--teal-soft` | #e8f5f3 | Fondos de acento |
-| `--gold` | #C4952A | Acento terciario (herencia tribai) |
-| `--gold-soft` | #FEF9EC | Fondos gold |
-| `--foreground` | #1a1918 | Texto primario (ink) |
-| `--off-white` | #f8f8f7 | Fondos alternos de sección |
-| `--warm-50` | #f3f1ee | Tinte cálido sutil |
-| Grays | #e8e6e3 → #0d0c0c | Escala de grises cálidos (100-950) |
+| `--ink` | #2C2418 | Texto primario, fondos oscuros (SolidezTecnica, Footer) |
+| `--sepia` | #8B7355 | Texto secundario sutil |
+| `--ochre` | #B8956A | **Único acento** — badges, enlaces, highlights |
+| `--ochre-soft` | #F5EDDF | Fondos suaves de acento |
+| `--background` | #FAF6F0 | Fondo principal (cream) |
+| `--paper` | #FFFDF8 | Fondos de sección claros |
+| `--cream` | #F5EFE6 | Fondos alternos |
+| `--border` | #DDD4C4 | Bordes principales |
+| `--border-light` | #EDE6DA | Bordes sutiles |
+| Warm grays | #EDE6DA → #2C2418 | Escala 100-900 |
 
 ### Tipografía
 
 - **Body**: Plus Jakarta Sans (300-800) — variable `--font-jakarta`
 - **Display/headings**: DM Serif Display (400) — variable `--font-dm-serif`
-- **Heading sizes**: 2rem (section) → 4.75rem (hero), line-height 1.05-1.1
-- **Body sizes**: 0.75rem (meta) → 1.25rem (large body), line-height 1.6
+- **Heading sizes**: 2rem (section) → 4.25rem (hero), line-height 1.08-1.1
+- **Body sizes**: 0.75rem (meta) → 1.1875rem (lg body), line-height 1.6
 - **Letter spacing**: -0.02em (headings), 0.01em (buttons), 0.1em (eyebrows)
 
 ### Componentes base (en globals.css)
 
-- `.btn-primary`: navy bg, white text, hover → blue, 8px radius
-- `.btn-secondary`: transparent, border, hover → off-white
-- `.card`: white bg, border, 14px radius, hover → lift + shadow
-- `.form-input`: white bg, border, 8px radius, focus → navy border
-- `.gradient-hero`: navy → navy-light diagonal gradient
-- `.gradient-mesh`: multi-radial teal/blue/gold subtle overlay
+- `.btn-primary`: ink bg, paper text, hover → ochre bg, 8px radius
+- `.btn-secondary`: transparent, ink border, hover → cream bg
+- `.card`: paper bg, border, 14px radius, hover → gray-300 border + lift
+- `.form-input`: paper bg, border, 8px radius, focus → ink border
+- `.fine-rule`: 1px border-light separator
 
 ## Arquitectura de carpetas
 
