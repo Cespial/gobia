@@ -3,6 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { MapPin, TrendingUp, FileCheck, ArrowUpRight } from "lucide-react";
+import { MiniBarChart, MiniGauge, MiniDots } from "@/components/illustrations/MiniChart";
 
 const cases = [
   {
@@ -13,9 +14,9 @@ const cases = [
     description:
       "Municipio de categoría 6 con equipo de hacienda de 3 personas. Antes gastaban 2 semanas por trimestre preparando reportes FUT y CHIP manualmente. Con Gobia, la información presupuestal se consolida automáticamente y el seguimiento al plan de desarrollo se actualiza en tiempo real.",
     results: [
-      { metric: "80%", label: "menos tiempo en reportes trimestrales" },
-      { metric: "100%", label: "metas del PDM con seguimiento activo" },
-      { metric: "0", label: "multas por rendición tardía" },
+      { metric: "80%", label: "menos tiempo en reportes trimestrales", viz: "bar" as const },
+      { metric: "100%", label: "metas del PDM con seguimiento activo", viz: "gauge" as const },
+      { metric: "0", label: "multas por rendición tardía", viz: "none" as const },
     ],
     accent: "ochre",
   },
@@ -27,9 +28,9 @@ const cases = [
     description:
       "Gobernación que necesitaba visibilidad sobre el desempeño fiscal de sus 32 municipios. El gemelo municipal de Gobia integra datos de TerriData, SISFUT y SECOP para generar un ranking de gestión en tiempo real con alertas tempranas.",
     results: [
-      { metric: "32", label: "municipios monitoreados en una vista" },
-      { metric: "15", label: "alertas tempranas en el primer trimestre" },
-      { metric: "3x", label: "más rápido el análisis de desempeño fiscal" },
+      { metric: "32", label: "municipios monitoreados en una vista", viz: "dots" as const },
+      { metric: "15", label: "alertas tempranas en el primer trimestre", viz: "none" as const },
+      { metric: "3x", label: "más rápido el análisis de desempeño fiscal", viz: "bar" as const },
     ],
     accent: "ochre",
   },
@@ -41,9 +42,9 @@ const cases = [
     description:
       "Ciudad intermedia con estatuto tributario de 400+ artículos. La secretaría de hacienda usa el módulo de IA para consultar normativa en lenguaje natural y genera los archivos XML de exógena con validación automática cruzada contra la base contable.",
     results: [
-      { metric: "5 min", label: "para consultar cualquier artículo" },
-      { metric: "98%", label: "precisión en generación de XML exógena" },
-      { metric: "0", label: "rechazos por errores de formato en DIAN" },
+      { metric: "5 min", label: "para consultar cualquier artículo", viz: "none" as const },
+      { metric: "98%", label: "precisión en generación de XML exógena", viz: "gauge" as const },
+      { metric: "0", label: "rechazos por errores de formato en DIAN", viz: "none" as const },
     ],
     accent: "ochre",
   },
@@ -127,10 +128,21 @@ export default function CasosDeUso() {
                       Escenario proyectado *
                     </p>
                     <div className="space-y-5">
-                      {caso.results.map((result) => (
-                        <div key={result.label}>
-                          <p className={`text-[1.75rem] font-bold ${styles.text} mb-0.5`}>{result.metric}</p>
-                          <p className="text-[0.8125rem] text-gray-500 leading-snug">{result.label}</p>
+                      {caso.results.map((result, ri) => (
+                        <div key={result.label} className="flex items-center gap-3">
+                          {result.viz === "bar" && (
+                            <MiniBarChart beforeValue={90} afterValue={20} animate={isInView} delay={0.3 + i * 0.15 + ri * 0.1} />
+                          )}
+                          {result.viz === "gauge" && (
+                            <MiniGauge value={Number.parseInt(result.metric) || 98} animate={isInView} delay={0.3 + i * 0.15 + ri * 0.1} />
+                          )}
+                          {result.viz === "dots" && (
+                            <MiniDots count={32} total={36} animate={isInView} delay={0.3 + i * 0.15 + ri * 0.1} />
+                          )}
+                          <div>
+                            <p className={`text-[1.75rem] font-bold ${styles.text} mb-0.5`}>{result.metric}</p>
+                            <p className="text-[0.8125rem] text-gray-500 leading-snug">{result.label}</p>
+                          </div>
                         </div>
                       ))}
                     </div>

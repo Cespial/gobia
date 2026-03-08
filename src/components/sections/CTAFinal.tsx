@@ -4,6 +4,7 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
 import { Send, CheckCircle, Loader2 } from "lucide-react";
 import { submitContactForm } from "@/app/actions/contact";
+import CTAIllustration from "@/components/illustrations/CTAIllustration";
 
 export default function CTAFinal() {
   const ref = useRef(null);
@@ -79,6 +80,15 @@ export default function CTAFinal() {
                   <span className="text-[0.9375rem] text-gray-600">{item}</span>
                 </div>
               ))}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={isInView ? { opacity: 1 } : {}}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="mt-10 hidden lg:block"
+            >
+              <CTAIllustration animate={isInView} />
             </motion.div>
           </div>
 
