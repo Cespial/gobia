@@ -60,7 +60,7 @@ export default function SolucionSection() {
       ref={ref}
       className="relative py-24 md:py-32 bg-off-white"
     >
-      {/* Subtle mesh */}
+      {/* Gradient mesh overlay */}
       <div className="absolute inset-0 gradient-mesh pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-[1120px] px-5 md:px-8">
@@ -119,7 +119,7 @@ export default function SolucionSection() {
           ))}
         </div>
 
-        {/* Badge */}
+        {/* Normative badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}

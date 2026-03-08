@@ -1,7 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useInView } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { FileWarning, Clock, BarChart3 } from "lucide-react";
 
@@ -56,9 +55,10 @@ export default function ProblemaSection() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-navy max-w-2xl mb-5"
         >
-          Asi luce hoy la gestión pública en Colombia
+          Así luce hoy la gestión pública en Colombia
         </motion.h2>
 
+        {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -93,7 +93,7 @@ export default function ProblemaSection() {
           ))}
         </div>
 
-        {/* Transition text */}
+        {/* Closing quote */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
