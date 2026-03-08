@@ -44,7 +44,7 @@ export default function Navbar() {
                 scrolled ? "text-navy" : "text-white"
               }`}
             >
-              publia
+              gobia
             </span>
             <span
               className={`text-sm font-medium transition-colors duration-300 ${

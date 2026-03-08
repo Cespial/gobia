@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg font-bold tracking-tight text-white">
-                publia
+                gobia
               </span>
               <span className="text-sm font-medium text-teal-soft">.co</span>
             </div>
@@ -92,7 +92,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-[0.75rem] text-white/30">
-            &copy; {new Date().getFullYear()} publia.co — Todos los derechos
+            &copy; {new Date().getFullYear()} gobia.co — Todos los derechos
             reservados. Una empresa de inplux.co
           </p>
 

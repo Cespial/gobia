@@ -1,8 +1,8 @@
-# publia.co — GovTech para el sector público colombiano
+# gobia.co — GovTech para el sector público colombiano
 
 ## Descripción del producto
 
-Publia es una plataforma GovTech que transforma la gestión pública colombiana. Es el piloto web de **inplux.co** (empresa matriz) para sector público, con **tribai.co** como producto hermano enfocado en el sector tributario privado.
+Gobia es una plataforma GovTech que transforma la gestión pública colombiana. Es el piloto web de **inplux.co** (empresa matriz) para sector público, con **tribai.co** como producto hermano enfocado en el sector tributario privado.
 
 La plataforma integra 6 módulos: Hacienda Dashboard, Seguimiento PDM, Estatuto Municipal IA, Exógena Automatizada, Gemelo Municipal y Rendición Automatizada.
 

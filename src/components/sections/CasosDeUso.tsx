@@ -11,7 +11,7 @@ const cases = [
     category: "Categoría 6",
     title: "Hacienda unificada + seguimiento PDM",
     description:
-      "Municipio de categoría 6 con equipo de hacienda de 3 personas. Antes gastaban 2 semanas por trimestre preparando reportes FUT y CHIP manualmente. Con Publia, la información presupuestal se consolida automáticamente y el seguimiento al plan de desarrollo se actualiza en tiempo real.",
+      "Municipio de categoría 6 con equipo de hacienda de 3 personas. Antes gastaban 2 semanas por trimestre preparando reportes FUT y CHIP manualmente. Con Gobia, la información presupuestal se consolida automáticamente y el seguimiento al plan de desarrollo se actualiza en tiempo real.",
     results: [
       { metric: "80%", label: "menos tiempo en reportes trimestrales" },
       { metric: "100%", label: "metas del PDM con seguimiento activo" },
@@ -25,7 +25,7 @@ const cases = [
     category: "32 municipios",
     title: "Vista consolidada de gestión territorial",
     description:
-      "Gobernación que necesitaba visibilidad sobre el desempeño fiscal de sus 32 municipios. El gemelo municipal de Publia integra datos de TerriData, SISFUT y SECOP para generar un ranking de gestión en tiempo real con alertas tempranas.",
+      "Gobernación que necesitaba visibilidad sobre el desempeño fiscal de sus 32 municipios. El gemelo municipal de Gobia integra datos de TerriData, SISFUT y SECOP para generar un ranking de gestión en tiempo real con alertas tempranas.",
     results: [
       { metric: "32", label: "municipios monitoreados en una vista" },
       { metric: "15", label: "alertas tempranas generadas en el primer trimestre" },
@@ -104,7 +104,7 @@ export default function CasosDeUso() {
             className="text-[1.0625rem] leading-relaxed text-gray-500 max-w-2xl mx-auto"
           >
             Desde municipios de categoría 6 hasta gobernaciones departamentales,
-            Publia se adapta a la escala y necesidades de cada entidad.
+            Gobia se adapta a la escala y necesidades de cada entidad.
           </motion.p>
         </div>
 

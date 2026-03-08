@@ -1,10 +1,10 @@
-# ROADMAP — publia.co
+# ROADMAP — gobia.co
 
 ## 1. Ruta crítica (dependencias bloqueantes)
 
 ```
 Landing page (ACTUAL)
-  └─→ Dominio publia.co configurado en Vercel
+  └─→ Dominio gobia.co configurado en Vercel
   └─→ Formulario de leads conectado a Supabase
         └─→ Email de confirmación via Resend
               └─→ CRM / pipeline de ventas

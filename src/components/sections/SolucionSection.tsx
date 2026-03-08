@@ -90,7 +90,7 @@ export default function SolucionSection() {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="text-[1.0625rem] leading-relaxed text-gray-500 max-w-2xl mx-auto"
           >
-            Publia conecta los datos que hoy están dispersos en decenas de
+            Gobia conecta los datos que hoy están dispersos en decenas de
             sistemas. Hacienda, planeación y normativa tributaria convergen en un
             solo lugar.
           </motion.p>

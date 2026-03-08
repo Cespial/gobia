@@ -54,7 +54,7 @@ export default function CTAFinal() {
               className="text-[1.0625rem] leading-relaxed text-gray-500 mb-8"
             >
               Agenda una sesión de 30 minutos con nuestro equipo. Te mostramos
-              cómo Publia se adapta a las necesidades específicas de tu
+              cómo Gobia se adapta a las necesidades específicas de tu
               municipio, gobernación o entidad territorial.
             </motion.p>
 
