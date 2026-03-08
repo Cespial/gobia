@@ -10,6 +10,8 @@ import {
   TrendingUp,
   Shield,
 } from "lucide-react";
+import PlatformHubDiagram from "@/components/illustrations/PlatformHubDiagram";
+import RAGPipelineDiagram from "@/components/illustrations/RAGPipelineDiagram";
 
 const features = [
   {
@@ -88,6 +90,16 @@ export default function SolucionSection() {
           </motion.p>
         </div>
 
+        {/* Hub diagram: 6 modules connected */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-16"
+        >
+          <PlatformHubDiagram animate={isInView} />
+        </motion.div>
+
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, i) => (
             <motion.div
@@ -109,6 +121,19 @@ export default function SolucionSection() {
             </motion.div>
           ))}
         </div>
+
+        {/* RAG Pipeline: how the AI module works */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="mt-16 mb-4"
+        >
+          <p className="text-center text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-6">
+            Así funciona el módulo de IA
+          </p>
+          <RAGPipelineDiagram animate={isInView} />
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

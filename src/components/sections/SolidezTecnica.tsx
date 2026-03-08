@@ -3,6 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Server, Lock, Zap, Globe } from "lucide-react";
+import ArchitectureSVG from "@/components/illustrations/ArchitectureSVG";
 
 const techStack = [
   "Next.js",
@@ -96,56 +97,7 @@ export default function SolidezTecnica() {
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.7, delay: 0.3 }}
           >
-            <div className="rounded-2xl border border-paper/10 bg-paper/[0.03] p-8">
-              <div className="space-y-4">
-                <div className="rounded-xl bg-paper/[0.05] border border-paper/10 p-4">
-                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-3">
-                    Capa de presentación
-                  </p>
-                  <div className="flex gap-2">
-                    {["Dashboard", "IA Chat", "Mapas", "Reportes"].map((item) => (
-                      <span key={item} className="flex-1 text-center rounded-lg bg-paper/[0.05] border border-paper/[0.06] py-2 text-[0.6875rem] font-medium text-paper/50">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-center">
-                  <div className="w-px h-6 bg-paper/15" />
-                </div>
-
-                <div className="rounded-xl bg-ochre/10 border border-ochre/15 p-4">
-                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-3">
-                    API + IA Pipeline
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["RAG", "ETL", "Auth", "Multi-tenant", "Alertas", "XML Gen"].map((item) => (
-                      <span key={item} className="text-center rounded-lg bg-paper/[0.05] py-1.5 text-[0.625rem] font-medium text-paper/50">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-center">
-                  <div className="w-px h-6 bg-paper/15" />
-                </div>
-
-                <div className="rounded-xl bg-paper/[0.05] border border-paper/10 p-4">
-                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-3">
-                    Datos + Vectores
-                  </p>
-                  <div className="flex gap-2">
-                    {["PostgreSQL", "PostGIS", "pgvector"].map((item) => (
-                      <span key={item} className="flex-1 text-center rounded-lg bg-ochre/10 border border-ochre/15 py-2 text-[0.6875rem] font-medium text-paper/50">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ArchitectureSVG animate={isInView} />
           </motion.div>
         </div>
 

@@ -3,6 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { FileWarning, Clock, BarChart3 } from "lucide-react";
+import DataSilosDiagram from "@/components/illustrations/DataSilosDiagram";
 
 const painPoints = [
   {
@@ -60,6 +61,16 @@ export default function ProblemaSection() {
           desconectados, normativa compleja y equipos que hacen lo mejor que
           pueden con herramientas del siglo pasado.
         </motion.p>
+
+        {/* Diagram: fragmented data silos */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-16"
+        >
+          <DataSilosDiagram animate={isInView} />
+        </motion.div>
 
         <div className="grid gap-6 md:grid-cols-3">
           {painPoints.map((point, i) => (
