@@ -2,16 +2,30 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
-import { Send, CheckCircle } from "lucide-react";
+import { Send, CheckCircle, Loader2 } from "lucide-react";
+import { submitContactForm } from "@/app/actions/contact";
 
 export default function CTAFinal() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
   const [submitted, setSubmitted] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    setPending(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const result = await submitContactForm(formData);
+
+    setPending(false);
+    if (result.success) {
+      setSubmitted(true);
+    } else {
+      setError(result.error || "Error al enviar. Intenta de nuevo.");
+    }
   };
 
   return (
@@ -103,9 +117,14 @@ export default function CTAFinal() {
                     <label htmlFor="email" className="block text-[0.8125rem] font-medium text-gray-700 mb-1.5">Correo electrónico</label>
                     <input type="email" id="email" name="email" required className="form-input" placeholder="correo@entidad.gov.co" />
                   </div>
-                  <button type="submit" className="btn-primary w-full mt-2">
-                    <Send size={16} />
-                    Solicitar demo
+                  {error && (
+                    <p className="text-[0.8125rem] text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                      {error}
+                    </p>
+                  )}
+                  <button type="submit" disabled={pending} className="btn-primary w-full mt-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    {pending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    {pending ? "Enviando..." : "Solicitar demo"}
                   </button>
                 </div>
                 <p className="mt-4 text-[0.6875rem] text-gray-400 leading-relaxed text-center">

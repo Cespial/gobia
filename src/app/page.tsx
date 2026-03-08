@@ -6,6 +6,7 @@ import ProductoPreview from "@/components/sections/ProductoPreview";
 import CerebroNormativo from "@/components/sections/CerebroNormativo";
 import SolidezTecnica from "@/components/sections/SolidezTecnica";
 import CasosDeUso from "@/components/sections/CasosDeUso";
+import Comparativa from "@/components/sections/Comparativa";
 import CTAFinal from "@/components/sections/CTAFinal";
 import Footer from "@/components/sections/Footer";
 
@@ -21,6 +22,7 @@ export default function Home() {
         <CerebroNormativo />
         <SolidezTecnica />
         <CasosDeUso />
+        <Comparativa />
         <CTAFinal />
       </main>
       <Footer />

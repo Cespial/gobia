@@ -85,9 +85,9 @@ export default function Hero() {
               Solicitar demo
               <ArrowRight size={16} />
             </a>
-            <a href="#casos" className="btn-secondary">
+            <a href="#solucion" className="btn-secondary">
               <Play size={16} />
-              Ver casos de uso
+              Explorar la plataforma
             </a>
           </motion.div>
 

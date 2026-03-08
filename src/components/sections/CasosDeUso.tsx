@@ -124,7 +124,7 @@ export default function CasosDeUso() {
 
                   <div className={`${styles.bg} border-t md:border-t-0 md:border-l ${styles.border} p-8 md:p-10 flex flex-col justify-center`}>
                     <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-gray-400 mb-5">
-                      Resultados proyectados
+                      Escenario proyectado *
                     </p>
                     <div className="space-y-5">
                       {caso.results.map((result) => (
@@ -140,6 +140,16 @@ export default function CasosDeUso() {
             );
           })}
         </div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : {}}
+          transition={{ duration: 0.5, delay: 0.7 }}
+          className="text-center text-[0.75rem] text-gray-400 mt-10 italic"
+        >
+          * Proyecciones basadas en análisis de procesos para entidades de características similares.
+          Resultados reales dependen de la configuración y adopción en cada entidad.
+        </motion.p>
       </div>
     </section>
   );

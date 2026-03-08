@@ -13,42 +13,67 @@ import {
 import PlatformHubDiagram from "@/components/illustrations/PlatformHubDiagram";
 import RAGPipelineDiagram from "@/components/illustrations/RAGPipelineDiagram";
 
-const features = [
+const statusStyles = {
+  beta: "bg-ochre/10 text-ochre border-ochre/20",
+  desarrollo: "bg-cream text-sepia border-border",
+  proximamente: "bg-gray-100 text-gray-400 border-gray-200",
+} as const;
+
+type Status = keyof typeof statusStyles;
+
+const statusLabels: Record<Status, string> = {
+  beta: "Beta activa",
+  desarrollo: "En desarrollo",
+  proximamente: "Próximamente",
+};
+
+const features: {
+  icon: typeof LayoutDashboard;
+  title: string;
+  description: string;
+  status: Status;
+}[] = [
   {
     icon: LayoutDashboard,
     title: "Hacienda Dashboard",
     description:
       "Ejecución presupuestal, recaudo, cartera e IDF en tiempo real. Todo en una vista unificada.",
+    status: "desarrollo",
   },
   {
     icon: TrendingUp,
     title: "Seguimiento PDM",
     description:
       "Metas del plan de desarrollo con semáforo automático, alertas tempranas y reportes listos para rendir cuentas.",
+    status: "desarrollo",
   },
   {
     icon: Brain,
     title: "Estatuto Municipal IA",
     description:
       "Consulta tu estatuto tributario en lenguaje natural. IA que cita artículos, no que inventa respuestas.",
+    status: "beta",
   },
   {
     icon: FileCheck,
     title: "Exógena Automatizada",
     description:
       "Genera los XML para DIAN en minutos, no en semanas. Validación cruzada antes de enviar.",
+    status: "desarrollo",
   },
   {
     icon: MapPin,
     title: "Gemelo Municipal",
     description:
       "Mapa digital de tu municipio con datos sociales, fiscales e infraestructura integrados.",
+    status: "proximamente",
   },
   {
     icon: Shield,
     title: "Rendición Automatizada",
     description:
       "SIRECI, SIA y FUT pre-generados con los datos que ya tienes. Sin doble digitación.",
+    status: "proximamente",
   },
 ];
 
@@ -109,8 +134,13 @@ export default function SolucionSection() {
               transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
               className="card group"
             >
-              <div className="mb-4 inline-flex items-center justify-center w-11 h-11 rounded-lg bg-ochre-soft text-sepia transition-all group-hover:bg-ochre group-hover:text-paper">
-                <feature.icon size={22} strokeWidth={1.5} />
+              <div className="flex items-start justify-between mb-4">
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-lg bg-ochre-soft text-sepia transition-all group-hover:bg-ochre group-hover:text-paper">
+                  <feature.icon size={22} strokeWidth={1.5} />
+                </div>
+                <span className={`text-[0.625rem] font-semibold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border ${statusStyles[feature.status]}`}>
+                  {statusLabels[feature.status]}
+                </span>
               </div>
               <h3 className="text-[1rem] font-bold text-ink mb-2">
                 {feature.title}
