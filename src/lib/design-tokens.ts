@@ -1,44 +1,39 @@
 // ═══════════════════════════════════════════
 //   GOBIA.CO — Design Tokens (TypeScript)
-//   Single source of truth for TS components.
+//   Monochromatic + single accent (ochre)
 //   Values mirror globals.css :root variables.
-//   Hereda de inplux-web + tribai.co
 // ═══════════════════════════════════════════
 
 export const colors = {
-  navy: "#0F1D31",
-  navyLight: "#1a2d4a",
-  blue: "#2563EB",
-  blueSoft: "#EFF6FF",
-  teal: "#0d7d74",
-  tealSoft: "#e8f5f3",
-  gold: "#C4952A",
-  goldSoft: "#FEF9EC",
-  foreground: "#1a1918",
-  background: "#ffffff",
-  offWhite: "#f8f8f7",
-  warm50: "#f3f1ee",
+  ink: "#2C2418",
+  sepia: "#8B7355",
+  ochre: "#B8956A",
+  ochreSoft: "#F5EDDF",
+  foreground: "#2C2418",
+  background: "#FAF6F0",
+  paper: "#FFFDF8",
+  cream: "#F5EFE6",
   gray: {
-    100: "#e8e6e3",
-    200: "#d1cfcc",
-    300: "#a8a5a0",
-    400: "#8a8784",
-    500: "#6e6b68",
-    600: "#545250",
-    700: "#3d3b39",
-    800: "#282726",
-    900: "#1a1918",
+    100: "#EDE6DA",
+    200: "#DDD4C4",
+    300: "#BFB5A3",
+    400: "#9E9484",
+    500: "#7D7365",
+    600: "#615849",
+    700: "#4A4237",
+    800: "#362F26",
+    900: "#2C2418",
   },
-  border: "#e5e3e0",
-  borderLight: "#f0eeeb",
+  border: "#DDD4C4",
+  borderLight: "#EDE6DA",
 } as const;
 
 export const shadows = {
-  xs: "0 1px 2px rgba(0, 0, 0, 0.03)",
-  sm: "0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
-  md: "0 4px 16px rgba(0, 0, 0, 0.05)",
-  lg: "0 12px 40px rgba(0, 0, 0, 0.07)",
-  xl: "0 20px 60px rgba(0, 0, 0, 0.1)",
+  xs: "0 1px 2px rgba(44, 36, 24, 0.04)",
+  sm: "0 1px 3px rgba(44, 36, 24, 0.05), 0 1px 2px rgba(44, 36, 24, 0.03)",
+  md: "0 4px 16px rgba(44, 36, 24, 0.06)",
+  lg: "0 12px 40px rgba(44, 36, 24, 0.08)",
+  xl: "0 20px 60px rgba(44, 36, 24, 0.12)",
 } as const;
 
 export const easing = {
@@ -48,24 +43,22 @@ export const easing = {
 
 export const typography = {
   heading: {
-    hero: { size: "4.75rem", lineHeight: "1.05" },
-    h1: { size: "3.5rem", lineHeight: "1.05" },
-    h2: { size: "2.5rem", lineHeight: "1.1" },
+    hero: { size: "4.25rem", lineHeight: "1.08" },
+    h1: { size: "3.5rem", lineHeight: "1.08" },
+    h2: { size: "2.75rem", lineHeight: "1.1" },
     section: { size: "2rem", lineHeight: "1.1" },
   },
   body: {
-    lg: { size: "1.25rem", lineHeight: "1.6" },
+    lg: { size: "1.1875rem", lineHeight: "1.6" },
     base: { size: "1rem", lineHeight: "1.6" },
     sm: { size: "0.875rem", lineHeight: "1.6" },
     meta: { size: "0.75rem", lineHeight: "1.6" },
   },
   weight: {
-    light: 300,
     regular: 400,
     medium: 500,
     semibold: 600,
     bold: 700,
-    extrabold: 800,
   },
   tracking: {
     heading: "-0.02em",

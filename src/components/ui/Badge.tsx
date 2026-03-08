@@ -2,20 +2,19 @@ import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface BadgeProps {
-  variant?: "teal" | "blue" | "gold" | "neutral";
+  variant?: "ochre" | "ink" | "neutral";
   children: ReactNode;
   className?: string;
 }
 
 const variantClasses = {
-  teal: "bg-teal-soft text-teal",
-  blue: "bg-blue-soft text-blue",
-  gold: "bg-gold-soft text-gold",
-  neutral: "bg-warm-50 text-gray-600",
+  ochre: "bg-ochre-soft text-ochre",
+  ink: "bg-gray-100 text-ink",
+  neutral: "bg-cream text-gray-600",
 } as const;
 
 export default function Badge({
-  variant = "teal",
+  variant = "ochre",
   children,
   className,
 }: BadgeProps) {

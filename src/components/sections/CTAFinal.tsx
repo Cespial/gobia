@@ -61,7 +61,7 @@ export default function CTAFinal() {
                 "Acompañamiento técnico para la implementación",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3">
-                  <CheckCircle size={18} className="text-olive mt-0.5 shrink-0" />
+                  <CheckCircle size={18} className="text-ochre mt-0.5 shrink-0" />
                   <span className="text-[0.9375rem] text-gray-600">{item}</span>
                 </div>
               ))}
@@ -74,9 +74,9 @@ export default function CTAFinal() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             {submitted ? (
-              <div className="rounded-2xl border border-olive/20 bg-olive-soft p-10 text-center">
-                <div className="mx-auto mb-4 inline-flex items-center justify-center w-14 h-14 rounded-full bg-olive/10">
-                  <CheckCircle size={28} className="text-olive" />
+              <div className="rounded-2xl border border-ochre/20 bg-ochre-soft p-10 text-center">
+                <div className="mx-auto mb-4 inline-flex items-center justify-center w-14 h-14 rounded-full bg-ochre/10">
+                  <CheckCircle size={28} className="text-ochre" />
                 </div>
                 <h3 className="text-[1.25rem] font-bold text-ink mb-2">Solicitud recibida</h3>
                 <p className="text-[0.9375rem] text-gray-500 leading-relaxed">

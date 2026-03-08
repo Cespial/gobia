@@ -1,19 +1,18 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════
-   GOBIA.CO — Editorial Illustration Aesthetic
-   Warm ink-and-watercolor palette
+   GOBIA.CO — Monochromatic + Single Accent
+   Ink + cream + ochre
    ═══════════════════════════════════════════ */
 
 :root {
-  /* ── Core backgrounds ── */
+  /* ── Core ── */
   --background: #FAF6F0;
   --foreground: #2C2418;
   --paper: #FFFDF8;
   --cream: #F5EFE6;
-  --parchment: #EDE6DA;
 
-  /* ── Warm grays (sepia-tinted) ── */
+  /* ── Warm grays ── */
   --gray-100: #EDE6DA;
   --gray-200: #DDD4C4;
   --gray-300: #BFB5A3;
@@ -24,27 +23,17 @@
   --gray-800: #362F26;
   --gray-900: #2C2418;
 
-  /* ── Brand colors (from illustration) ── */
+  /* ── Brand ── */
   --ink: #2C2418;
   --sepia: #8B7355;
   --ochre: #B8956A;
   --ochre-soft: #F5EDDF;
-  --olive: #6B8F5C;
-  --olive-soft: #EEF3EB;
-  --terracotta: #A67C5B;
-  --terracotta-soft: #F5EDE5;
-
-  /* ── Legacy accents (muted) ── */
-  --teal: #5A8F87;
-  --teal-soft: #EBF3F1;
-  --gold: #B8956A;
-  --gold-soft: #F5EDDF;
 
   /* ── Borders ── */
   --border: #DDD4C4;
   --border-light: #EDE6DA;
 
-  /* ── Shadows (warm-tinted) ── */
+  /* ── Shadows ── */
   --shadow-xs: 0 1px 2px rgba(44, 36, 24, 0.04);
   --shadow-sm: 0 1px 3px rgba(44, 36, 24, 0.05), 0 1px 2px rgba(44, 36, 24, 0.03);
   --shadow-md: 0 4px 16px rgba(44, 36, 24, 0.06);
@@ -61,19 +50,10 @@
   --color-foreground: var(--foreground);
   --color-paper: var(--paper);
   --color-cream: var(--cream);
-  --color-parchment: var(--parchment);
   --color-ink: var(--ink);
   --color-sepia: var(--sepia);
   --color-ochre: var(--ochre);
   --color-ochre-soft: var(--ochre-soft);
-  --color-olive: var(--olive);
-  --color-olive-soft: var(--olive-soft);
-  --color-terracotta: var(--terracotta);
-  --color-terracotta-soft: var(--terracotta-soft);
-  --color-teal: var(--teal);
-  --color-teal-soft: var(--teal-soft);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
   --color-border: var(--border);
   --color-border-light: var(--border-light);
   --color-gray-100: var(--gray-100);
@@ -98,9 +78,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 ::selection {
   background: var(--ochre);
@@ -113,7 +91,7 @@ html {
 ::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
 
-/* ── Button styles ── */
+/* ── Buttons ── */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -172,7 +150,7 @@ html {
 }
 
 .card:hover {
-  border-color: var(--ochre);
+  border-color: var(--gray-300);
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
@@ -195,8 +173,8 @@ html {
 
 .form-input:focus {
   outline: none;
-  border-color: var(--ochre);
-  box-shadow: 0 0 0 3px rgba(184, 149, 106, 0.1);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(44, 36, 24, 0.06);
 }
 
 /* ── Fine rule ── */

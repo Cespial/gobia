@@ -117,7 +117,7 @@ export default function SolucionSection() {
           className="mt-12 flex justify-center"
         >
           <div className="inline-flex items-center gap-3 rounded-full bg-paper border border-border px-6 py-3 shadow-sm">
-            <Shield size={18} className="text-olive" />
+            <Shield size={18} className="text-ochre" />
             <span className="text-[0.8125rem] font-semibold text-ink">
               Compatible con normativa colombiana vigente
             </span>

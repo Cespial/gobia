@@ -31,7 +31,7 @@ const cases = [
       { metric: "15", label: "alertas tempranas en el primer trimestre" },
       { metric: "3x", label: "más rápido el análisis de desempeño fiscal" },
     ],
-    accent: "olive",
+    accent: "ochre",
   },
   {
     icon: FileCheck,
@@ -45,14 +45,12 @@ const cases = [
       { metric: "98%", label: "precisión en generación de XML exógena" },
       { metric: "0", label: "rechazos por errores de formato en DIAN" },
     ],
-    accent: "terracotta",
+    accent: "ochre",
   },
 ];
 
 const accentStyles = {
   ochre: { bg: "bg-ochre-soft", text: "text-ochre", border: "border-ochre/15" },
-  olive: { bg: "bg-olive-soft", text: "text-olive", border: "border-olive/15" },
-  terracotta: { bg: "bg-terracotta-soft", text: "text-terracotta", border: "border-terracotta/15" },
 };
 
 export default function CasosDeUso() {

@@ -5,21 +5,21 @@ interface SectionWrapperProps {
   id?: string;
   children: ReactNode;
   className?: string;
-  background?: "white" | "off-white" | "navy";
+  background?: "paper" | "cream" | "ink";
   containerClass?: string;
 }
 
 const bgClasses = {
-  white: "bg-background",
-  "off-white": "bg-off-white",
-  navy: "bg-navy text-white",
+  paper: "bg-paper",
+  cream: "bg-background",
+  ink: "bg-ink text-paper",
 } as const;
 
 export default function SectionWrapper({
   id,
   children,
   className,
-  background = "white",
+  background = "cream",
   containerClass,
 }: SectionWrapperProps) {
   return (

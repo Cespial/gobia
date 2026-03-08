@@ -138,7 +138,7 @@ export default function SolidezTecnica() {
                   </p>
                   <div className="flex gap-2">
                     {["PostgreSQL", "PostGIS", "pgvector"].map((item) => (
-                      <span key={item} className="flex-1 text-center rounded-lg bg-olive/10 border border-olive/15 py-2 text-[0.6875rem] font-medium text-paper/50">
+                      <span key={item} className="flex-1 text-center rounded-lg bg-ochre/10 border border-ochre/15 py-2 text-[0.6875rem] font-medium text-paper/50">
                         {item}
                       </span>
                     ))}
