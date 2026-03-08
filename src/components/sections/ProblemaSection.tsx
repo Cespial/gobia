@@ -30,35 +30,26 @@ export default function ProblemaSection() {
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section
-      id="problema"
-      ref={ref}
-      className="relative py-24 md:py-32 bg-white"
-    >
+    <section id="problema" ref={ref} className="relative py-24 md:py-32 bg-paper">
       <div className="mx-auto max-w-[1120px] px-5 md:px-8">
-        {/* Section label */}
-        <motion.div
+        <motion.span
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="mb-4"
+          className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-4"
         >
-          <span className="text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-teal">
-            El problema
-          </span>
-        </motion.div>
+          El problema
+        </motion.span>
 
-        {/* Headline */}
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-navy max-w-2xl mb-5"
+          className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-ink max-w-2xl mb-5"
         >
           Así luce hoy la gestión pública en Colombia
         </motion.h2>
 
-        {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -70,7 +61,6 @@ export default function ProblemaSection() {
           pueden con herramientas del siglo pasado.
         </motion.p>
 
-        {/* Pain points grid */}
         <div className="grid gap-6 md:grid-cols-3">
           {painPoints.map((point, i) => (
             <motion.div
@@ -80,10 +70,10 @@ export default function ProblemaSection() {
               transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
               className="card group"
             >
-              <div className="mb-5 inline-flex items-center justify-center w-12 h-12 rounded-xl bg-warm-50 text-navy transition-colors group-hover:bg-teal-soft group-hover:text-teal">
+              <div className="mb-5 inline-flex items-center justify-center w-12 h-12 rounded-xl bg-cream text-sepia transition-colors group-hover:bg-ochre-soft group-hover:text-ochre">
                 <point.icon size={24} strokeWidth={1.5} />
               </div>
-              <h3 className="text-[1.0625rem] font-bold text-navy mb-3 leading-snug">
+              <h3 className="text-[1.0625rem] font-bold text-ink mb-3 leading-snug">
                 {point.title}
               </h3>
               <p className="text-[0.9375rem] leading-relaxed text-gray-500">
@@ -93,7 +83,6 @@ export default function ProblemaSection() {
           ))}
         </div>
 
-        {/* Closing quote */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}

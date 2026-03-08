@@ -55,22 +55,14 @@ export default function SolucionSection() {
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section
-      id="solucion"
-      ref={ref}
-      className="relative py-24 md:py-32 bg-off-white"
-    >
-      {/* Gradient mesh overlay */}
-      <div className="absolute inset-0 gradient-mesh pointer-events-none" />
-
+    <section id="solucion" ref={ref} className="relative py-24 md:py-32 bg-background">
       <div className="relative z-10 mx-auto max-w-[1120px] px-5 md:px-8">
-        {/* Section header */}
         <div className="text-center mb-16">
           <motion.span
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-teal mb-4"
+            className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-4"
           >
             La solución
           </motion.span>
@@ -79,7 +71,7 @@ export default function SolucionSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-navy mb-5"
+            className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-ink mb-5"
           >
             Una plataforma, toda la gestión
           </motion.h2>
@@ -96,7 +88,6 @@ export default function SolucionSection() {
           </motion.p>
         </div>
 
-        {/* Feature grid */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, i) => (
             <motion.div
@@ -104,12 +95,12 @@ export default function SolucionSection() {
               initial={{ opacity: 0, y: 24 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
-              className="card group bg-white"
+              className="card group"
             >
-              <div className="mb-4 inline-flex items-center justify-center w-11 h-11 rounded-lg bg-navy/[0.06] text-navy transition-all group-hover:bg-teal group-hover:text-white">
+              <div className="mb-4 inline-flex items-center justify-center w-11 h-11 rounded-lg bg-ochre-soft text-sepia transition-all group-hover:bg-ochre group-hover:text-paper">
                 <feature.icon size={22} strokeWidth={1.5} />
               </div>
-              <h3 className="text-[1rem] font-bold text-navy mb-2">
+              <h3 className="text-[1rem] font-bold text-ink mb-2">
                 {feature.title}
               </h3>
               <p className="text-[0.875rem] leading-relaxed text-gray-500">
@@ -119,16 +110,15 @@ export default function SolucionSection() {
           ))}
         </div>
 
-        {/* Normative badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.7 }}
           className="mt-12 flex justify-center"
         >
-          <div className="inline-flex items-center gap-3 rounded-full bg-white border border-border px-6 py-3 shadow-sm">
-            <Shield size={18} className="text-teal" />
-            <span className="text-[0.8125rem] font-semibold text-navy">
+          <div className="inline-flex items-center gap-3 rounded-full bg-paper border border-border px-6 py-3 shadow-sm">
+            <Shield size={18} className="text-olive" />
+            <span className="text-[0.8125rem] font-semibold text-ink">
               Compatible con normativa colombiana vigente
             </span>
             <span className="text-[0.6875rem] text-gray-400 font-medium">
