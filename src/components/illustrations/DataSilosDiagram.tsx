@@ -2,133 +2,141 @@
 
 import { motion } from "framer-motion";
 
-const silos = [
-  { label: "Excel", sub: "Reportes manuales", icon: "grid" },
-  { label: "SISFUT", sub: "Formulario único", icon: "form" },
-  { label: "CHIP", sub: "Contaduría", icon: "stack" },
-  { label: "SECOP", sub: "Contratación", icon: "doc" },
-] as const;
-
-function SiloIcon({ type, cx, cy }: { type: string; cx: number; cy: number }) {
-  switch (type) {
-    case "grid":
-      return (
-        <g>
-          <rect x={cx - 13} y={cy - 11} width={26} height={22} rx={2.5} stroke="#B8956A" strokeWidth={1.2} fill="none" />
-          <line x1={cx - 13} y1={cy} x2={cx + 13} y2={cy} stroke="#B8956A" strokeWidth={0.8} />
-          <line x1={cx} y1={cy - 11} x2={cx} y2={cy + 11} stroke="#B8956A" strokeWidth={0.8} />
-        </g>
-      );
-    case "form":
-      return (
-        <g>
-          <rect x={cx - 10} y={cy - 13} width={20} height={26} rx={2.5} stroke="#B8956A" strokeWidth={1.2} fill="none" />
-          <line x1={cx - 5} y1={cy - 6} x2={cx + 5} y2={cy - 6} stroke="#B8956A" strokeWidth={0.9} />
-          <line x1={cx - 5} y1={cy} x2={cx + 5} y2={cy} stroke="#B8956A" strokeWidth={0.9} />
-          <line x1={cx - 5} y1={cy + 6} x2={cx + 3} y2={cy + 6} stroke="#B8956A" strokeWidth={0.9} />
-        </g>
-      );
-    case "stack":
-      return (
-        <g>
-          <ellipse cx={cx} cy={cy - 8} rx={13} ry={5} stroke="#B8956A" strokeWidth={1.2} fill="none" />
-          <path d={`M ${cx - 13} ${cy - 8} L ${cx - 13} ${cy + 4}`} stroke="#B8956A" strokeWidth={1.2} />
-          <path d={`M ${cx + 13} ${cy - 8} L ${cx + 13} ${cy + 4}`} stroke="#B8956A" strokeWidth={1.2} />
-          <ellipse cx={cx} cy={cy + 4} rx={13} ry={5} stroke="#B8956A" strokeWidth={1.2} fill="none" />
-        </g>
-      );
-    case "doc":
-      return (
-        <g>
-          <path
-            d={`M ${cx - 9} ${cy - 13} L ${cx + 5} ${cy - 13} L ${cx + 11} ${cy - 7} L ${cx + 11} ${cy + 13} L ${cx - 9} ${cy + 13} Z`}
-            stroke="#B8956A" strokeWidth={1.2} fill="none" strokeLinejoin="round"
-          />
-          <path d={`M ${cx + 5} ${cy - 13} L ${cx + 5} ${cy - 7} L ${cx + 11} ${cy - 7}`} stroke="#B8956A" strokeWidth={0.9} fill="none" />
-          <circle cx={cx} cy={cy + 3} r={4.5} stroke="#B8956A" strokeWidth={0.9} fill="none" />
-        </g>
-      );
-    default:
-      return null;
-  }
-}
-
 interface DataSilosDiagramProps {
   animate?: boolean;
 }
 
 export default function DataSilosDiagram({ animate = true }: DataSilosDiagramProps) {
-  const w = 104;
-  const h = 140;
-  const gap = 28;
-  const totalW = 4 * w + 3 * gap;
+  const systems = [
+    { label: "CHIP", sub: "Contaduría", x: 40, y: 40 },
+    { label: "SISFUT", sub: "Presupuesto", x: 160, y: 28 },
+    { label: "Excel", sub: "Reportes", x: 280, y: 40 },
+    { label: "SECOP", sub: "Contratos", x: 350, y: 110 },
+    { label: "SIRECI", sub: "CGR", x: 290, y: 180 },
+    { label: "SIA", sub: "Auditoría", x: 160, y: 195 },
+    { label: "MUISCA", sub: "DIAN", x: 40, y: 175 },
+  ];
+
+  // Broken connections between adjacent systems
+  const connections: [number, number][] = [
+    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0],
+    [0, 5], [1, 4], [2, 5],
+  ];
 
   return (
     <svg
-      viewBox={`0 0 ${totalW} 190`}
+      viewBox="0 0 400 240"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-full max-w-lg mx-auto"
+      className="w-full max-w-xl mx-auto"
       role="img"
-      aria-label="Datos fragmentados en silos desconectados: Excel, SISFUT, CHIP y SECOP"
+      aria-label="7 sistemas gubernamentales desconectados rodeando al funcionario público"
     >
-      {silos.map((silo, i) => {
-        const x = i * (w + gap);
+      {/* Broken connection lines */}
+      {connections.map(([a, b], i) => {
+        const sa = systems[a];
+        const sb = systems[b];
+        const mx = (sa.x + sb.x) / 2;
+        const my = (sa.y + sb.y) / 2;
+
         return (
           <motion.g
-            key={silo.label}
-            initial={animate ? { opacity: 0, y: 14 } : false}
-            animate={animate ? { opacity: 1, y: 0 } : false}
-            transition={{ duration: 0.5, delay: 0.1 + i * 0.1, ease: [0.25, 1, 0.5, 1] as const }}
+            key={`conn-${i}`}
+            initial={animate ? { opacity: 0 } : undefined}
+            animate={animate ? { opacity: 0.4 } : undefined}
+            transition={{ duration: 0.4, delay: 0.6 + i * 0.05 }}
           >
-            <rect x={x} y={8} width={w} height={h} rx={10} fill="#FFFDF8" stroke="#DDD4C4" strokeWidth={1} />
-            <rect x={x + 22} y={22} width={60} height={50} rx={8} fill="#F5EDDF" />
-            <SiloIcon type={silo.icon} cx={x + w / 2} cy={47} />
-            <text x={x + w / 2} y={96} textAnchor="middle" fill="#2C2418" fontSize={12.5} fontWeight={600} fontFamily="'Plus Jakarta Sans', sans-serif">
-              {silo.label}
-            </text>
-            <text x={x + w / 2} y={112} textAnchor="middle" fill="#9E9484" fontSize={8.5} fontFamily="'Plus Jakarta Sans', sans-serif">
-              {silo.sub}
-            </text>
+            <line x1={sa.x} y1={sa.y} x2={mx - 4} y2={my - 2} stroke="#DDD4C4" strokeWidth={0.8} strokeDasharray="4 4" />
+            <line x1={mx + 4} y1={my + 2} x2={sb.x} y2={sb.y} stroke="#DDD4C4" strokeWidth={0.8} strokeDasharray="4 4" />
+            {/* X mark at midpoint */}
+            <line x1={mx - 3} y1={my - 3} x2={mx + 3} y2={my + 3} stroke="#E53935" strokeWidth={1.2} strokeLinecap="round" opacity={0.6} />
+            <line x1={mx + 3} y1={my - 3} x2={mx - 3} y2={my + 3} stroke="#E53935" strokeWidth={1.2} strokeLinecap="round" opacity={0.6} />
           </motion.g>
         );
       })}
 
-      {/* Broken connections */}
-      {[0, 1, 2].map((i) => {
-        const x1 = (i + 1) * w + i * gap;
-        const midX = x1 + gap / 2;
-        const y = 8 + h / 2;
-        return (
-          <motion.g
-            key={`break-${i}`}
-            initial={animate ? { opacity: 0 } : false}
-            animate={animate ? { opacity: 1 } : false}
-            transition={{ duration: 0.35, delay: 0.65 + i * 0.1 }}
-          >
-            <line x1={x1 + 3} y1={y} x2={midX - 6} y2={y} stroke="#BFB5A3" strokeWidth={1.5} strokeDasharray="3 3" />
-            <line x1={midX - 4} y1={y - 4} x2={midX + 4} y2={y + 4} stroke="#B8956A" strokeWidth={1.5} strokeLinecap="round" />
-            <line x1={midX + 4} y1={y - 4} x2={midX - 4} y2={y + 4} stroke="#B8956A" strokeWidth={1.5} strokeLinecap="round" />
-            <line x1={midX + 6} y1={y} x2={x1 + gap - 3} y2={y} stroke="#BFB5A3" strokeWidth={1.5} strokeDasharray="3 3" />
-          </motion.g>
-        );
-      })}
+      {/* Central "funcionario" */}
+      <motion.g
+        initial={animate ? { scale: 0, opacity: 0 } : undefined}
+        animate={animate ? { scale: 1, opacity: 1 } : undefined}
+        transition={{ duration: 0.5, delay: 0.2, type: "spring" }}
+        style={{ transformOrigin: "195px 112px" }}
+      >
+        {/* Frustration glow */}
+        <circle cx={195} cy={112} r={40} fill="#FDECEA" opacity={0.3} />
+        <circle cx={195} cy={112} r={28} fill="#FFFDF8" stroke="#DDD4C4" strokeWidth={1} />
 
-      {/* Bottom label */}
-      <motion.text
-        x={totalW / 2}
-        y={172}
-        textAnchor="middle"
-        fill="#9E9484"
-        fontSize={10}
-        fontStyle="italic"
-        fontFamily="'Plus Jakarta Sans', sans-serif"
-        initial={animate ? { opacity: 0 } : false}
-        animate={animate ? { opacity: 0.7 } : false}
+        {/* Person silhouette */}
+        <circle cx={195} cy={102} r={7} fill="#9E9484" />
+        <path d="M 183 120 Q 183 110 195 110 Q 207 110 207 120" fill="#9E9484" />
+
+        {/* Question marks floating */}
+        <motion.text
+          x={210} y={98}
+          fill="#E53935"
+          fontSize={10}
+          fontWeight={700}
+          initial={animate ? { opacity: 0 } : undefined}
+          animate={animate ? { opacity: [0, 0.8, 0] } : undefined}
+          transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+        >
+          ?
+        </motion.text>
+        <motion.text
+          x={178} y={96}
+          fill="#E53935"
+          fontSize={8}
+          fontWeight={700}
+          initial={animate ? { opacity: 0 } : undefined}
+          animate={animate ? { opacity: [0, 0.6, 0] } : undefined}
+          transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
+        >
+          ?
+        </motion.text>
+      </motion.g>
+
+      {/* System nodes */}
+      {systems.map((sys, i) => (
+        <motion.g
+          key={sys.label}
+          initial={animate ? { scale: 0, opacity: 0 } : undefined}
+          animate={animate ? { scale: 1, opacity: 1 } : undefined}
+          transition={{ duration: 0.4, delay: 0.3 + i * 0.07, type: "spring" }}
+          style={{ transformOrigin: `${sys.x}px ${sys.y}px` }}
+        >
+          {/* Node */}
+          <rect x={sys.x - 30} y={sys.y - 16} width={60} height={32} rx={6} fill="#FFFDF8" stroke="#DDD4C4" strokeWidth={0.8} />
+
+          {/* Label */}
+          <text x={sys.x} y={sys.y - 2} textAnchor="middle" fill="#2C2418" fontSize={8} fontWeight={700} fontFamily="'Plus Jakarta Sans', sans-serif">
+            {sys.label}
+          </text>
+          <text x={sys.x} y={sys.y + 9} textAnchor="middle" fill="#9E9484" fontSize={6} fontFamily="'Plus Jakarta Sans', sans-serif">
+            {sys.sub}
+          </text>
+        </motion.g>
+      ))}
+
+      {/* Bottom pain metrics */}
+      <motion.g
+        initial={animate ? { opacity: 0, y: 10 } : undefined}
+        animate={animate ? { opacity: 1, y: 0 } : undefined}
         transition={{ duration: 0.5, delay: 1 }}
       >
-        Datos fragmentados en 4+ sistemas sin conexión entre sí
-      </motion.text>
+        {[
+          { value: "7+", label: "sistemas", x: 80 },
+          { value: "0", label: "conexiones", x: 200 },
+          { value: "∞", label: "frustración", x: 320 },
+        ].map((metric) => (
+          <g key={metric.label}>
+            <text x={metric.x} y={232} textAnchor="middle" fill="#B8956A" fontSize={12} fontWeight={700} fontFamily="'DM Serif Display', serif">
+              {metric.value}
+            </text>
+            <text x={metric.x + 22} y={232} fill="#9E9484" fontSize={7} fontFamily="'Plus Jakarta Sans', sans-serif">
+              {metric.label}
+            </text>
+          </g>
+        ))}
+      </motion.g>
     </svg>
   );
 }

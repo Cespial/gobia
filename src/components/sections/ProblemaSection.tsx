@@ -2,27 +2,23 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { FileWarning, Clock, BarChart3 } from "lucide-react";
 import DataSilosDiagram from "@/components/illustrations/DataSilosDiagram";
 
-const painPoints = [
+const painMetrics = [
   {
-    icon: FileWarning,
-    title: "Reportes manuales, errores constantes",
-    description:
-      "CHIP, SIRECI, FUT, Exógena — cada sistema con su propio formato, sus propios plazos. El funcionario público pasa más tiempo llenando formularios que tomando decisiones.",
+    value: "2 sem.",
+    label: "para preparar un reporte trimestral FUT",
+    detail: "Consolidar datos de CHIP, Excel y SISFUT manualmente cada trimestre.",
   },
   {
-    icon: Clock,
-    title: "Información desactualizada y fragmentada",
-    description:
-      "Los datos de hacienda no se cruzan con los del plan de desarrollo. Las alertas llegan cuando ya es tarde. No hay una vista unificada del municipio.",
+    value: "4+",
+    label: "sistemas sin conexión entre sí",
+    detail: "Cada reporte requiere extraer datos de sistemas independientes que no se comunican.",
   },
   {
-    icon: BarChart3,
-    title: "Decisiones sin respaldo de datos",
-    description:
-      "Se aprueba presupuesto sin saber el estado real de cartera. Se evalúan metas sin indicadores actualizados. La gestión se basa en intuición, no en evidencia.",
+    value: "0",
+    label: "alertas tempranas de gestión fiscal",
+    detail: "Los problemas se detectan cuando ya generaron multas o sanciones.",
   },
 ];
 
@@ -67,28 +63,31 @@ export default function ProblemaSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-16"
+          className="mb-14"
         >
           <DataSilosDiagram animate={isInView} />
         </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {painPoints.map((point, i) => (
+        {/* Pain metrics — visual counters */}
+        <div className="grid gap-5 md:grid-cols-3">
+          {painMetrics.map((metric, i) => (
             <motion.div
-              key={point.title}
+              key={metric.label}
               initial={{ opacity: 0, y: 24 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
-              className="card group"
+              transition={{ duration: 0.6, delay: 0.4 + i * 0.1 }}
+              className="relative rounded-xl border border-border bg-paper p-6 md:p-7"
             >
-              <div className="mb-5 inline-flex items-center justify-center w-12 h-12 rounded-xl bg-cream text-sepia transition-colors group-hover:bg-ochre-soft group-hover:text-ochre">
-                <point.icon size={24} strokeWidth={1.5} />
+              <div className="flex items-baseline gap-3 mb-3">
+                <span className="font-serif text-[2rem] md:text-[2.5rem] leading-none tracking-[-0.02em] text-ochre">
+                  {metric.value}
+                </span>
+                <span className="text-[0.8125rem] font-semibold text-ink leading-snug">
+                  {metric.label}
+                </span>
               </div>
-              <h3 className="text-[1.0625rem] font-bold text-ink mb-3 leading-snug">
-                {point.title}
-              </h3>
-              <p className="text-[0.9375rem] leading-relaxed text-gray-500">
-                {point.description}
+              <p className="text-[0.8125rem] leading-relaxed text-gray-400">
+                {metric.detail}
               </p>
             </motion.div>
           ))}
@@ -97,8 +96,8 @@ export default function ProblemaSection() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="mt-16 text-center"
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="mt-14 text-center"
         >
           <p className="text-[1.125rem] text-gray-400 italic font-serif">
             &ldquo;No debería ser así. Y ya no tiene que serlo.&rdquo;
