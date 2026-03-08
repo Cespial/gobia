@@ -3,6 +3,7 @@ import Hero from "@/components/sections/Hero";
 import ProblemaSection from "@/components/sections/ProblemaSection";
 import SolucionSection from "@/components/sections/SolucionSection";
 import ProductoPreview from "@/components/sections/ProductoPreview";
+import CerebroNormativo from "@/components/sections/CerebroNormativo";
 import SolidezTecnica from "@/components/sections/SolidezTecnica";
 import CasosDeUso from "@/components/sections/CasosDeUso";
 import CTAFinal from "@/components/sections/CTAFinal";
@@ -17,6 +18,7 @@ export default function Home() {
         <ProblemaSection />
         <SolucionSection />
         <ProductoPreview />
+        <CerebroNormativo />
         <SolidezTecnica />
         <CasosDeUso />
         <CTAFinal />
