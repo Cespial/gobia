@@ -46,7 +46,7 @@ export default function Hero() {
         <div className="max-w-2xl">
           {/* Eyebrow */}
           <motion.div {...fadeUp(0.1)} className="mb-6">
-            <span className="inline-flex items-center gap-2.5 rounded-full bg-ochre-soft border border-ochre/20 px-4 py-1.5 text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-sepia">
+            <span className="inline-flex items-center gap-2.5 rounded-full bg-ochre-soft border border-ochre/20 px-4 py-1.5 text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-sepia">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ochre opacity-60" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-ochre" />
@@ -69,7 +69,7 @@ export default function Hero() {
           {/* Subheadline */}
           <motion.p
             {...fadeUp(0.35)}
-            className="text-[1.0625rem] md:text-[1.1875rem] leading-relaxed text-ink/65 max-w-lg mb-10"
+            className="text-[1.0625rem] md:text-[1.1875rem] leading-relaxed text-ink/75 max-w-lg mb-10"
           >
             Conectamos hacienda, planeación y normativa en una sola plataforma.
             Para que alcaldías y gobernaciones tomen decisiones con datos, no con
@@ -81,13 +81,12 @@ export default function Hero() {
             {...fadeUp(0.5)}
             className="flex flex-col sm:flex-row gap-3"
           >
-            <a href="#contacto" className="btn-primary">
-              Solicitar demo
+            <a href="/demo" className="btn-primary">
+              Ver demo Medellín
               <ArrowRight size={16} />
             </a>
-            <a href="#solucion" className="btn-secondary">
-              <Play size={16} />
-              Explorar la plataforma
+            <a href="#contacto" className="btn-secondary">
+              Solicitar demo personalizada
             </a>
           </motion.div>
 
@@ -96,7 +95,7 @@ export default function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.75rem] text-gray-500"
+            className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.8125rem] text-gray-500"
           >
             <span className="uppercase tracking-[0.1em] font-semibold">
               Respaldado por

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import GobiaLogo from "@/components/illustrations/GobiaLogo";
 
 const navLinks = [
   { label: "Problema", href: "#problema" },
@@ -61,13 +62,8 @@ export default function Navbar() {
         style={{ boxShadow: scrolled ? "var(--shadow-xs)" : "none" }}
       >
         <div className="mx-auto flex max-w-[1120px] items-center justify-between px-5 py-4 md:px-8">
-          <a href="#" className="flex items-baseline gap-0.5">
-            <span className="font-serif text-xl tracking-tight text-ink">
-              gobia
-            </span>
-            <span className="font-serif text-base text-ochre">
-              .co
-            </span>
+          <a href="#" className="flex items-center gap-0.5">
+            <GobiaLogo variant="navbar" />
           </a>
 
           <div className="hidden items-center gap-1 md:flex">
@@ -99,7 +95,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center">
             <a
               href="#contacto"
-              className="rounded-md px-5 py-2.5 text-[0.8125rem] font-semibold bg-ink text-paper transition-all duration-300 hover:bg-sepia hover:shadow-md hover:-translate-y-0.5"
+              className="rounded-md px-5 py-2.5 text-[0.8125rem] font-semibold bg-ink text-paper transition-all duration-300 hover:bg-ochre hover:shadow-md hover:-translate-y-0.5"
             >
               Solicitar demo
             </a>

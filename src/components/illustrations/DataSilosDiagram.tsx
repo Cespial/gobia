@@ -128,10 +128,10 @@ export default function DataSilosDiagram({ animate = true }: DataSilosDiagramPro
           { value: "∞", label: "frustración", x: 320 },
         ].map((metric) => (
           <g key={metric.label}>
-            <text x={metric.x} y={232} textAnchor="middle" fill="#B8956A" fontSize={12} fontWeight={700} fontFamily="'DM Serif Display', serif">
+            <text x={metric.x} y={226} textAnchor="middle" fill="#B8956A" fontSize={13} fontWeight={700} fontFamily="'DM Serif Display', serif">
               {metric.value}
             </text>
-            <text x={metric.x + 22} y={232} fill="#9E9484" fontSize={7} fontFamily="'Plus Jakarta Sans', sans-serif">
+            <text x={metric.x} y={238} textAnchor="middle" fill="#9E9484" fontSize={7.5} fontWeight={500} fontFamily="'Plus Jakarta Sans', sans-serif">
               {metric.label}
             </text>
           </g>

@@ -50,7 +50,9 @@ export default function DashboardMockupSVG({ animate = true }: DashboardMockupSV
 
         {/* Sidebar */}
         <rect x={0.5} y={titleBar} width={sidebar} height={H - titleBar - 0.5} fill="#2C2418" />
-        <rect x={0.5} y={H - 10} width={10} height={10} rx={10} fill="#2C2418" />
+        {/* Cover sidebar bottom-left corner so main frame's rounded rect shows through */}
+        <rect x={0} y={H - 10} width={1} height={10.5} fill="#FFFDF8" />
+        <rect x={0.5} y={H - 10.5} width={10} height={11} rx={10} ry={10} fill="#2C2418" />
 
         {/* Sidebar nav items */}
         <motion.g

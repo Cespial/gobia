@@ -91,7 +91,7 @@ export default function ArchitectureSVG({ animate = true }: ArchitectureSVGProps
                   <text
                     x={px + pillW / 2} y={py + pillH / 2 + 1}
                     textAnchor="middle" dominantBaseline="central"
-                    fill="#F5EFE6" fontSize={10} fontWeight={500}
+                    fill="#FFFDF8" fontSize={10} fontWeight={500}
                     fontFamily="'Plus Jakarta Sans', sans-serif"
                   >
                     {item}

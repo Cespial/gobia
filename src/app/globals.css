@@ -111,7 +111,7 @@ html { scroll-behavior: smooth; }
 }
 
 .btn-primary:hover {
-  background: var(--sepia);
+  background: var(--ochre);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
@@ -183,6 +183,10 @@ html { scroll-behavior: smooth; }
   background: var(--border);
   width: 100%;
 }
+
+/* ── Scrollbar ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── Animations ── */
 @keyframes fade-up {

@@ -84,7 +84,7 @@ export default function PlatformHubDiagram({ animate = true }: PlatformHubDiagra
           animate={animate ? { scale: 1, opacity: 1 } : false}
           transition={{ duration: 0.4, delay: 0.5 + i * 0.08, ease: [0.25, 1, 0.5, 1] as const }}
         >
-          <circle cx={node.x} cy={node.y} r={nodeR} fill="#FFFDF8" stroke="#2C2418" strokeWidth={1} />
+          <circle cx={node.x} cy={node.y} r={nodeR} fill="#FFFDF8" stroke="#DDD4C4" strokeWidth={1} />
           <text
             x={node.x} y={node.y + 1}
             textAnchor="middle" dominantBaseline="central"

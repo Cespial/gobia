@@ -1,14 +1,17 @@
+import dynamic from "next/dynamic";
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/sections/Hero";
 import ProblemaSection from "@/components/sections/ProblemaSection";
-import SolucionSection from "@/components/sections/SolucionSection";
-import ProductoPreview from "@/components/sections/ProductoPreview";
-import CerebroNormativo from "@/components/sections/CerebroNormativo";
-import SolidezTecnica from "@/components/sections/SolidezTecnica";
-import CasosDeUso from "@/components/sections/CasosDeUso";
-import Comparativa from "@/components/sections/Comparativa";
-import CTAFinal from "@/components/sections/CTAFinal";
 import Footer from "@/components/sections/Footer";
+
+// Lazy-load below-fold sections to reduce initial JS bundle
+const SolucionSection = dynamic(() => import("@/components/sections/SolucionSection"));
+const ProductoPreview = dynamic(() => import("@/components/sections/ProductoPreview"));
+const CerebroNormativo = dynamic(() => import("@/components/sections/CerebroNormativo"));
+const SolidezTecnica = dynamic(() => import("@/components/sections/SolidezTecnica"));
+const CasosDeUso = dynamic(() => import("@/components/sections/CasosDeUso"));
+const Comparativa = dynamic(() => import("@/components/sections/Comparativa"));
+const CTAFinal = dynamic(() => import("@/components/sections/CTAFinal"));
 
 export default function Home() {
   return (
