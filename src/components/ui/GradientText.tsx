@@ -11,7 +11,7 @@ export default function GradientText({
   className,
 }: GradientTextProps) {
   return (
-    <span className={cn("italic font-serif text-ochre", className)}>
+    <span className={cn("italic font-serif font-bold text-ochre", className)}>
       {children}
     </span>
   );

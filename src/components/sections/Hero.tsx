@@ -58,10 +58,10 @@ export default function Hero() {
           {/* Headline */}
           <motion.h1
             {...fadeUp(0.2)}
-            className="font-serif text-[2.5rem] md:text-[3.5rem] lg:text-[4.25rem] leading-[1.08] tracking-[-0.02em] text-ink mb-6"
+            className="font-serif font-bold text-[2.5rem] md:text-[3.5rem] lg:text-[4.25rem] leading-[1.08] tracking-[-0.02em] text-ink mb-6"
           >
             Gestión pública{" "}
-            <em className="text-ochre not-italic font-serif">inteligente</em>
+            <em className="text-ochre not-italic font-serif font-bold">inteligente</em>
             <br />
             para Colombia
           </motion.h1>

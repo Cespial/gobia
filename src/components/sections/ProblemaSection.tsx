@@ -42,7 +42,7 @@ export default function ProblemaSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-ink max-w-2xl mb-5"
+          className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-ink max-w-2xl mb-5"
         >
           Así luce hoy la gestión pública en Colombia
         </motion.h2>
@@ -79,7 +79,7 @@ export default function ProblemaSection() {
               className="relative rounded-xl border border-border bg-paper p-6 md:p-7"
             >
               <div className="flex items-baseline gap-3 mb-3">
-                <span className="font-serif text-[2rem] md:text-[2.5rem] leading-none tracking-[-0.02em] text-ochre">
+                <span className="font-serif font-bold text-[2rem] md:text-[2.5rem] leading-none tracking-[-0.02em] text-ochre">
                   {metric.value}
                 </span>
                 <span className="text-[0.8125rem] font-semibold text-ink leading-snug">

@@ -66,7 +66,7 @@
   --color-gray-800: var(--gray-800);
   --color-gray-900: var(--gray-900);
   --font-sans: var(--font-jakarta);
-  --font-serif: var(--font-dm-serif);
+  --font-serif: var(--font-display);
 }
 
 /* ── Base ── */

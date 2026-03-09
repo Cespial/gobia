@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, DM_Serif_Display } from "next/font/google";
+import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -9,11 +9,11 @@ const jakarta = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600", "700", "800"],
 });
 
-const dmSerif = DM_Serif_Display({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-dm-serif",
+  variable: "--font-display",
   display: "swap",
-  weight: "400",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${jakarta.variable} ${dmSerif.variable} antialiased`}>
+      <body className={`${jakarta.variable} ${spaceGrotesk.variable} antialiased`}>
         {children}
       </body>
     </html>
