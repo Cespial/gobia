@@ -30,12 +30,12 @@ export default function Hero() {
           style={{
             background: `linear-gradient(
               to bottom,
-              rgba(250, 246, 240, 0.97) 0%,
-              rgba(250, 246, 240, 0.93) 35%,
-              rgba(250, 246, 240, 0.82) 55%,
-              rgba(250, 246, 240, 0.50) 72%,
-              rgba(250, 246, 240, 0.18) 88%,
-              rgba(250, 246, 240, 0) 100%
+              rgba(250, 246, 240, 0.98) 0%,
+              rgba(250, 246, 240, 0.96) 40%,
+              rgba(250, 246, 240, 0.90) 60%,
+              rgba(250, 246, 240, 0.75) 75%,
+              rgba(250, 246, 240, 0.40) 90%,
+              rgba(250, 246, 240, 0.10) 100%
             )`,
           }}
         />
@@ -69,7 +69,7 @@ export default function Hero() {
           {/* Subheadline */}
           <motion.p
             {...fadeUp(0.35)}
-            className="text-[1.0625rem] md:text-[1.1875rem] leading-relaxed text-ink/75 max-w-lg mb-10"
+            className="text-[1.0625rem] md:text-[1.1875rem] leading-relaxed text-ink/85 max-w-lg mb-10"
           >
             Conectamos hacienda, planeación y normativa en una sola plataforma.
             Para que alcaldías y gobernaciones tomen decisiones con datos, no con
@@ -95,16 +95,16 @@ export default function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.8125rem] text-gray-500"
+            className="mt-14 inline-flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.8125rem] bg-background/80 backdrop-blur-sm rounded-full px-5 py-2.5 border border-border/40"
           >
-            <span className="uppercase tracking-[0.1em] font-semibold">
+            <span className="uppercase tracking-[0.1em] font-semibold text-sepia">
               Respaldado por
             </span>
-            <span className="text-ink/70 font-semibold">inplux.co</span>
-            <span className="w-px h-3 bg-ink/15" aria-hidden="true" />
-            <span className="text-ink/70 font-semibold">tribai.co</span>
-            <span className="w-px h-3 bg-ink/15" aria-hidden="true" />
-            <span className="text-ink/70 font-semibold">25 años de experiencia</span>
+            <span className="text-ink font-semibold">inplux.co</span>
+            <span className="w-px h-3 bg-ink/20" aria-hidden="true" />
+            <span className="text-ink font-semibold">tribai.co</span>
+            <span className="w-px h-3 bg-ink/20" aria-hidden="true" />
+            <span className="text-ink font-semibold">25 años de experiencia</span>
           </motion.div>
         </div>
       </div>

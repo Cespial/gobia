@@ -63,6 +63,28 @@ export default function CerebroNormativo() {
           </motion.p>
         </div>
 
+        {/* Example query */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.25 }}
+          className="max-w-xl mx-auto mb-10"
+        >
+          <div className="rounded-xl border border-paper/10 bg-paper/5 p-4">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-paper/30 mb-2">
+              Ejemplo de consulta
+            </p>
+            <p className="text-[0.9375rem] text-paper/70 italic mb-3">
+              &ldquo;¿Cuál es la tarifa del impuesto predial para predios rurales con avalúo menor a 50 SMLMV?&rdquo;
+            </p>
+            <div className="flex items-start gap-2 pl-3 border-l-2 border-ochre/40">
+              <p className="text-[0.8125rem] text-paper/50 leading-relaxed">
+                <span className="text-ochre font-semibold">Art. 23, Libro I</span> — Tarifa diferencial del 5‰ para predios rurales con avalúo catastral inferior a 50 SMLMV, según Acuerdo Municipal 048 de 2023...
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Graph */}
         <KnowledgeGraph animate={isInView} />
 

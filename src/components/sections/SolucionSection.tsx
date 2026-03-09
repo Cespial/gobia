@@ -9,15 +9,8 @@ import {
   MapPin,
   TrendingUp,
   Shield,
-  ArrowUpRight,
 } from "lucide-react";
 import PlatformHubDiagram from "@/components/illustrations/PlatformHubDiagram";
-import HaciendaFeatureSVG from "@/components/illustrations/HaciendaFeatureSVG";
-import PDMFeatureSVG from "@/components/illustrations/PDMFeatureSVG";
-import EstatutoFeatureSVG from "@/components/illustrations/EstatutoFeatureSVG";
-import ExogenaFeatureSVG from "@/components/illustrations/ExogenaFeatureSVG";
-import GemeloFeatureSVG from "@/components/illustrations/GemeloFeatureSVG";
-import RendicionFeatureSVG from "@/components/illustrations/RendicionFeatureSVG";
 
 const statusStyles = {
   beta: "bg-ochre/10 text-ochre border-ochre/20",
@@ -38,54 +31,48 @@ const features = [
     icon: LayoutDashboard,
     title: "Hacienda Dashboard",
     description:
-      "Ejecución presupuestal, recaudo, cartera e IDF en tiempo real. Todo en una vista unificada con datos de FUT, SISFUT y CHIP consolidados automáticamente.",
+      "Ejecución presupuestal, recaudo, cartera e IDF consolidados automáticamente.",
     status: "desarrollo" as Status,
-    Illustration: HaciendaFeatureSVG,
-    highlights: ["Ejecución presupuestal", "Recaudo por impuesto", "Scorecard IDF"],
+    highlights: ["Ejecución presupuestal", "Recaudo", "Scorecard IDF"],
   },
   {
     icon: Brain,
     title: "Estatuto Municipal IA",
     description:
-      "Consulta tu estatuto tributario en lenguaje natural. IA que cita artículos específicos con referencias verificables, no que inventa respuestas.",
+      "Consulta tu estatuto tributario en lenguaje natural con citación verificable.",
     status: "beta" as Status,
-    Illustration: EstatutoFeatureSVG,
-    highlights: ["Citación verificable", "540+ artículos indexados", "Búsqueda semántica"],
+    highlights: ["540+ artículos", "Citación verificable", "Búsqueda semántica"],
   },
   {
     icon: TrendingUp,
     title: "Seguimiento PDM",
     description:
-      "Metas del plan de desarrollo con semáforo automático, alertas tempranas y reportes listos para rendir cuentas. Alineado con metodología DNP.",
+      "Metas del plan de desarrollo con semáforo automático y alertas tempranas.",
     status: "desarrollo" as Status,
-    Illustration: PDMFeatureSVG,
-    highlights: ["Semáforo automático", "Alertas tempranas", "Reportes PDF"],
+    highlights: ["Semáforo automático", "Alertas", "Reportes PDF"],
   },
   {
     icon: FileCheck,
     title: "Exógena Automatizada",
     description:
-      "Genera los XML para DIAN en minutos, no en semanas. Validación cruzada de NIT, cruces contables y formato ISO 8859-1 antes de enviar.",
+      "Genera XML para DIAN en minutos con validación cruzada de NIT y cruces contables.",
     status: "desarrollo" as Status,
-    Illustration: ExogenaFeatureSVG,
-    highlights: ["6 formatos DIAN", "Validación NIT", "0 rechazos MUISCA"],
+    highlights: ["6 formatos DIAN", "Validación NIT", "0 rechazos"],
   },
   {
     icon: MapPin,
     title: "Gemelo Municipal",
     description:
-      "Mapa digital de tu municipio con datos sociales, fiscales e infraestructura integrados. Fuentes: DANE, TerriData, SECOP.",
+      "Mapa digital con datos sociales, fiscales e infraestructura de DANE y TerriData.",
     status: "proximamente" as Status,
-    Illustration: GemeloFeatureSVG,
-    highlights: ["Datos georreferenciados", "5 capas de datos", "1,122 municipios"],
+    highlights: ["Georreferenciado", "5 capas", "1,122 municipios"],
   },
   {
     icon: Shield,
     title: "Rendición Automatizada",
     description:
-      "SIRECI, SIA y FUT pre-generados con los datos que ya tienes. Cada archivo en el formato exacto que pide cada entidad — sin doble digitación.",
+      "SIRECI, SIA y FUT pre-generados en el formato exacto de cada entidad.",
     status: "proximamente" as Status,
-    Illustration: RendicionFeatureSVG,
     highlights: ["SIRECI · SIA · FUT", "Calendario fiscal", "Sin doble digitación"],
   },
 ];
@@ -134,83 +121,59 @@ export default function SolucionSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-20"
+          className="mb-16"
         >
           <PlatformHubDiagram animate={isInView} />
         </motion.div>
 
-        {/* Feature showcase — alternating layout */}
-        <div className="space-y-8 md:space-y-6">
-          {features.map((feature, i) => {
-            const isReversed = i % 2 === 1;
-
-            return (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 24 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: 0.3 + i * 0.1 }}
-                className="card p-0 overflow-hidden"
-              >
-                <div className={`grid md:grid-cols-2 ${isReversed ? "" : ""}`}>
-                  {/* SVG Illustration */}
-                  <div className={`p-6 md:p-8 bg-paper/50 flex items-center justify-center ${isReversed ? "md:order-2" : ""}`}>
-                    <div className="w-full max-w-[360px]">
-                      <feature.Illustration animate={isInView} delay={0.3 + i * 0.1} />
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className={`p-6 md:p-8 lg:p-10 flex flex-col justify-center ${isReversed ? "md:order-1" : ""}`}>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-ochre-soft text-sepia">
-                        <feature.icon size={20} strokeWidth={1.5} />
-                      </div>
-                      <span className={`text-[0.625rem] font-semibold uppercase tracking-[0.06em] px-2.5 py-1 rounded-full border ${statusStyles[feature.status]}`}>
-                        {statusLabels[feature.status]}
-                      </span>
-                    </div>
-
-                    <h3 className="font-serif text-[1.375rem] md:text-[1.5rem] leading-[1.15] tracking-[-0.01em] text-ink mb-3">
-                      {feature.title}
-                    </h3>
-
-                    <p className="text-[0.9375rem] leading-relaxed text-gray-500 mb-5">
-                      {feature.description}
-                    </p>
-
-                    {/* Highlight chips */}
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      {feature.highlights.map((h) => (
-                        <span
-                          key={h}
-                          className="inline-flex items-center px-2.5 py-1 rounded-md bg-ochre-soft text-[0.6875rem] font-medium text-sepia"
-                        >
-                          {h}
-                        </span>
-                      ))}
-                    </div>
-
-                    <a
-                      href="#contacto"
-                      className="inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-ochre hover:underline self-start"
-                    >
-                      Solicitar demo
-                      <ArrowUpRight size={14} />
-                    </a>
-                  </div>
+        {/* Compact feature grid — 2x3 on desktop, 1 col on mobile */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {features.map((feature, i) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.3 + i * 0.07 }}
+              className="card p-5 md:p-6 flex flex-col"
+            >
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-ochre-soft text-sepia">
+                  <feature.icon size={16} strokeWidth={1.5} />
                 </div>
-              </motion.div>
-            );
-          })}
+                <span className={`text-[0.5625rem] font-semibold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border ${statusStyles[feature.status]}`}>
+                  {statusLabels[feature.status]}
+                </span>
+              </div>
+
+              <h3 className="text-[1rem] font-bold text-ink mb-1.5">
+                {feature.title}
+              </h3>
+
+              <p className="text-[0.8125rem] leading-relaxed text-gray-500 mb-4 flex-1">
+                {feature.description}
+              </p>
+
+              {/* Highlight chips */}
+              <div className="flex flex-wrap gap-1.5">
+                {feature.highlights.map((h) => (
+                  <span
+                    key={h}
+                    className="inline-flex items-center px-2 py-0.5 rounded bg-ochre-soft text-[0.625rem] font-medium text-sepia"
+                  >
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          ))}
         </div>
 
         {/* Compliance badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 1 }}
-          className="mt-14 flex justify-center"
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="mt-12 flex justify-center"
         >
           <div className="inline-flex items-center gap-3 rounded-full bg-paper border border-border px-6 py-3 shadow-sm">
             <Shield size={18} className="text-ochre" />

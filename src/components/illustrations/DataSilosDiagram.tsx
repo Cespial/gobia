@@ -7,15 +7,21 @@ interface DataSilosDiagramProps {
 }
 
 export default function DataSilosDiagram({ animate = true }: DataSilosDiagramProps) {
-  const systems = [
-    { label: "CHIP", sub: "Contaduría", x: 40, y: 40 },
-    { label: "SISFUT", sub: "Presupuesto", x: 160, y: 28 },
-    { label: "Excel", sub: "Reportes", x: 280, y: 40 },
-    { label: "SECOP", sub: "Contratos", x: 350, y: 110 },
-    { label: "SIRECI", sub: "CGR", x: 290, y: 180 },
-    { label: "SIA", sub: "Auditoría", x: 160, y: 195 },
-    { label: "MUISCA", sub: "DIAN", x: 40, y: 175 },
+  // 7 nodes evenly spaced in a circle around center (200, 110), radius 90
+  const cx = 200, cy = 110, r = 88;
+  const systemLabels = [
+    { label: "CHIP", sub: "Contaduría" },
+    { label: "SISFUT", sub: "Presupuesto" },
+    { label: "Excel", sub: "Reportes" },
+    { label: "SECOP", sub: "Contratos" },
+    { label: "SIRECI", sub: "CGR" },
+    { label: "SIA", sub: "Auditoría" },
+    { label: "MUISCA", sub: "DIAN" },
   ];
+  const systems = systemLabels.map((s, i) => {
+    const angle = (-Math.PI / 2) + (i * 2 * Math.PI) / 7;
+    return { ...s, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
 
   // Broken connections between adjacent systems
   const connections: [number, number][] = [
@@ -59,19 +65,19 @@ export default function DataSilosDiagram({ animate = true }: DataSilosDiagramPro
         initial={animate ? { scale: 0, opacity: 0 } : undefined}
         animate={animate ? { scale: 1, opacity: 1 } : undefined}
         transition={{ duration: 0.5, delay: 0.2, type: "spring" }}
-        style={{ transformOrigin: "195px 112px" }}
+        style={{ transformOrigin: `${cx}px ${cy}px` }}
       >
         {/* Frustration glow */}
-        <circle cx={195} cy={112} r={40} fill="#FDECEA" opacity={0.3} />
-        <circle cx={195} cy={112} r={28} fill="#FFFDF8" stroke="#DDD4C4" strokeWidth={1} />
+        <circle cx={cx} cy={cy} r={40} fill="#FDECEA" opacity={0.3} />
+        <circle cx={cx} cy={cy} r={28} fill="#FFFDF8" stroke="#DDD4C4" strokeWidth={1} />
 
         {/* Person silhouette */}
-        <circle cx={195} cy={102} r={7} fill="#9E9484" />
-        <path d="M 183 120 Q 183 110 195 110 Q 207 110 207 120" fill="#9E9484" />
+        <circle cx={cx} cy={cy - 10} r={7} fill="#9E9484" />
+        <path d={`M ${cx - 12} ${cy + 8} Q ${cx - 12} ${cy - 2} ${cx} ${cy - 2} Q ${cx + 12} ${cy - 2} ${cx + 12} ${cy + 8}`} fill="#9E9484" />
 
         {/* Question marks floating */}
         <motion.text
-          x={210} y={98}
+          x={cx + 12} y={cy - 14}
           fill="#E53935"
           fontSize={10}
           fontWeight={700}
@@ -82,7 +88,7 @@ export default function DataSilosDiagram({ animate = true }: DataSilosDiagramPro
           ?
         </motion.text>
         <motion.text
-          x={178} y={96}
+          x={cx - 20} y={cy - 16}
           fill="#E53935"
           fontSize={8}
           fontWeight={700}
