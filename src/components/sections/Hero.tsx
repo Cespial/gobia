@@ -23,6 +23,7 @@ export default function Hero() {
           poster="/hero/hero-data-viz-poster.jpg"
           className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-auto mix-blend-multiply opacity-70"
         >
+          <source src="/hero/hero-data-viz.webm" type="video/webm" />
           <source src="/hero/hero-data-viz.mp4" type="video/mp4" />
         </video>
       </div>
