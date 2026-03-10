@@ -2,7 +2,14 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import ColombiaMapSVG from "@/components/illustrations/ColombiaMapSVG";
+import dynamic from "next/dynamic";
+
+const ColombiaMapbox = dynamic(() => import("@/components/illustrations/ColombiaMapbox"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full max-w-xl mx-auto aspect-[3/4] rounded-2xl bg-gray-100 animate-pulse" />
+  ),
+});
 
 const painMetrics = [
   {
@@ -65,7 +72,7 @@ export default function ProblemaSection() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-14"
         >
-          <ColombiaMapSVG animate={isInView} />
+          <ColombiaMapbox animate={isInView} />
         </motion.div>
 
         {/* Pain metrics — visual counters */}
