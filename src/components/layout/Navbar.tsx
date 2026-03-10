@@ -56,7 +56,7 @@ export default function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-background/92 backdrop-blur-xl border-b border-border"
+            ? "bg-white/92 backdrop-blur-xl border-b border-border"
             : "bg-transparent border-b border-transparent"
         }`}
         style={{ boxShadow: scrolled ? "var(--shadow-xs)" : "none" }}
@@ -143,7 +143,7 @@ export default function Navbar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-ink/15 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-black/15 backdrop-blur-sm"
               onClick={closeMobile}
             />
             <motion.div
@@ -151,7 +151,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] as const }}
-              className="fixed top-[72px] left-0 right-0 z-50 bg-paper border-b border-border shadow-lg rounded-b-2xl overflow-hidden"
+              className="fixed top-[72px] left-0 right-0 z-50 bg-white border-b border-border shadow-lg rounded-b-2xl overflow-hidden"
             >
               <div className="flex flex-col px-5 py-4 gap-1">
                 {navLinks.map((link, i) => {

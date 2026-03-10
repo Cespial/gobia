@@ -11,7 +11,7 @@ const fadeUp = (delay: number) => ({
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[85vh] md:min-h-screen flex flex-col bg-background overflow-hidden">
+    <section className="relative min-h-[75vh] md:min-h-screen flex flex-col bg-background overflow-hidden">
       {/* ── Video background layer ── */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <video
@@ -33,11 +33,11 @@ export default function Hero() {
         style={{
           background: `linear-gradient(
             to bottom,
-            #FAF6F0 0%,
-            #FAF6F0 55%,
-            rgba(250, 246, 240, 0.95) 65%,
-            rgba(250, 246, 240, 0.7) 78%,
-            rgba(250, 246, 240, 0.3) 90%,
+            #F8F8F6 0%,
+            #F8F8F6 55%,
+            rgba(248, 248, 246, 0.95) 65%,
+            rgba(248, 248, 246, 0.7) 78%,
+            rgba(248, 248, 246, 0.3) 90%,
             transparent 100%
           )`,
         }}
@@ -72,7 +72,7 @@ export default function Hero() {
           {/* Subheadline */}
           <motion.p
             {...fadeUp(0.35)}
-            className="text-[1rem] md:text-[1.0625rem] leading-relaxed text-ink/70 max-w-md mb-8"
+            className="text-[1rem] md:text-[1.0625rem] leading-relaxed text-gray-500 max-w-md mb-8"
           >
             Conectamos hacienda, planeación y normativa en una sola
             plataforma. Para que alcaldías y gobernaciones tomen decisiones
