@@ -97,9 +97,11 @@ export default function Hero() {
               Respaldado por
             </span>
             <div className="flex items-center gap-x-6 gap-y-2 flex-wrap justify-center">
-              <span className="text-ink font-semibold">inplux.co</span>
+              <a href="https://inplux.co" target="_blank" rel="noopener noreferrer" className="text-ink font-semibold hover:text-ochre transition-colors">inplux.co</a>
               <span className="w-px h-3 bg-border" aria-hidden="true" />
-              <span className="text-ink font-semibold">tribai.co</span>
+              <a href="https://tribai.co" target="_blank" rel="noopener noreferrer" className="text-ink font-semibold hover:text-ochre transition-colors">tribai.co</a>
+              <span className="w-px h-3 bg-border" aria-hidden="true" />
+              <a href="https://fourier.dev" target="_blank" rel="noopener noreferrer" className="text-ink font-semibold hover:text-ochre transition-colors">fourier.dev</a>
               <span className="w-px h-3 bg-border" aria-hidden="true" />
               <span className="text-ink font-semibold">25 años de experiencia</span>
             </div>
