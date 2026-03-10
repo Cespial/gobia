@@ -1,10 +1,32 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { motion, useInView, useMotionValue, useTransform, animate } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
 import { MapPin, TrendingUp, FileCheck, CheckCircle2 } from "lucide-react";
 
-const cases = [
+/* ─── Metric types ─── */
+type MetricType = "ring" | "bold" | "dots";
+
+interface Metric {
+  type: MetricType;
+  value: number;
+  suffix?: string;
+  label?: string;
+  /** For dots visualization: total dots in the grid */
+  totalDots?: number;
+}
+
+interface CaseData {
+  icon: typeof MapPin;
+  entity: string;
+  tag: string;
+  title: string;
+  benefits: string[];
+  metrics: Metric[];
+}
+
+/* ─── Data ─── */
+const cases: CaseData[] = [
   {
     icon: MapPin,
     entity: "Alcaldía municipal",
@@ -14,6 +36,10 @@ const cases = [
       "80% menos tiempo en reportes trimestrales",
       "100% metas del PDM con seguimiento activo",
       "0 multas por rendición tardía",
+    ],
+    metrics: [
+      { type: "ring", value: 80, suffix: "%", label: "menos tiempo" },
+      { type: "bold", value: 0, suffix: " multas", label: "por rendición" },
     ],
   },
   {
@@ -26,6 +52,10 @@ const cases = [
       "Alertas tempranas de desempeño fiscal",
       "3x más rápido el análisis departamental",
     ],
+    metrics: [
+      { type: "dots", value: 32, totalDots: 36, label: "municipios" },
+      { type: "bold", value: 3, suffix: "x", label: "más rápido" },
+    ],
   },
   {
     icon: FileCheck,
@@ -37,9 +67,188 @@ const cases = [
       "98% precisión en generación de XML exógena",
       "0 rechazos por errores de formato en DIAN",
     ],
+    metrics: [
+      { type: "ring", value: 98, suffix: "%", label: "precisión" },
+      { type: "bold", value: 5, suffix: " min", label: "por consulta" },
+    ],
   },
 ];
 
+/* ─── Animated counter hook ─── */
+function useCountUp(target: number, isInView: boolean, duration = 1.5) {
+  const motionValue = useMotionValue(0);
+  const rounded = useTransform(motionValue, (v) => Math.round(v));
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    if (!isInView) return;
+    const controls = animate(motionValue, target, {
+      duration,
+      ease: [0.22, 1, 0.36, 1],
+    });
+    return () => controls.stop();
+  }, [isInView, target, duration, motionValue]);
+
+  useEffect(() => {
+    const unsubscribe = rounded.on("change", (v) => setDisplay(v));
+    return () => unsubscribe();
+  }, [rounded]);
+
+  return display;
+}
+
+/* ─── Circular progress ring ─── */
+function ProgressRing({
+  percent,
+  isInView,
+}: {
+  percent: number;
+  isInView: boolean;
+}) {
+  const size = 40;
+  const strokeWidth = 3.5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <svg width={size} height={size} className="shrink-0 -rotate-90">
+      {/* Track */}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#E5E5E5"
+        strokeWidth={strokeWidth}
+      />
+      {/* Fill */}
+      <motion.circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="var(--ochre)"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        initial={{ strokeDashoffset: circumference }}
+        animate={
+          isInView
+            ? { strokeDashoffset: circumference - (percent / 100) * circumference }
+            : { strokeDashoffset: circumference }
+        }
+        transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
+      />
+    </svg>
+  );
+}
+
+/* ─── Dot grid visualization ─── */
+function DotGrid({
+  filled,
+  total,
+  isInView,
+}: {
+  filled: number;
+  total: number;
+  isInView: boolean;
+}) {
+  const cols = 6;
+
+  return (
+    <div
+      className="grid gap-[3px] shrink-0"
+      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, width: 40, height: 40 }}
+    >
+      {Array.from({ length: total }).map((_, i) => (
+        <motion.div
+          key={i}
+          className="rounded-full"
+          style={{ width: 4, height: 4 }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={
+            isInView
+              ? {
+                  opacity: 1,
+                  scale: 1,
+                  backgroundColor: i < filled ? "var(--ochre)" : "#E5E5E5",
+                }
+              : { opacity: 0, scale: 0 }
+          }
+          transition={{
+            duration: 0.3,
+            delay: isInView ? 0.3 + i * 0.03 : 0,
+            ease: "easeOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Single metric display ─── */
+function MetricDisplay({
+  metric,
+  isInView,
+}: {
+  metric: Metric;
+  isInView: boolean;
+}) {
+  const count = useCountUp(metric.value, isInView);
+
+  if (metric.type === "ring") {
+    return (
+      <div className="flex items-center gap-2.5">
+        <ProgressRing percent={metric.value} isInView={isInView} />
+        <div>
+          <p className="text-[0.9375rem] font-bold text-ochre leading-tight">
+            {count}
+            {metric.suffix}
+          </p>
+          {metric.label && (
+            <p className="text-[0.6875rem] text-gray-400 leading-tight">{metric.label}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (metric.type === "dots") {
+    return (
+      <div className="flex items-center gap-2.5">
+        <DotGrid
+          filled={metric.value}
+          total={metric.totalDots ?? 36}
+          isInView={isInView}
+        />
+        <div>
+          <p className="text-[0.9375rem] font-bold text-ochre leading-tight">
+            {count}
+            {metric.suffix}
+          </p>
+          {metric.label && (
+            <p className="text-[0.6875rem] text-gray-400 leading-tight">{metric.label}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* bold */
+  return (
+    <div className="flex items-center gap-1.5">
+      <p className="text-[1.125rem] font-bold text-ochre leading-tight">
+        {count}
+        {metric.suffix}
+      </p>
+      {metric.label && (
+        <p className="text-[0.6875rem] text-gray-400 leading-tight">{metric.label}</p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main component ─── */
 export default function CasosDeUso() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
@@ -107,6 +316,18 @@ export default function CasosDeUso() {
                   </li>
                 ))}
               </ul>
+
+              {/* Metrics row */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
+                className="flex items-center gap-5 mt-5 pt-4 border-t border-border-light"
+              >
+                {caso.metrics.map((metric, mi) => (
+                  <MetricDisplay key={mi} metric={metric} isInView={isInView} />
+                ))}
+              </motion.div>
             </motion.div>
           ))}
         </div>

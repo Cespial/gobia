@@ -1,17 +1,165 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
-import { ArrowRight, BarChart3, FileCheck, ClipboardList, Megaphone, MapPin, Brain } from "lucide-react";
+import { motion, useInView, animate } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
+import { ArrowRight } from "lucide-react";
 
-const modules = [
-  { icon: BarChart3, label: "Hacienda", href: "/demo" },
-  { icon: ClipboardList, label: "PDM", href: "/demo/pdm" },
-  { icon: Brain, label: "Estatuto IA", href: "/demo/estatuto" },
-  { icon: FileCheck, label: "Exógena", href: "/demo/exogena" },
-  { icon: Megaphone, label: "Rendición", href: "/demo/rendicion" },
-  { icon: MapPin, label: "Gemelo", href: "/demo/gemelo" },
+/* ─── Animated number counter ────────────────────────────────────────────── */
+
+function AnimatedNumber({
+  value,
+  decimals = 0,
+  prefix = "",
+  suffix = "",
+  inView,
+  delay = 0,
+}: {
+  value: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+  inView: boolean;
+  delay?: number;
+}) {
+  const [display, setDisplay] = useState("0");
+
+  useEffect(() => {
+    if (!inView) return;
+
+    const timeout = setTimeout(() => {
+      const mv = { val: 0 };
+      const controls = animate(mv, { val: value }, {
+        duration: 1.4,
+        ease: [0.25, 1, 0.5, 1],
+        onUpdate: () => {
+          setDisplay(mv.val.toFixed(decimals));
+        },
+      });
+      return () => controls.stop();
+    }, delay * 1000);
+
+    return () => clearTimeout(timeout);
+  }, [inView, value, decimals, delay]);
+
+  return (
+    <span>
+      {prefix}{display}{suffix}
+    </span>
+  );
+}
+
+/* ─── Sparkline (pure CSS/SVG) ───────────────────────────────────────────── */
+
+function Sparkline({ data, color = "var(--ochre)" }: { data: number[]; color?: string }) {
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const w = 64;
+  const h = 20;
+
+  const points = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / range) * (h - 2) - 1;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="inline-block ml-2 align-middle">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* ─── Progress bar ───────────────────────────────────────────────────────── */
+
+function ProgressBar({ value, max, inView }: { value: number; max: number; inView: boolean }) {
+  const pct = (value / max) * 100;
+
+  return (
+    <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+      <motion.div
+        className="h-full rounded-full"
+        style={{ background: "var(--ochre)" }}
+        initial={{ width: 0 }}
+        animate={inView ? { width: `${pct}%` } : { width: 0 }}
+        transition={{ duration: 1.2, delay: 0.6, ease: [0.25, 1, 0.5, 1] }}
+      />
+    </div>
+  );
+}
+
+/* ─── Budget bar row ─────────────────────────────────────────────────────── */
+
+function BudgetBar({
+  label,
+  value,
+  maxValue,
+  inView,
+  index,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  inView: boolean;
+  index: number;
+}) {
+  const pct = (value / maxValue) * 100;
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[0.6875rem] text-sepia w-[88px] shrink-0 text-right font-medium">
+        {label}
+      </span>
+      <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden relative">
+        <motion.div
+          className="h-full rounded"
+          style={{ background: index === 1 ? "var(--ochre)" : "var(--ink)" }}
+          initial={{ width: 0 }}
+          animate={inView ? { width: `${pct}%` } : { width: 0 }}
+          transition={{
+            duration: 1,
+            delay: 0.8 + index * 0.1,
+            ease: [0.25, 1, 0.5, 1],
+          }}
+        />
+        <motion.span
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-[0.5625rem] font-semibold"
+          style={{ color: pct > 45 ? "var(--paper)" : "var(--ink)" }}
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.3, delay: 1.2 + index * 0.1 }}
+        >
+          {value.toLocaleString("es-CO")} MM
+        </motion.span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── KPI data ───────────────────────────────────────────────────────────── */
+
+const sparklineData = [62, 65, 63, 68, 70, 72, 71, 75, 74, 76, 78, 78.4];
+
+const budgetCategories = [
+  { label: "Funcionamiento", value: 1842 },
+  { label: "Inversión", value: 4267 },
+  { label: "Deuda", value: 386 },
+  { label: "SGP", value: 2145 },
+  { label: "Propios", value: 3102 },
 ];
+
+const maxBudget = Math.max(...budgetCategories.map((b) => b.value));
+
+/* ─── Main component ────────────────────────────────────────────────────── */
 
 export default function ProductoPreview() {
   const ref = useRef(null);
@@ -20,6 +168,7 @@ export default function ProductoPreview() {
   return (
     <section ref={ref} className="relative py-24 md:py-32 bg-paper overflow-hidden">
       <div className="mx-auto max-w-[1120px] px-5 md:px-8">
+        {/* ── Section header ── */}
         <div className="text-center mb-12">
           <motion.span
             initial={{ opacity: 0, y: 20 }}
@@ -51,7 +200,7 @@ export default function ProductoPreview() {
           </motion.p>
         </div>
 
-        {/* Browser-frame demo preview */}
+        {/* ── Browser-frame mini dashboard ── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -72,35 +221,143 @@ export default function ProductoPreview() {
             </div>
           </div>
 
-          {/* Module grid inside browser frame */}
-          <div className="rounded-b-xl border border-t-0 border-border bg-background p-6 md:p-8">
-            <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-sepia mb-5 text-center">
-              Explora cada módulo con datos reales de Medellín
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-              {modules.map((mod, i) => (
-                <motion.a
-                  key={mod.label}
-                  href={mod.href}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                  transition={{ duration: 0.4, delay: 0.35 + i * 0.06 }}
-                  className="flex items-center gap-2.5 p-3.5 rounded-xl bg-paper border border-border hover:border-ochre/40 hover:shadow-sm transition-all duration-200 group"
-                >
-                  <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-ochre-soft text-sepia group-hover:text-ochre transition-colors">
-                    <mod.icon size={16} strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[0.8125rem] font-semibold text-ink">{mod.label}</span>
-                </motion.a>
-              ))}
+          {/* Dashboard content */}
+          <div className="rounded-b-xl border border-t-0 border-border bg-background p-4 md:p-6">
+            {/* Dashboard header bar */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded bg-ink flex items-center justify-center">
+                  <span className="text-[0.5rem] font-bold text-paper leading-none">G</span>
+                </div>
+                <span className="text-[0.75rem] font-semibold text-ink">
+                  Medellín — Panel Fiscal
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[0.625rem] text-sepia">Vigencia 2024</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
             </div>
 
-            <div className="flex justify-center">
-              <a
-                href="/demo"
-                className="btn-primary"
+            {/* ── KPI cards row ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+              {/* Ejecución Presupuestal */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="bg-paper rounded-lg border border-border p-3.5 group"
               >
+                <span className="text-[0.625rem] uppercase tracking-[0.08em] text-sepia font-medium block mb-1">
+                  Ejecución Presupuestal
+                </span>
+                <div className="flex items-end justify-between">
+                  <span className="text-[1.5rem] md:text-[1.75rem] font-bold text-ink leading-none tracking-tight">
+                    <AnimatedNumber value={78.4} decimals={1} suffix="%" inView={isInView} delay={0.5} />
+                  </span>
+                  <Sparkline data={sparklineData} />
+                </div>
+                <span className="text-[0.5625rem] text-sepia mt-1.5 block">
+                  +3.2pp vs. mes anterior
+                </span>
+              </motion.div>
+
+              {/* Recaudo Efectivo */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="bg-paper rounded-lg border border-border p-3.5"
+              >
+                <span className="text-[0.625rem] uppercase tracking-[0.08em] text-sepia font-medium block mb-1">
+                  Recaudo Efectivo
+                </span>
+                <div className="flex items-end justify-between">
+                  <span className="text-[1.5rem] md:text-[1.75rem] font-bold text-ink leading-none tracking-tight">
+                    $<AnimatedNumber value={142.3} decimals={1} suffix="M" inView={isInView} delay={0.6} />
+                  </span>
+                </div>
+                <span className="text-[0.5625rem] text-sepia mt-1.5 block">
+                  92.1% de la meta anual
+                </span>
+              </motion.div>
+
+              {/* Metas PDM Cumplidas */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="bg-paper rounded-lg border border-border p-3.5"
+              >
+                <span className="text-[0.625rem] uppercase tracking-[0.08em] text-sepia font-medium block mb-1">
+                  Metas PDM Cumplidas
+                </span>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-[1.5rem] md:text-[1.75rem] font-bold text-ink leading-none tracking-tight">
+                    <AnimatedNumber value={64} inView={isInView} delay={0.7} />
+                  </span>
+                  <span className="text-[0.875rem] font-semibold text-sepia">/98</span>
+                </div>
+                <ProgressBar value={64} max={98} inView={isInView} />
+              </motion.div>
+
+              {/* IDF Score */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.7 }}
+                className="bg-paper rounded-lg border border-border p-3.5"
+              >
+                <span className="text-[0.625rem] uppercase tracking-[0.08em] text-sepia font-medium block mb-1">
+                  IDF Score
+                </span>
+                <div className="flex items-end gap-2">
+                  <span className="text-[1.5rem] md:text-[1.75rem] font-bold text-ink leading-none tracking-tight">
+                    <AnimatedNumber value={83.6} decimals={1} inView={isInView} delay={0.8} />
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.5625rem] font-semibold bg-emerald-50 text-emerald-700 mb-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Sostenible
+                  </span>
+                </div>
+                <span className="text-[0.5625rem] text-sepia mt-1.5 block">
+                  Rango 80-100: desempeño alto
+                </span>
+              </motion.div>
+            </div>
+
+            {/* ── Budget bar chart ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.75 }}
+              className="bg-paper rounded-lg border border-border p-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[0.6875rem] font-semibold text-ink uppercase tracking-[0.06em]">
+                  Composición Presupuestal 2024
+                </span>
+                <span className="text-[0.5625rem] text-sepia">
+                  Cifras en miles de millones COP
+                </span>
+              </div>
+              <div className="space-y-2">
+                {budgetCategories.map((cat, i) => (
+                  <BudgetBar
+                    key={cat.label}
+                    label={cat.label}
+                    value={cat.value}
+                    maxValue={maxBudget}
+                    inView={isInView}
+                    index={i}
+                  />
+                ))}
+              </div>
+            </motion.div>
+
+            {/* ── CTA ── */}
+            <div className="flex justify-center mt-5">
+              <a href="/demo" className="btn-primary">
                 Ver demo completo — Medellín
                 <ArrowRight size={16} />
               </a>

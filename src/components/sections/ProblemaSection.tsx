@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import DataSilosDiagram from "@/components/illustrations/DataSilosDiagram";
+import ColombiaMapSVG from "@/components/illustrations/ColombiaMapSVG";
 
 const painMetrics = [
   {
@@ -65,7 +65,7 @@ export default function ProblemaSection() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-14"
         >
-          <DataSilosDiagram animate={isInView} />
+          <ColombiaMapSVG animate={isInView} />
         </motion.div>
 
         {/* Pain metrics — visual counters */}

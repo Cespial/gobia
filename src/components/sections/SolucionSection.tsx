@@ -2,15 +2,16 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import {
-  LayoutDashboard,
-  Brain,
-  FileCheck,
-  MapPin,
-  TrendingUp,
-  Shield,
-} from "lucide-react";
+import { Shield } from "lucide-react";
 import PlatformHubDiagram from "@/components/illustrations/PlatformHubDiagram";
+import {
+  MicroHacienda,
+  MicroEstatuto,
+  MicroPDM,
+  MicroExogena,
+  MicroGemelo,
+  MicroRendicion,
+} from "@/components/illustrations/MicroIcons";
 
 const statusStyles = {
   beta: "bg-ochre/10 text-ochre border-ochre/20",
@@ -28,7 +29,7 @@ const statusLabels: Record<Status, string> = {
 
 const features = [
   {
-    icon: LayoutDashboard,
+    icon: MicroHacienda,
     title: "Hacienda Dashboard",
     description:
       "Ejecución presupuestal, recaudo, cartera e IDF consolidados automáticamente.",
@@ -36,7 +37,7 @@ const features = [
     highlights: ["Ejecución presupuestal", "Recaudo", "Scorecard IDF"],
   },
   {
-    icon: Brain,
+    icon: MicroEstatuto,
     title: "Estatuto Municipal IA",
     description:
       "Consulta tu estatuto tributario en lenguaje natural con citación verificable.",
@@ -44,7 +45,7 @@ const features = [
     highlights: ["540+ artículos", "Citación verificable", "Búsqueda semántica"],
   },
   {
-    icon: TrendingUp,
+    icon: MicroPDM,
     title: "Seguimiento PDM",
     description:
       "Metas del plan de desarrollo con semáforo automático y alertas tempranas.",
@@ -52,7 +53,7 @@ const features = [
     highlights: ["Semáforo automático", "Alertas", "Reportes PDF"],
   },
   {
-    icon: FileCheck,
+    icon: MicroExogena,
     title: "Exógena Automatizada",
     description:
       "Genera XML para DIAN en minutos con validación cruzada de NIT y cruces contables.",
@@ -60,7 +61,7 @@ const features = [
     highlights: ["6 formatos DIAN", "Validación NIT", "0 rechazos"],
   },
   {
-    icon: MapPin,
+    icon: MicroGemelo,
     title: "Gemelo Municipal",
     description:
       "Mapa digital con datos sociales, fiscales e infraestructura de DANE y TerriData.",
@@ -68,7 +69,7 @@ const features = [
     highlights: ["Georreferenciado", "5 capas", "1,122 municipios"],
   },
   {
-    icon: Shield,
+    icon: MicroRendicion,
     title: "Rendición Automatizada",
     description:
       "SIRECI, SIA y FUT pre-generados en el formato exacto de cada entidad.",
@@ -137,8 +138,8 @@ export default function SolucionSection() {
               className="card p-5 md:p-6 flex flex-col"
             >
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-ochre-soft text-sepia">
-                  <feature.icon size={16} strokeWidth={1.5} />
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-ochre-soft">
+                  <feature.icon animate={isInView} />
                 </div>
                 <span className={`text-[0.5625rem] font-semibold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border ${statusStyles[feature.status]}`}>
                   {statusLabels[feature.status]}
