@@ -21,7 +21,7 @@ export default function Hero() {
           playsInline
           preload="none"
           poster="/hero/hero-data-viz-poster.jpg"
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-auto mix-blend-multiply opacity-85"
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-auto mix-blend-multiply opacity-70"
         >
           <source src="/hero/hero-data-viz.mp4" type="video/mp4" />
         </video>
@@ -29,14 +29,15 @@ export default function Hero() {
 
       {/* ── Top gradient: protects text zone ── */}
       <div
-        className="absolute top-0 left-0 right-0 h-[55%] z-[1] pointer-events-none"
+        className="absolute top-0 left-0 right-0 h-[80%] z-[1] pointer-events-none"
         style={{
           background: `linear-gradient(
             to bottom,
-            var(--background) 0%,
-            var(--background) 50%,
-            rgba(250, 246, 240, 0.85) 70%,
-            rgba(250, 246, 240, 0.4) 85%,
+            #FAF6F0 0%,
+            #FAF6F0 55%,
+            rgba(250, 246, 240, 0.95) 65%,
+            rgba(250, 246, 240, 0.7) 78%,
+            rgba(250, 246, 240, 0.3) 90%,
             transparent 100%
           )`,
         }}
@@ -71,7 +72,7 @@ export default function Hero() {
           {/* Subheadline */}
           <motion.p
             {...fadeUp(0.35)}
-            className="text-[1rem] md:text-[1.0625rem] leading-relaxed text-gray-500 max-w-md mb-8"
+            className="text-[1rem] md:text-[1.0625rem] leading-relaxed text-ink/70 max-w-md mb-8"
           >
             Conectamos hacienda, planeación y normativa en una sola
             plataforma. Para que alcaldías y gobernaciones tomen decisiones
