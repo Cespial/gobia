@@ -22,6 +22,7 @@ function AnimatedNumber({
   delay?: number;
 }) {
   const [display, setDisplay] = useState("0");
+  const [finished, setFinished] = useState(false);
 
   useEffect(() => {
     if (!inView) return;
@@ -34,6 +35,9 @@ function AnimatedNumber({
         onUpdate: () => {
           setDisplay(mv.val.toFixed(decimals));
         },
+        onComplete: () => {
+          setFinished(true);
+        },
       });
       return () => controls.stop();
     }, delay * 1000);
@@ -42,9 +46,12 @@ function AnimatedNumber({
   }, [inView, value, decimals, delay]);
 
   return (
-    <span>
+    <motion.span
+      animate={finished ? { scale: [1, 1.1, 1] } : {}}
+      transition={{ duration: 0.3 }}
+    >
       {prefix}{display}{suffix}
-    </span>
+    </motion.span>
   );
 }
 

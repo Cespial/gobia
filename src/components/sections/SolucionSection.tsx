@@ -141,7 +141,13 @@ export default function SolucionSection() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-ochre-soft">
                   <feature.icon animate={isInView} />
                 </div>
-                <span className={`text-[0.5625rem] font-semibold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border ${statusStyles[feature.status]}`}>
+                <span className={`inline-flex items-center gap-1.5 text-[0.5625rem] font-semibold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border ${statusStyles[feature.status]}`}>
+                  {feature.status === "beta" && (
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ochre opacity-40" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-ochre" />
+                    </span>
+                  )}
                   {statusLabels[feature.status]}
                 </span>
               </div>

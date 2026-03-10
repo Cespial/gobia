@@ -69,6 +69,7 @@ export default function ColombiaMapbox({ animate = true }: ColombiaMapboxProps) 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
+  const revealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const initMap = useCallback(() => {
@@ -137,7 +138,9 @@ export default function ColombiaMapbox({ animate = true }: ColombiaMapboxProps) 
             "case",
             ["boolean", ["feature-state", "hover"], false],
             0.7,
+            ["boolean", ["feature-state", "visible"], false],
             0.6,
+            0,
           ],
         },
       });
@@ -158,7 +161,9 @@ export default function ColombiaMapbox({ animate = true }: ColombiaMapboxProps) 
             "case",
             ["boolean", ["feature-state", "hover"], false],
             2,
+            ["boolean", ["feature-state", "visible"], false],
             0.8,
+            0,
           ],
         },
       });
@@ -208,6 +213,22 @@ export default function ColombiaMapbox({ animate = true }: ColombiaMapboxProps) 
         popup.current!.remove();
       });
 
+      // Sequential reveal animation
+      let revealIndex = 0;
+      const totalFeatures = 33;
+      revealIntervalRef.current = setInterval(() => {
+        if (revealIndex >= totalFeatures) {
+          clearInterval(revealIntervalRef.current!);
+          revealIntervalRef.current = null;
+          return;
+        }
+        m.setFeatureState(
+          { source: "departments", id: revealIndex },
+          { visible: true }
+        );
+        revealIndex++;
+      }, 60);
+
       setLoaded(true);
     });
   }, []);
@@ -217,6 +238,10 @@ export default function ColombiaMapbox({ animate = true }: ColombiaMapboxProps) 
       initMap();
     }
     return () => {
+      if (revealIntervalRef.current) {
+        clearInterval(revealIntervalRef.current);
+        revealIntervalRef.current = null;
+      }
       if (map.current) {
         map.current.remove();
         map.current = null;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
@@ -10,6 +11,8 @@ const fadeUp = (delay: number) => ({
 });
 
 export default function Hero() {
+  const [videoLoaded, setVideoLoaded] = useState(false);
+
   return (
     <section className="relative min-h-[75vh] md:min-h-screen flex flex-col bg-background overflow-hidden">
       {/* ── Video background layer ── */}
@@ -21,7 +24,8 @@ export default function Hero() {
           playsInline
           preload="none"
           poster="/hero/hero-data-viz-poster.jpg"
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-auto mix-blend-multiply opacity-70"
+          onLoadedData={() => setVideoLoaded(true)}
+          className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-auto mix-blend-multiply transition-opacity duration-1000 ${videoLoaded ? "opacity-70" : "opacity-0"}`}
         >
           <source src="/hero/hero-data-viz.webm" type="video/webm" />
           <source src="/hero/hero-data-viz.mp4" type="video/mp4" />

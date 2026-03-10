@@ -79,12 +79,15 @@ function useCountUp(target: number, isInView: boolean, duration = 1.5) {
   const motionValue = useMotionValue(0);
   const rounded = useTransform(motionValue, (v) => Math.round(v));
   const [display, setDisplay] = useState(0);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (!isInView) return;
+    setDone(false);
     const controls = animate(motionValue, target, {
       duration,
       ease: [0.22, 1, 0.36, 1],
+      onComplete: () => setDone(true),
     });
     return () => controls.stop();
   }, [isInView, target, duration, motionValue]);
@@ -94,7 +97,7 @@ function useCountUp(target: number, isInView: boolean, duration = 1.5) {
     return () => unsubscribe();
   }, [rounded]);
 
-  return display;
+  return { display, done };
 }
 
 /* ─── Circular progress ring ─── */
@@ -194,17 +197,21 @@ function MetricDisplay({
   metric: Metric;
   isInView: boolean;
 }) {
-  const count = useCountUp(metric.value, isInView);
+  const { display: count, done } = useCountUp(metric.value, isInView);
 
   if (metric.type === "ring") {
     return (
       <div className="flex items-center gap-2.5">
         <ProgressRing percent={metric.value} isInView={isInView} />
         <div>
-          <p className="text-[0.9375rem] font-bold text-ochre leading-tight">
+          <motion.p
+            className="text-[0.9375rem] font-bold text-ochre leading-tight"
+            animate={done ? { scale: [1, 1.12, 1] } : {}}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
             {count}
             {metric.suffix}
-          </p>
+          </motion.p>
           {metric.label && (
             <p className="text-[0.6875rem] text-gray-400 leading-tight">{metric.label}</p>
           )}
@@ -222,10 +229,14 @@ function MetricDisplay({
           isInView={isInView}
         />
         <div>
-          <p className="text-[0.9375rem] font-bold text-ochre leading-tight">
+          <motion.p
+            className="text-[0.9375rem] font-bold text-ochre leading-tight"
+            animate={done ? { scale: [1, 1.12, 1] } : {}}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
             {count}
             {metric.suffix}
-          </p>
+          </motion.p>
           {metric.label && (
             <p className="text-[0.6875rem] text-gray-400 leading-tight">{metric.label}</p>
           )}
@@ -237,10 +248,14 @@ function MetricDisplay({
   /* bold */
   return (
     <div className="flex items-center gap-1.5">
-      <p className="text-[1.125rem] font-bold text-ochre leading-tight">
+      <motion.p
+        className="text-[1.125rem] font-bold text-ochre leading-tight"
+        animate={done ? { scale: [1, 1.12, 1] } : {}}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
         {count}
         {metric.suffix}
-      </p>
+      </motion.p>
       {metric.label && (
         <p className="text-[0.6875rem] text-gray-400 leading-tight">{metric.label}</p>
       )}

@@ -15,11 +15,17 @@ const navLinks = [
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("");
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
+    };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -49,6 +55,18 @@ export default function Navbar() {
     return () => observers.forEach((o) => o.disconnect());
   }, []);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   return (
@@ -62,7 +80,7 @@ export default function Navbar() {
         style={{ boxShadow: scrolled ? "var(--shadow-xs)" : "none" }}
       >
         <div className="mx-auto flex max-w-[1120px] items-center justify-between px-5 py-4 md:px-8">
-          <a href="#" className="flex items-center gap-0.5">
+          <a href="#" className="flex items-center gap-0.5 transition-transform duration-200 hover:scale-105">
             <GobiaLogo variant="navbar" />
           </a>
 
@@ -133,6 +151,10 @@ export default function Navbar() {
             </AnimatePresence>
           </button>
         </div>
+        <div
+          className="absolute bottom-0 left-0 h-[2px] bg-ochre transition-all duration-150 ease-out"
+          style={{ width: `${scrollProgress}%` }}
+        />
       </nav>
 
       <AnimatePresence>
