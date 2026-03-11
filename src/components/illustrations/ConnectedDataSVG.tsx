@@ -7,249 +7,206 @@ interface ConnectedDataSVGProps {
 }
 
 /*
-  Mirror version of FragmentedDataSVG:
-  Same 16 sources, same layout — but now all connected through Gobia.
-  Solid ochre lines, green checkmarks, data flowing successfully.
+  Mirror of FragmentedDataSVG — same 16 sources, same layout,
+  but now all connected through Gobia with solid ochre lines.
+  Near-monochromatic palette. No decorative noise.
 */
 
-type SourceType = "gov" | "excel" | "pdf" | "paper" | "email";
+interface Source {
+  label: string;
+  sub: string;
+  type: "gov" | "excel" | "pdf" | "paper" | "email";
+}
 
-const innerSources = [
-  { label: "CHIP", sub: "Contaduría General", type: "gov" as SourceType },
-  { label: "SISFUT", sub: "Presupuesto", type: "gov" as SourceType },
-  { label: "SECOP II", sub: "Contratos públicos", type: "gov" as SourceType },
-  { label: "SIRECI", sub: "Rendición CGR", type: "gov" as SourceType },
-  { label: "SIA Observa", sub: "Auditoría territorial", type: "gov" as SourceType },
-  { label: "MUISCA", sub: "DIAN Exógena", type: "gov" as SourceType },
-  { label: "TerriData", sub: "DNP Indicadores", type: "gov" as SourceType },
-  { label: "FUT", sub: "Formulario Único", type: "gov" as SourceType },
+const innerSources: Source[] = [
+  { label: "CHIP", sub: "Contaduría General", type: "gov" },
+  { label: "SISFUT", sub: "Presupuesto", type: "gov" },
+  { label: "SECOP II", sub: "Contratos públicos", type: "gov" },
+  { label: "SIRECI", sub: "Rendición CGR", type: "gov" },
+  { label: "SIA Observa", sub: "Auditoría territorial", type: "gov" },
+  { label: "MUISCA", sub: "DIAN Exógena", type: "gov" },
+  { label: "TerriData", sub: "DNP Indicadores", type: "gov" },
+  { label: "FUT", sub: "Formulario Único", type: "gov" },
 ];
 
-const outerSources = [
-  { label: "Excel", sub: "Importación directa", type: "excel" as SourceType },
-  { label: "PDF", sub: "Indexado con IA", type: "pdf" as SourceType },
-  { label: "Email", sub: "Alertas automáticas", type: "email" as SourceType },
-  { label: "Excel", sub: "Migración asistida", type: "excel" as SourceType },
-  { label: "Word", sub: "Generación automática", type: "paper" as SourceType },
-  { label: "PDF", sub: "Consulta semántica", type: "pdf" as SourceType },
-  { label: "WhatsApp", sub: "Notificaciones", type: "email" as SourceType },
-  { label: "Archivo", sub: "Digitalizado", type: "paper" as SourceType },
+const outerSources: Source[] = [
+  { label: "Excel", sub: "Importación directa", type: "excel" },
+  { label: "PDF", sub: "Indexado con IA", type: "pdf" },
+  { label: "Email", sub: "Alertas automáticas", type: "email" },
+  { label: "Excel", sub: "Migración asistida", type: "excel" },
+  { label: "Word", sub: "Generación automática", type: "paper" },
+  { label: "PDF", sub: "Consulta semántica", type: "pdf" },
+  { label: "WhatsApp", sub: "Notificaciones", type: "email" },
+  { label: "Archivo", sub: "Digitalizado", type: "paper" },
 ];
 
-const typeStyles: Record<SourceType, { bg: string; border: string; accent: string; text: string; icon: string }> = {
-  gov:   { bg: "#F0F4F8", border: "#90CAF9", accent: "#1565C0", text: "#0D47A1", icon: "GOV" },
-  excel: { bg: "#E8F5E9", border: "#A5D6A7", accent: "#2E7D32", text: "#1B5E20", icon: "XLS" },
-  pdf:   { bg: "#FFF3E0", border: "#FFCC80", accent: "#E65100", text: "#BF360C", icon: "PDF" },
-  paper: { bg: "#FFF8E1", border: "#FFE082", accent: "#F9A825", text: "#F57F17", icon: "DOC" },
-  email: { bg: "#F3E5F5", border: "#CE93D8", accent: "#7B1FA2", text: "#4A148C", icon: "MSG" },
+// Same subtle accent colors as FragmentedDataSVG
+const accentByType: Record<string, string> = {
+  gov: "#78909C",
+  excel: "#7CB342",
+  pdf: "#E57373",
+  paper: "#FFB74D",
+  email: "#AB47BC",
 };
 
-// Select connections that show flowing particles
-const particleConns = [0, 1, 3, 4, 6, 7];
-
 export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGProps) {
-  const cx = 400, cy = 265;
-  const innerR = 148, outerR = 255;
-  const nodeW = 80, nodeH = 36;
-  const outerNodeW = 86, outerNodeH = 36;
+  const cx = 400, cy = 270;
+  const innerR = 142, outerR = 248;
 
-  const posOnRing = <T,>(items: T[], r: number, offset = 0) =>
-    items.map((item, i) => {
-      const angle = -Math.PI / 2 + offset + (i * 2 * Math.PI) / items.length;
-      return { ...item, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), angle };
-    });
-
-  const inner = posOnRing(innerSources, innerR);
-  const outer = posOnRing(outerSources, outerR, Math.PI / outerSources.length);
-
-  const outerToInner = outer.map((src) =>
-    inner.reduce((best, n, j) => {
-      const d = Math.hypot(n.x - src.x, n.y - src.y);
-      return d < best.d ? { d, idx: j } : best;
-    }, { d: Infinity, idx: 0 }).idx
-  );
+  const allSources = [
+    ...innerSources.map((s, i) => {
+      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 8;
+      return { ...s, x: cx + innerR * Math.cos(angle), y: cy + innerR * Math.sin(angle), ring: "inner" as const, w: 76, h: 34 };
+    }),
+    ...outerSources.map((s, i) => {
+      const angle = -Math.PI / 2 + (Math.PI / 8) + (i * 2 * Math.PI) / 8;
+      return { ...s, x: cx + outerR * Math.cos(angle), y: cy + outerR * Math.sin(angle), ring: "outer" as const, w: 82, h: 34 };
+    }),
+  ];
 
   return (
     <div className="relative w-full">
-      <svg viewBox="0 0 800 530" fill="none" className="w-full" role="img" aria-label="Todas las fuentes de datos conectadas a través de Gobia">
-        {/* ── Background rings ── */}
-        <circle cx={cx} cy={cy} r={outerR + 55} stroke="#B8956A" strokeWidth={0.3} strokeDasharray="2 10" opacity={0.15} />
-        <circle cx={cx} cy={cy} r={outerR} stroke="#B8956A" strokeWidth={0.4} strokeDasharray="3 6" opacity={0.15} />
-        <circle cx={cx} cy={cy} r={innerR} stroke="#B8956A" strokeWidth={0.5} opacity={0.12} />
-        <circle cx={cx} cy={cy} r={60} stroke="#B8956A" strokeWidth={0.3} opacity={0.1} />
+      <svg
+        viewBox="0 0 800 545"
+        fill="none"
+        className="w-full"
+        role="img"
+        aria-label="Todas las fuentes de datos conectadas a través de Gobia"
+      >
+        {/* ── Subtle guide rings ── */}
+        <circle cx={cx} cy={cy} r={innerR} stroke="#D4CFC7" strokeWidth={0.5} opacity={0.4} />
+        <circle cx={cx} cy={cy} r={outerR} stroke="#D4CFC7" strokeWidth={0.3} opacity={0.25} />
 
-        {/* ── Ring labels ── */}
-        <defs>
-          <path id="cInnerArc" d={`M ${cx - innerR + 14} ${cy} A ${innerR - 14} ${innerR - 14} 0 0 1 ${cx + innerR - 14} ${cy}`} />
-          <path id="cOuterArc" d={`M ${cx - outerR + 14} ${cy} A ${outerR - 14} ${outerR - 14} 0 0 1 ${cx + outerR - 14} ${cy}`} />
-        </defs>
-        <motion.text
-          initial={animate ? { opacity: 0 } : undefined}
-          animate={animate ? { opacity: 0.3 } : undefined}
-          transition={{ duration: 0.5, delay: 1.0 }}
-          fontSize={6.5} fill="#B8956A" fontFamily="'Plus Jakarta Sans', sans-serif" letterSpacing="0.15em" fontWeight={600}
-        >
-          <textPath href="#cInnerArc" startOffset="50%" textAnchor="middle">CONECTADAS VÍA GOBIA</textPath>
-        </motion.text>
-        <motion.text
-          initial={animate ? { opacity: 0 } : undefined}
-          animate={animate ? { opacity: 0.25 } : undefined}
-          transition={{ duration: 0.5, delay: 1.2 }}
-          fontSize={6.5} fill="#B8956A" fontFamily="'Plus Jakarta Sans', sans-serif" letterSpacing="0.15em" fontWeight={600}
-        >
-          <textPath href="#cOuterArc" startOffset="50%" textAnchor="middle">INTEGRADAS AUTOMÁTICAMENTE</textPath>
-        </motion.text>
+        {/* ── Solid connections — all 16, unbroken, ochre ── */}
+        {allSources.map((src, i) => {
+          const dx = src.x - cx, dy = src.y - cy;
+          const len = Math.hypot(dx, dy);
+          const nx = dx / len, ny = dy / len;
+          const delay = src.ring === "inner" ? 0.3 + i * 0.05 : 0.6 + (i - 8) * 0.05;
 
-        {/* ── Solid connections: center → inner ── */}
-        {inner.map((src, i) => (
-          <motion.line
-            key={`ci-${i}`}
-            x1={cx} y1={cy} x2={src.x} y2={src.y}
-            stroke="#B8956A" strokeWidth={0.9} opacity={0.25}
-            initial={animate ? { pathLength: 0, opacity: 0 } : undefined}
-            animate={animate ? { pathLength: 1, opacity: 0.25 } : undefined}
-            transition={{ duration: 0.5, delay: 0.4 + i * 0.06 }}
-          />
-        ))}
-
-        {/* ── Solid connections: inner → outer ── */}
-        {outer.map((src, i) => {
-          const ni = inner[outerToInner[i]];
           return (
             <motion.line
-              key={`co-${i}`}
-              x1={ni.x} y1={ni.y} x2={src.x} y2={src.y}
-              stroke="#B8956A" strokeWidth={0.5} opacity={0.15}
+              key={`conn-${i}`}
+              x1={cx + nx * 48} y1={cy + ny * 48}
+              x2={src.x - nx * (src.w / 2 - 2)} y2={src.y - ny * (src.h / 2 - 2)}
+              stroke="#B8956A"
+              strokeWidth={src.ring === "inner" ? 0.9 : 0.6}
+              opacity={src.ring === "inner" ? 0.3 : 0.2}
               initial={animate ? { pathLength: 0, opacity: 0 } : undefined}
-              animate={animate ? { pathLength: 1, opacity: 0.15 } : undefined}
-              transition={{ duration: 0.4, delay: 0.7 + i * 0.05 }}
+              animate={animate ? { pathLength: 1, opacity: src.ring === "inner" ? 0.3 : 0.2 } : undefined}
+              transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
             />
           );
         })}
 
-        {/* ── Success particles flowing TO center ── */}
-        {particleConns.map((connIdx, ci) => {
-          const src = inner[connIdx];
+        {/* ── Small green checkmarks at midpoint of inner connections ── */}
+        {allSources.slice(0, 8).map((src, i) => {
           const dx = src.x - cx, dy = src.y - cy;
-          // Dots flow from source inward to center
-          return [0.85, 0.65, 0.45, 0.25].map((pct, pi) => (
-            <motion.circle
-              key={`sp-${ci}-${pi}`}
-              cx={cx + dx * pct} cy={cy + dy * pct} r={1.3}
-              fill="#B8956A"
-              initial={{ opacity: 0 }}
-              animate={animate ? { opacity: [0, 0.55, 0] } : undefined}
-              transition={{
-                duration: 0.8,
-                delay: 1.5 + ci * 0.5 + pi * 0.15,
-                repeat: Infinity,
-                repeatDelay: 3.5,
-              }}
-            />
-          ));
-        })}
-
-        {/* ── Green checkmarks on connections (midpoint) ── */}
-        {inner.map((src, i) => {
-          const mx = (cx + src.x) / 2, my = (cy + src.y) / 2;
+          const mx = cx + dx * 0.46, my = cy + dy * 0.46;
           return (
             <motion.g
               key={`check-${i}`}
               initial={animate ? { opacity: 0, scale: 0 } : undefined}
               animate={animate ? { opacity: 1, scale: 1 } : undefined}
-              transition={{ duration: 0.3, delay: 0.9 + i * 0.06, type: "spring" }}
+              transition={{ duration: 0.3, delay: 0.8 + i * 0.05, type: "spring" }}
               style={{ transformOrigin: `${mx}px ${my}px` }}
             >
-              <circle cx={mx} cy={my} r={6} fill="#dcfce7" />
-              <path d={`M${mx - 2.5} ${my} L${mx - 0.5} ${my + 2.5} L${mx + 3} ${my - 2}`} stroke="#16a34a" strokeWidth={1.2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx={mx} cy={my} r={4.5} fill="#FAFAF8" stroke="#86EFAC" strokeWidth={0.7} />
+              <path
+                d={`M${mx - 2} ${my + 0.3} L${mx - 0.3} ${my + 2} L${mx + 2.5} ${my - 1.5}`}
+                stroke="#16a34a" strokeWidth={0.8} fill="none"
+                strokeLinecap="round" strokeLinejoin="round"
+              />
             </motion.g>
           );
         })}
 
         {/* ── Center: Gobia ── */}
         <motion.g
-          initial={animate ? { scale: 0, opacity: 0 } : undefined}
+          initial={animate ? { scale: 0.8, opacity: 0 } : undefined}
           animate={animate ? { scale: 1, opacity: 1 } : undefined}
-          transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 160, damping: 16 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           style={{ transformOrigin: `${cx}px ${cy}px` }}
         >
-          <circle cx={cx} cy={cy} r={54} fill="#F5EDDF" opacity={0.35} />
-          <circle cx={cx} cy={cy} r={44} fill="#F5EDDF" stroke="#B8956A" strokeWidth={1.5} />
-          <text x={cx} y={cy - 2} textAnchor="middle" dominantBaseline="central" fontSize={18} fontWeight={700} fill="#B8956A" fontFamily="'Space Grotesk', serif">
+          <circle cx={cx} cy={cy} r={46} fill="#FAFAF8" stroke="#B8956A" strokeWidth={1.2} />
+          <circle cx={cx} cy={cy} r={42} fill="none" stroke="#D4CFC7" strokeWidth={0.4} />
+
+          <text
+            x={cx} y={cy + 2}
+            textAnchor="middle" dominantBaseline="central"
+            fontSize={16} fontWeight={700} fill="#B8956A"
+            fontFamily="'Space Grotesk', sans-serif"
+          >
             Gobia
           </text>
-          <text x={cx} y={cy + 18} textAnchor="middle" fontSize={6} fill="#9E9484" fontFamily="'Plus Jakarta Sans', sans-serif" letterSpacing="0.08em">
+          <text
+            x={cx} y={cy + 18}
+            textAnchor="middle" fontSize={5} fill="#A09A92"
+            fontFamily="'Plus Jakarta Sans', sans-serif"
+            letterSpacing="0.08em"
+          >
             PLATAFORMA INTEGRADA
           </text>
         </motion.g>
 
-        {/* ── Inner ring nodes ── */}
-        {inner.map((src, i) => {
-          const colors = typeStyles[src.type];
-          const nx = src.x - nodeW / 2, ny = src.y - nodeH / 2;
+        {/* ── Source nodes — identical card style to FragmentedDataSVG ── */}
+        {allSources.map((src, i) => {
+          const accent = accentByType[src.type];
+          const nx = src.x - src.w / 2, ny = src.y - src.h / 2;
+          const delay = src.ring === "inner" ? 0.15 + i * 0.04 : 0.4 + (i - 8) * 0.04;
+
           return (
             <motion.g
-              key={`cin-${i}`}
-              initial={animate ? { opacity: 0, scale: 0.8 } : { opacity: 1 }}
-              animate={animate ? { opacity: 1, scale: 1 } : undefined}
-              transition={{ duration: 0.35, delay: 0.2 + i * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-              style={{ transformOrigin: `${src.x}px ${src.y}px` }}
+              key={`node-${i}`}
+              initial={animate ? { opacity: 0, y: 6 } : { opacity: 1 }}
+              animate={animate ? { opacity: 1, y: 0 } : undefined}
+              transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
             >
-              <rect x={nx + 1} y={ny + 1} width={nodeW} height={nodeH} rx={5} fill="#0000000A" />
-              <rect x={nx} y={ny} width={nodeW} height={nodeH} rx={5} fill={colors.bg} stroke={colors.border} strokeWidth={0.8} />
-              <rect x={nx + 4} y={ny + 4} width={22} height={11} rx={2.5} fill={colors.accent} opacity={0.12} />
-              <text x={nx + 15} y={ny + 12} textAnchor="middle" fontSize={5.5} fontWeight={700} fill={colors.accent} fontFamily="'Plus Jakarta Sans', sans-serif" opacity={0.7}>{colors.icon}</text>
-              <text x={nx + 30} y={ny + 13} fontSize={8} fontWeight={700} fill={colors.text} fontFamily="'Plus Jakarta Sans', sans-serif">{src.label}</text>
-              <text x={nx + 5} y={ny + 27} fontSize={5.5} fill={colors.accent} fontFamily="'Plus Jakarta Sans', sans-serif" opacity={0.7}>{src.sub}</text>
+              {/* Shadow */}
+              <rect x={nx + 1} y={ny + 1.5} width={src.w} height={src.h} rx={4} fill="#00000006" />
+
+              {/* Card */}
+              <rect
+                x={nx} y={ny} width={src.w} height={src.h} rx={4}
+                fill="#FAFAF8"
+                stroke="#D4CFC7"
+                strokeWidth={0.7}
+              />
+
+              {/* Accent strip */}
+              <rect x={nx + 0.5} y={ny + 5} width={2} height={src.h - 10} rx={1} fill={accent} opacity={0.45} />
+
+              {/* Label */}
+              <text
+                x={nx + 10} y={ny + 13}
+                fontSize={src.ring === "inner" ? 8 : 7.5}
+                fontWeight={700}
+                fill="#3D3830"
+                fontFamily="'Space Grotesk', sans-serif"
+              >
+                {src.label}
+              </text>
+
+              {/* Sub label */}
+              <text
+                x={nx + 10} y={ny + 24}
+                fontSize={5.5}
+                fill="#A09A92"
+                fontFamily="'Plus Jakarta Sans', sans-serif"
+              >
+                {src.sub}
+              </text>
             </motion.g>
           );
         })}
-
-        {/* ── Outer ring nodes ── */}
-        {outer.map((src, i) => {
-          const colors = typeStyles[src.type];
-          const nx = src.x - outerNodeW / 2, ny = src.y - outerNodeH / 2;
-          return (
-            <motion.g
-              key={`cout-${i}`}
-              initial={animate ? { opacity: 0, scale: 0.8 } : { opacity: 1 }}
-              animate={animate ? { opacity: 1, scale: 1 } : undefined}
-              transition={{ duration: 0.35, delay: 0.4 + i * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-              style={{ transformOrigin: `${src.x}px ${src.y}px` }}
-            >
-              <rect x={nx + 1} y={ny + 1} width={outerNodeW} height={outerNodeH} rx={5} fill="#0000000A" />
-              <rect x={nx} y={ny} width={outerNodeW} height={outerNodeH} rx={5} fill={colors.bg} stroke={colors.border} strokeWidth={0.7} />
-              <rect x={nx + 4} y={ny + 4} width={22} height={11} rx={2.5} fill={colors.accent} opacity={0.12} />
-              <text x={nx + 15} y={ny + 12} textAnchor="middle" fontSize={5.5} fontWeight={700} fill={colors.accent} fontFamily="'Plus Jakarta Sans', sans-serif" opacity={0.7}>{colors.icon}</text>
-              <text x={nx + 30} y={ny + 13} fontSize={7.5} fontWeight={700} fill={colors.text} fontFamily="'Plus Jakarta Sans', sans-serif">{src.label}</text>
-              <text x={nx + 5} y={ny + 27} fontSize={5.5} fill={colors.accent} fontFamily="'Plus Jakarta Sans', sans-serif" opacity={0.65}>{src.sub}</text>
-            </motion.g>
-          );
-        })}
-
-        {/* ── "INTEGRADO" stamp ── */}
-        <motion.g
-          initial={animate ? { opacity: 0, scale: 1.5 } : undefined}
-          animate={animate ? { opacity: 1, scale: 1 } : undefined}
-          transition={{ type: "spring", stiffness: 200, damping: 14, delay: 2.0 }}
-          style={{ transformOrigin: `${cx}px ${cy + 70}px` }}
-        >
-          <g transform={`rotate(-14, ${cx}, ${cy + 70})`}>
-            <rect x={cx - 68} y={cy + 54} width={136} height={32} rx={4} fill="none" stroke="#16a34a" strokeWidth={2} strokeDasharray="6 3" opacity={0.2} />
-            <rect x={cx - 64} y={cy + 57} width={128} height={26} rx={2} fill="none" stroke="#16a34a" strokeWidth={0.8} opacity={0.12} />
-            <text x={cx} y={cy + 75} textAnchor="middle" fontSize={13} fontWeight={800} fill="#16a34a" opacity={0.15} fontFamily="'Plus Jakarta Sans', sans-serif" letterSpacing="0.12em">
-              INTEGRADO
-            </text>
-          </g>
-        </motion.g>
       </svg>
 
       {/* ── Bottom stats ── */}
       <motion.div
-        className="flex items-center justify-center gap-8 md:gap-12 mt-3"
-        initial={animate ? { opacity: 0, y: 8 } : { opacity: 1 }}
-        animate={animate ? { opacity: 1, y: 0 } : undefined}
-        transition={{ duration: 0.5, delay: 1.6 }}
+        className="flex items-center justify-center gap-10 md:gap-14 mt-2"
+        initial={animate ? { opacity: 0 } : { opacity: 1 }}
+        animate={animate ? { opacity: 1 } : undefined}
+        transition={{ duration: 0.6, delay: 1.2 }}
       >
         {[
           { value: "16+", label: "fuentes conectadas" },
@@ -257,8 +214,8 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
           { value: "15 min", label: "en vez de semanas" },
         ].map((stat) => (
           <div key={stat.label} className="text-center">
-            <span className="block font-serif font-bold text-lg md:text-xl text-ochre">{stat.value}</span>
-            <span className="block text-[0.625rem] text-gray-400 font-medium mt-0.5">{stat.label}</span>
+            <span className="block font-serif font-bold text-lg md:text-xl tracking-tight text-ochre">{stat.value}</span>
+            <span className="block text-[0.6875rem] text-gray-400 mt-0.5">{stat.label}</span>
           </div>
         ))}
       </motion.div>
