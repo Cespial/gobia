@@ -31,7 +31,7 @@ export default function SolidezTecnica() {
     <section
       id="tecnologia"
       ref={ref}
-      className="relative py-24 md:py-32 bg-ink text-paper overflow-hidden"
+      className="relative pt-4 pb-16 md:py-32 bg-ink text-paper overflow-hidden"
     >
       <div
         className="absolute inset-0 opacity-[0.03]"
@@ -58,7 +58,7 @@ export default function SolidezTecnica() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] mb-6"
+              className="font-serif font-bold text-[1.75rem] md:text-[2.25rem] leading-[1.1] tracking-[-0.02em] mb-6"
             >
               Construida para la escala del{" "}
               <span className="text-ochre">sector público</span>

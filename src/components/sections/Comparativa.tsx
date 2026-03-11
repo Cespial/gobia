@@ -502,21 +502,21 @@ function BeforeAfterSlider() {
         <DespuesSVG />
       </div>
 
-      {/* Labels */}
+      {/* Labels — always visible, larger on mobile */}
       <div
         className="absolute top-3 left-3 md:top-4 md:left-4 z-10 pointer-events-none"
-        style={{ opacity: position > 15 ? 1 : 0, transition: "opacity 0.2s" }}
+        style={{ opacity: position > 10 ? 1 : 0, transition: "opacity 0.2s" }}
       >
-        <span className="inline-block bg-gray-800/80 backdrop-blur-sm text-white text-[0.6875rem] md:text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide uppercase">
+        <span className="inline-block bg-gray-800/85 backdrop-blur-sm text-white text-xs md:text-sm font-semibold px-3 py-1.5 rounded-lg tracking-wide uppercase">
           Antes
         </span>
       </div>
       <div
         className="absolute top-3 right-3 md:top-4 md:right-4 z-10 pointer-events-none"
-        style={{ opacity: position < 85 ? 1 : 0, transition: "opacity 0.2s" }}
+        style={{ opacity: position < 90 ? 1 : 0, transition: "opacity 0.2s" }}
       >
-        <span className="inline-block bg-ochre/90 backdrop-blur-sm text-white text-[0.6875rem] md:text-xs font-semibold px-2.5 py-1 rounded-md tracking-wide uppercase">
-          Después
+        <span className="inline-block bg-ochre/90 backdrop-blur-sm text-white text-xs md:text-sm font-semibold px-3 py-1.5 rounded-lg tracking-wide uppercase">
+          Con Gobia
         </span>
       </div>
 
@@ -537,7 +537,7 @@ function BeforeAfterSlider() {
           transform: "translate(-50%, -50%)",
         }}
       >
-        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white border-2 border-gray-300 shadow-lg flex items-center justify-center pointer-events-auto cursor-col-resize transition-transform hover:scale-110">
+        <div className="w-11 h-11 md:w-10 md:h-10 rounded-full bg-white border-2 border-ochre/40 shadow-lg flex items-center justify-center pointer-events-auto cursor-col-resize transition-transform hover:scale-110 ring-4 ring-ochre/10">
           {/* Left/right arrows */}
           <svg
             width="18"
@@ -615,10 +615,13 @@ export default function Comparativa() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mb-10"
         >
-          <BeforeAfterSlider />
-          <p className="text-center text-[0.75rem] text-gray-400 mt-3">
-            Arrastra el control deslizante para comparar
+
+          <p className="text-center text-[0.8125rem] text-gray-400 mb-3 flex items-center justify-center gap-2">
+            <span className="inline-block w-4 h-[2px] bg-gray-300" />
+            Arrastra para comparar
+            <span className="inline-block w-4 h-[2px] bg-gray-300" />
           </p>
+          <BeforeAfterSlider />
         </motion.div>
 
         {/* Table — desktop */}

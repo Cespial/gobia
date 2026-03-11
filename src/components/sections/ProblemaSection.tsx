@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { ArrowDown } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const FragmentedDataSVG = dynamic(() => import("@/components/illustrations/FragmentedDataSVG"), {
@@ -110,11 +111,18 @@ export default function ProblemaSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.8 }}
-          className="mt-14 text-center"
+          className="mt-14 text-center space-y-5"
         >
           <p className="text-[1.125rem] text-gray-400 italic font-serif">
             &ldquo;No debería ser así. Y ya no tiene que serlo.&rdquo;
           </p>
+          <a
+            href="#solucion"
+            className="inline-flex items-center gap-2 text-[0.875rem] font-semibold text-ochre hover:text-ink transition-colors duration-200"
+          >
+            Ver cómo lo resolvemos
+            <ArrowDown size={16} />
+          </a>
         </motion.div>
       </div>
     </section>

@@ -200,7 +200,7 @@ export default function ProductoPreview() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-ink mb-5"
+            className="font-serif font-bold text-[1.75rem] md:text-[2.25rem] leading-[1.1] tracking-[-0.02em] text-ink mb-5"
           >
             Todo en un solo dashboard
           </motion.h2>

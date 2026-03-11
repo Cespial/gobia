@@ -17,7 +17,7 @@ export default function CerebroNormativo() {
   return (
     <section
       ref={ref}
-      className="relative py-24 md:py-32 bg-ink text-paper overflow-hidden"
+      className="relative py-16 md:py-32 bg-ink text-paper overflow-hidden"
     >
       {/* Subtle grid bg */}
       <div
@@ -44,7 +44,7 @@ export default function CerebroNormativo() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] mb-5"
+            className="font-serif font-bold text-[1.75rem] md:text-[2.25rem] leading-[1.1] tracking-[-0.02em] mb-5"
           >
             Toda la normativa,{" "}
             <span className="text-ochre">conectada</span>
