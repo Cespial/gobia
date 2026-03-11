@@ -30,7 +30,7 @@ export default function CTAFinal() {
   };
 
   return (
-    <section id="contacto" ref={ref} className="relative py-24 md:py-32 bg-background">
+    <section id="contacto" ref={ref} className="relative py-24 md:py-32 bg-background border-t border-border-light">
       <div className="relative z-10 mx-auto max-w-[1120px] px-5 md:px-8">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-20 items-center">
           <div>
@@ -50,7 +50,7 @@ export default function CTAFinal() {
               className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] text-ink mb-5"
             >
               Lleva la gestión de tu{" "}
-              <em className="text-ochre not-italic">entidad</em> al siguiente nivel
+              <span className="text-ochre">entidad</span> al siguiente nivel
             </motion.h2>
 
             <motion.p
@@ -98,7 +98,12 @@ export default function CTAFinal() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             {submitted ? (
-              <div className="rounded-2xl border border-ochre/20 bg-ochre-soft p-10 text-center">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="rounded-2xl border border-ochre/20 bg-ochre-soft p-10 text-center"
+              >
                 <div className="mx-auto mb-4 inline-flex items-center justify-center w-14 h-14 rounded-full bg-ochre/10">
                   <CheckCircle size={28} className="text-ochre" />
                 </div>
@@ -106,7 +111,7 @@ export default function CTAFinal() {
                 <p className="text-[0.9375rem] text-gray-500 leading-relaxed">
                   Nuestro equipo te contactará en las próximas 24 horas hábiles para agendar la demo.
                 </p>
-              </div>
+              </motion.div>
             ) : (
               <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-paper p-8 md:p-10 shadow-sm">
                 <h3 className="text-[1.125rem] font-bold text-ink mb-6">Solicitar demo gratuita</h3>
@@ -128,11 +133,16 @@ export default function CTAFinal() {
                     <input type="email" id="email" name="email" required className="form-input" placeholder="correo@entidad.gov.co" />
                   </div>
                   {error && (
-                    <p className="text-[0.8125rem] text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                    <motion.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-[0.8125rem] text-red-600 bg-red-50 rounded-lg px-3 py-2"
+                    >
                       {error}
-                    </p>
+                    </motion.p>
                   )}
-                  <button type="submit" disabled={pending} className="btn-primary w-full mt-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                  <button type="submit" disabled={pending} aria-busy={pending} className="btn-primary w-full mt-2 disabled:opacity-60 disabled:cursor-not-allowed">
                     {pending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     {pending ? "Enviando..." : "Solicitar demo"}
                   </button>

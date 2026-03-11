@@ -31,12 +31,25 @@ export const metadata: Metadata = {
     "estatuto tributario",
   ],
   authors: [{ name: "inplux.co" }],
+  metadataBase: new URL("https://gobia.co"),
   openGraph: {
     title: "Gobia — Gestión pública inteligente para Colombia",
     description:
       "Plataforma GovTech que transforma la gestión pública colombiana con IA, datos abiertos y automatización normativa.",
+    url: "https://gobia.co",
+    siteName: "Gobia",
     type: "website",
     locale: "es_CO",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Gobia — Gestión pública inteligente para Colombia",
+    description:
+      "Plataforma GovTech que transforma la gestión pública colombiana con IA y automatización normativa.",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

@@ -70,7 +70,7 @@ export default function PlatformHubDiagram({ animate = true }: PlatformHubDiagra
           x={cx} y={cy + 1}
           textAnchor="middle" dominantBaseline="central"
           fill="#B8956A" fontSize={16} fontWeight={700}
-          fontFamily="'DM Serif Display', serif"
+          fontFamily="'Space Grotesk', serif"
         >
           Gobia
         </text>

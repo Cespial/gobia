@@ -216,18 +216,27 @@ export default function ColombiaMapbox({ animate = true }: ColombiaMapboxProps) 
       // Sequential reveal animation
       let revealIndex = 0;
       const totalFeatures = 33;
-      revealIntervalRef.current = setInterval(() => {
-        if (revealIndex >= totalFeatures) {
-          clearInterval(revealIntervalRef.current!);
-          revealIntervalRef.current = null;
-          return;
+
+      // Respect prefers-reduced-motion
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (prefersReducedMotion) {
+        for (let i = 0; i < totalFeatures; i++) {
+          m.setFeatureState({ source: "departments", id: i }, { visible: true });
         }
-        m.setFeatureState(
-          { source: "departments", id: revealIndex },
-          { visible: true }
-        );
-        revealIndex++;
-      }, 60);
+      } else {
+        revealIntervalRef.current = setInterval(() => {
+          if (revealIndex >= totalFeatures) {
+            clearInterval(revealIntervalRef.current!);
+            revealIntervalRef.current = null;
+            return;
+          }
+          m.setFeatureState(
+            { source: "departments", id: revealIndex },
+            { visible: true }
+          );
+          revealIndex++;
+        }, 60);
+      }
 
       setLoaded(true);
     });

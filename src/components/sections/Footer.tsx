@@ -62,7 +62,7 @@ function MiniColombiaMap() {
       ref={ref}
       initial={{ opacity: 0, y: 12 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      transition={{ duration: 0.6, ease: [0.25, 1, 0.5, 1] }}
       className="flex flex-col items-center md:items-start"
     >
       <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-paper/25 mb-4">
@@ -97,8 +97,8 @@ function MiniColombiaMap() {
         {/* Country silhouette */}
         <path
           d={COLOMBIA_OUTLINE}
-          fill="#262626"
-          stroke="#404040"
+          fill="var(--gray-800)"
+          stroke="var(--gray-700)"
           strokeWidth={1}
           fillRule="evenodd"
         />
@@ -111,7 +111,7 @@ function MiniColombiaMap() {
                 cx={city.cx}
                 cy={city.cy}
                 r={4}
-                fill="#B8956A"
+                fill="var(--ochre)"
                 opacity={0.35}
                 className="footer-pulse-ring"
               />
@@ -120,7 +120,7 @@ function MiniColombiaMap() {
               cx={city.cx}
               cy={city.cy}
               r={4}
-              fill={city.active ? "#B8956A" : "#525252"}
+              fill={city.active ? "var(--ochre)" : "var(--gray-600)"}
             />
           </g>
         ))}

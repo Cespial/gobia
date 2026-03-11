@@ -48,7 +48,7 @@ export default function EstatutoFeatureSVG({ animate = true, delay = 0 }: Props)
       >
         {/* AI avatar */}
         <circle cx={20} cy={86} r={8} fill="#2C2418" />
-        <text x={20} y={89} textAnchor="middle" fill="#B8956A" fontSize={6} fontWeight={700} fontFamily="'DM Serif Display', serif">
+        <text x={20} y={89} textAnchor="middle" fill="#B8956A" fontSize={6} fontWeight={700} fontFamily="'Space Grotesk', serif">
           G
         </text>
 

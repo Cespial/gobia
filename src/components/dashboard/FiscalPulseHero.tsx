@@ -214,7 +214,7 @@ function ArcGauge({ value, max = 100, size = 100 }: { value: number; max?: numbe
         animate={{ pathLength: 1 }}
         transition={{ duration: 1.2, ease: "easeOut" }}
       />
-      <text x={size / 2} y={size * 0.45} textAnchor="middle" fill="#B8956A" fontSize={size * 0.28} fontWeight="700" fontFamily="'DM Serif Display', serif">
+      <text x={size / 2} y={size * 0.45} textAnchor="middle" fill="#B8956A" fontSize={size * 0.28} fontWeight="700" fontFamily="'Space Grotesk', serif">
         {value.toFixed(1)}
       </text>
       <text x={size / 2} y={size * 0.6} textAnchor="middle" fill="#9E9484" fontSize={size * 0.09} fontWeight="600">

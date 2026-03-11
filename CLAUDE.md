@@ -23,31 +23,31 @@ La plataforma integra 6 módulos: Hacienda Dashboard, Seguimiento PDM, Estatuto 
 
 | Token | Valor | Uso |
 |-------|-------|-----|
-| `--ink` | #2C2418 | Texto primario, fondos oscuros (SolidezTecnica, Footer) |
-| `--sepia` | #8B7355 | Texto secundario sutil |
+| `--ink` | #1A1A1A | Texto primario, fondos oscuros (SolidezTecnica, Footer) |
+| `--sepia` | #6B6B6B | Texto secundario sutil |
 | `--ochre` | #B8956A | **Único acento** — badges, enlaces, highlights |
-| `--ochre-soft` | #F5EDDF | Fondos suaves de acento |
-| `--background` | #FAF6F0 | Fondo principal (cream) |
-| `--paper` | #FFFDF8 | Fondos de sección claros |
-| `--cream` | #F5EFE6 | Fondos alternos |
-| `--border` | #DDD4C4 | Bordes principales |
-| `--border-light` | #EDE6DA | Bordes sutiles |
-| Warm grays | #EDE6DA → #2C2418 | Escala 100-900 |
+| `--ochre-soft` | #F5F0E8 | Fondos suaves de acento |
+| `--background` | #F8F8F6 | Fondo principal (neutral cream) |
+| `--paper` | #FFFFFF | Fondos de sección claros |
+| `--cream` | #F2F2F0 | Fondos alternos |
+| `--border` | #E5E5E5 | Bordes principales |
+| `--border-light` | #F0F0F0 | Bordes sutiles |
+| Neutral grays | #F0F0F0 → #1A1A1A | Escala 100-900 |
 
 ### Tipografía
 
 - **Body**: Plus Jakarta Sans (300-800) — variable `--font-jakarta`
-- **Display/headings**: DM Serif Display (400) — variable `--font-dm-serif`
+- **Display/headings**: Space Grotesk (300-700) — variable `--font-display`
 - **Heading sizes**: 2rem (section) → 4.25rem (hero), line-height 1.08-1.1
 - **Body sizes**: 0.75rem (meta) → 1.1875rem (lg body), line-height 1.6
 - **Letter spacing**: -0.02em (headings), 0.01em (buttons), 0.1em (eyebrows)
 
 ### Componentes base (en globals.css)
 
-- `.btn-primary`: ink bg, paper text, hover → ochre bg, 8px radius
+- `.btn-primary`: ink bg, paper text, hover → ochre bg, 6px radius
 - `.btn-secondary`: transparent, ink border, hover → cream bg
-- `.card`: paper bg, border, 14px radius, hover → gray-300 border + lift
-- `.form-input`: paper bg, border, 8px radius, focus → ink border
+- `.card`: paper bg, border, 12px radius, hover → gray-300 border + lift + scale(1.01)
+- `.form-input`: paper bg, border, 6px radius, focus → ink border
 - `.fine-rule`: 1px border-light separator
 
 ## Arquitectura de carpetas

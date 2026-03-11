@@ -56,7 +56,7 @@ function MiniArc({ value, max, good, size = 52 }: { value: number; max: number; 
         x={size / 2} y={size * 0.42}
         textAnchor="middle" fill="#2C2418"
         fontSize={size * 0.22} fontWeight="700"
-        fontFamily="'DM Serif Display', serif"
+        fontFamily="'Space Grotesk', serif"
       >
         {value.toFixed(1)}
       </text>

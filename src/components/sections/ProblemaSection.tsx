@@ -4,10 +4,10 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import dynamic from "next/dynamic";
 
-const ColombiaMapbox = dynamic(() => import("@/components/illustrations/ColombiaMapbox"), {
+const FragmentedDataSVG = dynamic(() => import("@/components/illustrations/FragmentedDataSVG"), {
   ssr: false,
   loading: () => (
-    <div className="w-full max-w-xl mx-auto aspect-[3/4] rounded-2xl bg-gray-100 animate-pulse" />
+    <div className="w-full aspect-[680/490] rounded-2xl bg-gray-100 animate-pulse" />
   ),
 });
 
@@ -60,19 +60,20 @@ export default function ProblemaSection() {
           transition={{ duration: 0.6, delay: 0.15 }}
           className="text-[1.0625rem] leading-relaxed text-gray-500 max-w-xl mb-16"
         >
-          Cada entidad territorial enfrenta los mismos retos. Sistemas
-          desconectados, normativa compleja y equipos que hacen lo mejor que
-          pueden con herramientas del siglo pasado.
+          Un funcionario público debe navegar{" "}
+          <span className="font-semibold text-ink">16+ fuentes de datos desconectadas</span>
+          {" "}— cada una con su formato, su portal, su lógica. El resultado:
+          semanas de trabajo manual, errores y cero visibilidad.
         </motion.p>
 
-        {/* Diagram: fragmented data silos */}
+        {/* Star SVG: Fragmented data sources diagram */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-14"
         >
-          <ColombiaMapbox animate={isInView} />
+          <FragmentedDataSVG animate={isInView} />
         </motion.div>
 
         {/* Pain metrics — visual counters */}
@@ -86,9 +87,14 @@ export default function ProblemaSection() {
               className="relative rounded-xl border border-border bg-paper p-6 md:p-7"
             >
               <div className="flex items-baseline gap-3 mb-3">
-                <span className="font-serif font-bold text-[2rem] md:text-[2.5rem] leading-none tracking-[-0.02em] text-ochre">
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={isInView ? { opacity: 1, scale: 1 } : {}}
+                  transition={{ duration: 0.5, delay: 0.5 + i * 0.1, ease: [0.25, 1, 0.5, 1] }}
+                  className="font-serif font-bold text-[2rem] md:text-[2.5rem] leading-none tracking-[-0.02em] text-ochre"
+                >
                   {metric.value}
-                </span>
+                </motion.span>
                 <span className="text-[0.8125rem] font-semibold text-ink leading-snug">
                   {metric.label}
                 </span>

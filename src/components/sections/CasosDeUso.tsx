@@ -83,6 +83,16 @@ function useCountUp(target: number, isInView: boolean, duration = 1.5) {
 
   useEffect(() => {
     if (!isInView) return;
+
+    // Respect prefers-reduced-motion
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      motionValue.set(target);
+      setDisplay(target);
+      setDone(true);
+      return;
+    }
+
     setDone(false);
     const controls = animate(motionValue, target, {
       duration,
@@ -114,14 +124,14 @@ function ProgressRing({
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <svg width={size} height={size} className="shrink-0 -rotate-90">
+    <svg width={size} height={size} className="shrink-0 -rotate-90" role="img" aria-label={`${percent}% progreso`}>
       {/* Track */}
       <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="#E5E5E5"
+        stroke="var(--border)"
         strokeWidth={strokeWidth}
       />
       {/* Fill */}
@@ -146,7 +156,7 @@ function ProgressRing({
   );
 }
 
-/* ─── Dot grid visualization ─── */
+/* ─── Dot grid visualization (single SVG for performance) ─── */
 function DotGrid({
   filled,
   total,
@@ -157,35 +167,40 @@ function DotGrid({
   isInView: boolean;
 }) {
   const cols = 6;
+  const dotSize = 4;
+  const gap = 3;
+  const cellSize = dotSize + gap;
+  const rows = Math.ceil(total / cols);
+  const width = cols * cellSize - gap;
+  const height = rows * cellSize - gap;
 
   return (
-    <div
-      className="grid gap-[3px] shrink-0"
-      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, width: 40, height: 40 }}
-    >
-      {Array.from({ length: total }).map((_, i) => (
-        <motion.div
-          key={i}
-          className="rounded-full"
-          style={{ width: 4, height: 4 }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={
-            isInView
-              ? {
-                  opacity: 1,
-                  scale: 1,
-                  backgroundColor: i < filled ? "var(--ochre)" : "#E5E5E5",
-                }
-              : { opacity: 0, scale: 0 }
-          }
-          transition={{
-            duration: 0.3,
-            delay: isInView ? 0.3 + i * 0.03 : 0,
-            ease: "easeOut",
-          }}
-        />
-      ))}
-    </div>
+    <svg width={width} height={height} className="shrink-0" role="img" aria-label={`${filled} de ${total}`}>
+      {Array.from({ length: total }).map((_, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        return (
+          <motion.circle
+            key={i}
+            cx={col * cellSize + dotSize / 2}
+            cy={row * cellSize + dotSize / 2}
+            r={dotSize / 2}
+            fill={i < filled ? "var(--ochre)" : "var(--border)"}
+            initial={{ opacity: 0, r: 0 }}
+            animate={
+              isInView
+                ? { opacity: 1, r: dotSize / 2 }
+                : { opacity: 0, r: 0 }
+            }
+            transition={{
+              duration: 0.3,
+              delay: isInView ? 0.3 + i * 0.03 : 0,
+              ease: [0.25, 1, 0.5, 1],
+            }}
+          />
+        );
+      })}
+    </svg>
   );
 }
 
@@ -207,7 +222,7 @@ function MetricDisplay({
           <motion.p
             className="text-[0.9375rem] font-bold text-ochre leading-tight"
             animate={done ? { scale: [1, 1.12, 1] } : {}}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
           >
             {count}
             {metric.suffix}
@@ -232,7 +247,7 @@ function MetricDisplay({
           <motion.p
             className="text-[0.9375rem] font-bold text-ochre leading-tight"
             animate={done ? { scale: [1, 1.12, 1] } : {}}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
           >
             {count}
             {metric.suffix}
@@ -251,7 +266,7 @@ function MetricDisplay({
       <motion.p
         className="text-[1.125rem] font-bold text-ochre leading-tight"
         animate={done ? { scale: [1, 1.12, 1] } : {}}
-        transition={{ duration: 0.3, ease: "easeOut" }}
+        transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
       >
         {count}
         {metric.suffix}

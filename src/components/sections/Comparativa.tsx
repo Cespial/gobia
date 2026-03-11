@@ -525,7 +525,7 @@ function BeforeAfterSlider() {
         className="absolute top-0 bottom-0 z-20 pointer-events-none"
         style={{ left: `${position}%`, transform: "translateX(-50%)" }}
       >
-        <div className="w-[2px] h-full bg-white/90 shadow-[0_0_8px_rgba(0,0,0,0.3)]" />
+        <div className="w-[2px] h-full bg-white/90 shadow-[0_0_8px_rgba(0,0,0,0.3),0_0_16px_rgba(184,149,106,0.45),0_0_32px_rgba(184,149,106,0.2)]" />
       </div>
 
       {/* Drag handle */}

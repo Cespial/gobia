@@ -145,7 +145,7 @@ export default function HaciendaFeatureSVG({ animate = true, delay = 0 }: Props)
         fill="#B8956A"
         fontSize={14}
         fontWeight={700}
-        fontFamily="'DM Serif Display', serif"
+        fontFamily="'Space Grotesk', serif"
         initial={animate ? { opacity: 0 } : undefined}
         animate={animate ? { opacity: 1 } : undefined}
         transition={{ duration: 0.5, delay: delay + 1 }}

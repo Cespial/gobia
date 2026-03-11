@@ -27,9 +27,17 @@ function AnimatedNumber({
   useEffect(() => {
     if (!inView) return;
 
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      setDisplay(value.toFixed(decimals));
+      setFinished(true);
+      return;
+    }
+
+    let controls: { stop: () => void } | undefined;
     const timeout = setTimeout(() => {
       const mv = { val: 0 };
-      const controls = animate(mv, { val: value }, {
+      controls = animate(mv, { val: value }, {
         duration: 1.4,
         ease: [0.25, 1, 0.5, 1],
         onUpdate: () => {
@@ -39,16 +47,18 @@ function AnimatedNumber({
           setFinished(true);
         },
       });
-      return () => controls.stop();
     }, delay * 1000);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      controls?.stop();
+    };
   }, [inView, value, decimals, delay]);
 
   return (
     <motion.span
       animate={finished ? { scale: [1, 1.1, 1] } : {}}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
     >
       {prefix}{display}{suffix}
     </motion.span>

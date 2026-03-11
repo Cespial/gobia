@@ -47,7 +47,7 @@ export default function CerebroNormativo() {
             className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] mb-5"
           >
             Toda la normativa,{" "}
-            <em className="text-ochre not-italic">conectada</em>
+            <span className="text-ochre">conectada</span>
           </motion.h2>
 
           <motion.p
@@ -89,23 +89,24 @@ export default function CerebroNormativo() {
         <KnowledgeGraph animate={isInView} />
 
         {/* Metrics */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="mt-14 grid grid-cols-3 divide-x divide-paper/10 max-w-lg mx-auto"
-        >
-          {metrics.map((m) => (
-            <div key={m.label} className="text-center px-4">
+        <div className="mt-14 grid grid-cols-3 divide-x divide-paper/10 max-w-lg mx-auto">
+          {metrics.map((m, i) => (
+            <motion.div
+              key={m.label}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={isInView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ duration: 0.5, delay: 0.6 + i * 0.1, ease: [0.25, 1, 0.5, 1] }}
+              className="text-center px-4"
+            >
               <p className="text-[1.75rem] font-bold text-ochre mb-1">
                 {m.value}
               </p>
               <p className="text-[0.75rem] text-paper/50 font-medium">
                 {m.label}
               </p>
-            </div>
+            </motion.div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Teaser CTA */}
         <motion.p

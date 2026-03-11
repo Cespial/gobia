@@ -25,7 +25,7 @@ export default function Hero() {
           preload="none"
           poster="/hero/hero-data-viz-poster.jpg"
           onLoadedData={() => setVideoLoaded(true)}
-          className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-auto mix-blend-multiply transition-opacity duration-1000 ${videoLoaded ? "opacity-70" : "opacity-0"}`}
+          className={`absolute inset-0 w-full h-full object-cover object-center mix-blend-multiply transition-opacity duration-1000 ${videoLoaded ? "opacity-60" : "opacity-0"}`}
         >
           <source src="/hero/hero-data-viz.webm" type="video/webm" />
           <source src="/hero/hero-data-viz.mp4" type="video/mp4" />
@@ -38,11 +38,11 @@ export default function Hero() {
         style={{
           background: `linear-gradient(
             to bottom,
-            #F8F8F6 0%,
-            #F8F8F6 55%,
-            rgba(248, 248, 246, 0.95) 65%,
-            rgba(248, 248, 246, 0.7) 78%,
-            rgba(248, 248, 246, 0.3) 90%,
+            rgba(248, 248, 246, 0.97) 0%,
+            rgba(248, 248, 246, 0.92) 25%,
+            rgba(248, 248, 246, 0.8) 45%,
+            rgba(248, 248, 246, 0.5) 65%,
+            rgba(248, 248, 246, 0.2) 85%,
             transparent 100%
           )`,
         }}
@@ -74,19 +74,9 @@ export default function Hero() {
             Colombia
           </motion.h1>
 
-          {/* Subheadline */}
-          <motion.p
-            {...fadeUp(0.35)}
-            className="text-[1rem] md:text-[1.0625rem] leading-relaxed text-gray-500 max-w-md mb-8"
-          >
-            Conectamos hacienda, planeación y normativa en una sola
-            plataforma. Para que alcaldías y gobernaciones tomen decisiones
-            con datos, no con supuestos.
-          </motion.p>
-
           {/* CTAs */}
           <motion.div
-            {...fadeUp(0.5)}
+            {...fadeUp(0.35)}
             className="flex flex-col sm:flex-row gap-3"
           >
             <a href="/demo" className="btn-primary">

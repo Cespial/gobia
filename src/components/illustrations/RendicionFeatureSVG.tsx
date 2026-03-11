@@ -125,7 +125,7 @@ export default function RendicionFeatureSVG({ animate = true, delay = 0 }: Props
             <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#B8956A" strokeWidth={3} strokeLinecap="round" />
           );
         })}
-        <text x={130} y={98} textAnchor="middle" fill="#B8956A" fontSize={7} fontWeight={700} fontFamily="'DM Serif Display', serif">
+        <text x={130} y={98} textAnchor="middle" fill="#B8956A" fontSize={7} fontWeight={700} fontFamily="'Space Grotesk', serif">
           G
         </text>
         <text x={130} y={106} textAnchor="middle" fill="#9E9484" fontSize={4} fontFamily="'Plus Jakarta Sans', sans-serif">

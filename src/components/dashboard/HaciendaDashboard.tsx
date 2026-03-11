@@ -291,7 +291,7 @@ export default function HaciendaDashboard() {
                       );
                     });
                   })()}
-                  <text x="100" y="96" textAnchor="middle" fill="#2C2418" fontSize="14" fontWeight="700" fontFamily="'DM Serif Display', serif">
+                  <text x="100" y="96" textAnchor="middle" fill="#2C2418" fontSize="14" fontWeight="700" fontFamily="'Space Grotesk', serif">
                     {formatCOP(gastosCategoria.reduce((s, g) => s + g.ejecutado, 0))}
                   </text>
                   <text x="100" y="112" textAnchor="middle" fill="#9E9484" fontSize="8" fontFamily="'Plus Jakarta Sans', sans-serif">

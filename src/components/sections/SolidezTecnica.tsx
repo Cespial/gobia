@@ -61,7 +61,7 @@ export default function SolidezTecnica() {
               className="font-serif font-bold text-[2rem] md:text-[2.75rem] leading-[1.1] tracking-[-0.02em] mb-6"
             >
               Construida para la escala del{" "}
-              <em className="text-ochre not-italic">sector público</em>
+              <span className="text-ochre">sector público</span>
             </motion.h2>
 
             <motion.p
@@ -84,7 +84,7 @@ export default function SolidezTecnica() {
               {techStack.map((tech) => (
                 <span
                   key={tech}
-                  className="inline-flex items-center rounded-full bg-paper/[0.06] border border-paper/10 px-3.5 py-1.5 text-[0.75rem] font-medium text-paper/60"
+                  className="inline-flex items-center rounded-full bg-paper/[0.06] border border-paper/10 px-3.5 py-1.5 text-[0.75rem] font-medium text-paper/60 transition-colors duration-200 hover:bg-paper/[0.12] hover:text-paper/80"
                 >
                   {tech}
                 </span>

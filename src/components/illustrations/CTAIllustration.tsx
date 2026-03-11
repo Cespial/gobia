@@ -37,7 +37,7 @@ export default function CTAIllustration({ animate = true }: CTAIllustrationProps
 
         {/* Center circle */}
         <circle cx={160} cy={140} r={40} fill="#F5EDDF" stroke="#B8956A" strokeWidth={1.5} />
-        <text x={160} y={136} textAnchor="middle" dominantBaseline="central" fill="#B8956A" fontSize={12} fontWeight={700} fontFamily="'DM Serif Display', serif">
+        <text x={160} y={136} textAnchor="middle" dominantBaseline="central" fill="#B8956A" fontSize={12} fontWeight={700} fontFamily="'Space Grotesk', serif">
           Gobia
         </text>
         <text x={160} y={152} textAnchor="middle" fill="#9E9484" fontSize={7} fontFamily="'Plus Jakarta Sans', sans-serif">

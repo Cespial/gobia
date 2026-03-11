@@ -308,7 +308,7 @@ export default function DemoPage() {
                         );
                       });
                     })()}
-                    <text x="100" y="96" textAnchor="middle" fill="#2C2418" fontSize="12" fontWeight="700" fontFamily="'DM Serif Display', serif">
+                    <text x="100" y="96" textAnchor="middle" fill="#2C2418" fontSize="12" fontWeight="700" fontFamily="'Space Grotesk', serif">
                       {formatCOP(totalGastosEjecutados)}
                     </text>
                     <text x="100" y="112" textAnchor="middle" fill="#9E9484" fontSize="7">
