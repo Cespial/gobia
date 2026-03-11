@@ -8,9 +8,9 @@ interface FragmentedDataSVGProps {
 }
 
 /*
-  Refined editorial diagram: municipality at center, 16 data
-  sources radiating outward. Near-monochromatic palette.
-  Clean break indicators. No decorative noise.
+  Editorial diagram: municipality at center, 16 data sources
+  radiating outward — each connection visibly BROKEN with a
+  prominent red × indicator. Dashed lines, wide gaps, no ambiguity.
 */
 
 interface Source {
@@ -77,9 +77,9 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
         role="img"
         aria-label="Municipio en el centro rodeado de 16 fuentes de datos desconectadas"
       >
-        {/* ── Single subtle guide ring ── */}
-        <circle cx={cx} cy={cy} r={innerR} stroke="#EAE6E1" strokeWidth={0.5} opacity={0.5} />
-        <circle cx={cx} cy={cy} r={outerR} stroke="#EAE6E1" strokeWidth={0.3} opacity={0.3} />
+        {/* ── Subtle guide rings ── */}
+        <circle cx={cx} cy={cy} r={innerR} stroke="#EAE6E1" strokeWidth={0.5} opacity={0.4} />
+        <circle cx={cx} cy={cy} r={outerR} stroke="#EAE6E1" strokeWidth={0.3} opacity={0.25} />
 
         {/* ── Radial connections — all 16, broken at midpoint ── */}
         {allSources.map((src, i) => {
@@ -89,29 +89,34 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
           const bPct = src.ring === "inner" ? 0.46 : 0.38;
           const bx = cx + dx * bPct, by = cy + dy * bPct;
           const isActive = hovered === i;
-          const baseOpacity = src.ring === "inner" ? 0.4 : 0.25;
-          const opacity = hovered !== null ? (isActive ? 0.7 : 0.1) : baseOpacity;
+          const baseOpacity = src.ring === "inner" ? 0.55 : 0.35;
+          const opacity = hovered !== null ? (isActive ? 0.85 : 0.12) : baseOpacity;
 
           return (
             <g key={`conn-${i}`} style={{ opacity, transition: "opacity 0.25s ease" }}>
-              {/* Line from center to break — dashed to signal incomplete */}
+              {/* Line from center toward break — dashed, stops well short */}
               <line
                 x1={cx + nx * 48} y1={cy + ny * 48}
-                x2={bx - nx * 12} y2={by - ny * 12}
-                stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 1 : 0.7}
-                strokeDasharray="4 3"
+                x2={bx - nx * 16} y2={by - ny * 16}
+                stroke="#CABBB5" strokeWidth={src.ring === "inner" ? 1.3 : 1}
+                strokeDasharray="5 4"
               />
-              {/* Line from break to node — dashed */}
+              {/* Line from break toward node — dashed, starts well after */}
               <line
-                x1={bx + nx * 12} y1={by + ny * 12}
+                x1={bx + nx * 16} y1={by + ny * 16}
                 x2={src.x - nx * (src.w / 2 - 2)} y2={src.y - ny * (src.h / 2 - 2)}
-                stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 1 : 0.7}
-                strokeDasharray="4 3"
+                stroke="#CABBB5" strokeWidth={src.ring === "inner" ? 1.3 : 1}
+                strokeDasharray="5 4"
               />
-              {/* Break indicator: red-tinted circle with prominent × */}
-              <circle cx={bx} cy={by} r={8} fill="#FEF2F2" stroke="#E8A090" strokeWidth={1} />
-              <line x1={bx - 3.5} y1={by - 3.5} x2={bx + 3.5} y2={by + 3.5} stroke="#C0554A" strokeWidth={1.5} strokeLinecap="round" />
-              <line x1={bx + 3.5} y1={by - 3.5} x2={bx - 3.5} y2={by + 3.5} stroke="#C0554A" strokeWidth={1.5} strokeLinecap="round" />
+
+              {/* ── Break indicator: large red × in circle ── */}
+              {/* Soft red halo */}
+              <circle cx={bx} cy={by} r={14} fill="#FEE2E2" opacity={0.35} />
+              {/* Main circle */}
+              <circle cx={bx} cy={by} r={10} fill="#FEE8E8" stroke="#E07060" strokeWidth={1.2} />
+              {/* Bold × */}
+              <line x1={bx - 4} y1={by - 4} x2={bx + 4} y2={by + 4} stroke="#C0392B" strokeWidth={2} strokeLinecap="round" />
+              <line x1={bx + 4} y1={by - 4} x2={bx - 4} y2={by + 4} stroke="#C0392B" strokeWidth={2} strokeLinecap="round" />
             </g>
           );
         })}
@@ -126,7 +131,7 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
           <circle cx={cx} cy={cy} r={46} fill="#FAFAF8" stroke="#D4CFC7" strokeWidth={1.2} />
           <circle cx={cx} cy={cy} r={42} fill="none" stroke="#E8E4DE" strokeWidth={0.4} />
 
-          {/* Building — clean, slightly larger */}
+          {/* Building icon */}
           <rect x={cx - 14} y={cy - 14} width={28} height={20} rx={1} fill="none" stroke="#8A8279" strokeWidth={1} />
           <path d={`M${cx - 18} ${cy - 14} L${cx} ${cy - 24} L${cx + 18} ${cy - 14}`} fill="none" stroke="#8A8279" strokeWidth={1} strokeLinejoin="round" />
           <rect x={cx - 3.5} y={cy - 2} width={7} height={9} rx={0.8} fill="#8A8279" opacity={0.2} />
@@ -217,7 +222,7 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
         })()}
       </svg>
 
-      {/* ── Bottom stats — minimal ── */}
+      {/* ── Bottom stats ── */}
       <motion.div
         className="flex items-center justify-center gap-10 md:gap-14 mt-2"
         initial={animate ? { opacity: 0 } : { opacity: 1 }}
