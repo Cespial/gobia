@@ -56,11 +56,11 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
   const allSources = [
     ...innerSources.map((s, i) => {
       const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 8;
-      return { ...s, x: cx + innerR * Math.cos(angle), y: cy + innerR * Math.sin(angle), ring: "inner" as const, w: 76, h: 34 };
+      return { ...s, x: cx + innerR * Math.cos(angle), y: cy + innerR * Math.sin(angle), ring: "inner" as const, w: 84, h: 38 };
     }),
     ...outerSources.map((s, i) => {
       const angle = -Math.PI / 2 + (Math.PI / 8) + (i * 2 * Math.PI) / 8;
-      return { ...s, x: cx + outerR * Math.cos(angle), y: cy + outerR * Math.sin(angle), ring: "outer" as const, w: 82, h: 34 };
+      return { ...s, x: cx + outerR * Math.cos(angle), y: cy + outerR * Math.sin(angle), ring: "outer" as const, w: 90, h: 38 };
     }),
   ];
 
@@ -111,10 +111,10 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
               transition={{ duration: 0.3, delay: 0.8 + i * 0.05, type: "spring" }}
               style={{ transformOrigin: `${mx}px ${my}px` }}
             >
-              <circle cx={mx} cy={my} r={4.5} fill="#FAFAF8" stroke="#86EFAC" strokeWidth={0.7} />
+              <circle cx={mx} cy={my} r={6} fill="#FAFAF8" stroke="#86EFAC" strokeWidth={0.8} />
               <path
-                d={`M${mx - 2} ${my + 0.3} L${mx - 0.3} ${my + 2} L${mx + 2.5} ${my - 1.5}`}
-                stroke="#16a34a" strokeWidth={0.8} fill="none"
+                d={`M${mx - 3} ${my + 0.3} L${mx - 0.5} ${my + 3} L${mx + 3.5} ${my - 2}`}
+                stroke="#16a34a" strokeWidth={1.1} fill="none"
                 strokeLinecap="round" strokeLinejoin="round"
               />
             </motion.g>
@@ -174,12 +174,12 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
               />
 
               {/* Accent strip */}
-              <rect x={nx + 0.5} y={ny + 5} width={2} height={src.h - 10} rx={1} fill={accent} opacity={0.45} />
+              <rect x={nx + 0.5} y={ny + 6} width={2.5} height={src.h - 12} rx={1} fill={accent} opacity={0.45} />
 
               {/* Label */}
               <text
-                x={nx + 10} y={ny + 13}
-                fontSize={src.ring === "inner" ? 8 : 7.5}
+                x={nx + 11} y={ny + 15}
+                fontSize={src.ring === "inner" ? 8.5 : 8}
                 fontWeight={700}
                 fill="#3D3830"
                 fontFamily="'Space Grotesk', sans-serif"
@@ -189,8 +189,8 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
 
               {/* Sub label */}
               <text
-                x={nx + 10} y={ny + 24}
-                fontSize={5.5}
+                x={nx + 11} y={ny + 27}
+                fontSize={6}
                 fill="#A09A92"
                 fontFamily="'Plus Jakarta Sans', sans-serif"
               >

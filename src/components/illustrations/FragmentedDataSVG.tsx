@@ -60,11 +60,11 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
   const allSources = [
     ...innerSources.map((s, i) => {
       const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 8;
-      return { ...s, x: cx + innerR * Math.cos(angle), y: cy + innerR * Math.sin(angle), ring: "inner" as const, w: 76, h: 34 };
+      return { ...s, x: cx + innerR * Math.cos(angle), y: cy + innerR * Math.sin(angle), ring: "inner" as const, w: 84, h: 38 };
     }),
     ...outerSources.map((s, i) => {
       const angle = -Math.PI / 2 + (Math.PI / 8) + (i * 2 * Math.PI) / 8;
-      return { ...s, x: cx + outerR * Math.cos(angle), y: cy + outerR * Math.sin(angle), ring: "outer" as const, w: 82, h: 34 };
+      return { ...s, x: cx + outerR * Math.cos(angle), y: cy + outerR * Math.sin(angle), ring: "outer" as const, w: 90, h: 38 };
     }),
   ];
 
@@ -97,19 +97,19 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
               {/* Line from center to break */}
               <line
                 x1={cx + nx * 48} y1={cy + ny * 48}
-                x2={bx - nx * 6} y2={by - ny * 6}
+                x2={bx - nx * 8} y2={by - ny * 8}
                 stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 0.8 : 0.5}
               />
               {/* Line from break to node */}
               <line
-                x1={bx + nx * 6} y1={by + ny * 6}
+                x1={bx + nx * 8} y1={by + ny * 8}
                 x2={src.x - nx * (src.w / 2 - 2)} y2={src.y - ny * (src.h / 2 - 2)}
                 stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 0.8 : 0.5}
               />
-              {/* Break indicator: small circle with × */}
-              <circle cx={bx} cy={by} r={4} fill="#FAFAF8" stroke="#D4A39A" strokeWidth={0.7} />
-              <line x1={bx - 1.8} y1={by - 1.8} x2={bx + 1.8} y2={by + 1.8} stroke="#C0826A" strokeWidth={0.65} strokeLinecap="round" />
-              <line x1={bx + 1.8} y1={by - 1.8} x2={bx - 1.8} y2={by + 1.8} stroke="#C0826A" strokeWidth={0.65} strokeLinecap="round" />
+              {/* Break indicator: circle with bold × */}
+              <circle cx={bx} cy={by} r={6} fill="#FAFAF8" stroke="#D4A39A" strokeWidth={0.8} />
+              <line x1={bx - 2.8} y1={by - 2.8} x2={bx + 2.8} y2={by + 2.8} stroke="#C0826A" strokeWidth={1.1} strokeLinecap="round" />
+              <line x1={bx + 2.8} y1={by - 2.8} x2={bx - 2.8} y2={by + 2.8} stroke="#C0826A" strokeWidth={1.1} strokeLinecap="round" />
             </g>
           );
         })}
@@ -171,12 +171,12 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
               />
 
               {/* Accent strip */}
-              <rect x={nx + 0.5} y={ny + 5} width={2} height={src.h - 10} rx={1} fill={accent} opacity={isHov ? 0.8 : 0.45} />
+              <rect x={nx + 0.5} y={ny + 6} width={2.5} height={src.h - 12} rx={1} fill={accent} opacity={isHov ? 0.8 : 0.45} />
 
               {/* Label */}
               <text
-                x={nx + 10} y={ny + 13}
-                fontSize={src.ring === "inner" ? 8 : 7.5}
+                x={nx + 11} y={ny + 15}
+                fontSize={src.ring === "inner" ? 8.5 : 8}
                 fontWeight={700}
                 fill="#3D3830"
                 fontFamily="'Space Grotesk', sans-serif"
@@ -186,8 +186,8 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
 
               {/* Sub label */}
               <text
-                x={nx + 10} y={ny + 24}
-                fontSize={5.5}
+                x={nx + 11} y={ny + 27}
+                fontSize={6}
                 fill="#A09A92"
                 fontFamily="'Plus Jakarta Sans', sans-serif"
               >
