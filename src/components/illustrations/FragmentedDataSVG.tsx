@@ -89,27 +89,29 @@ export default function FragmentedDataSVG({ animate = true }: FragmentedDataSVGP
           const bPct = src.ring === "inner" ? 0.46 : 0.38;
           const bx = cx + dx * bPct, by = cy + dy * bPct;
           const isActive = hovered === i;
-          const baseOpacity = src.ring === "inner" ? 0.3 : 0.18;
-          const opacity = hovered !== null ? (isActive ? 0.6 : 0.08) : baseOpacity;
+          const baseOpacity = src.ring === "inner" ? 0.4 : 0.25;
+          const opacity = hovered !== null ? (isActive ? 0.7 : 0.1) : baseOpacity;
 
           return (
             <g key={`conn-${i}`} style={{ opacity, transition: "opacity 0.25s ease" }}>
-              {/* Line from center to break */}
+              {/* Line from center to break — dashed to signal incomplete */}
               <line
                 x1={cx + nx * 48} y1={cy + ny * 48}
-                x2={bx - nx * 8} y2={by - ny * 8}
-                stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 0.8 : 0.5}
+                x2={bx - nx * 12} y2={by - ny * 12}
+                stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 1 : 0.7}
+                strokeDasharray="4 3"
               />
-              {/* Line from break to node */}
+              {/* Line from break to node — dashed */}
               <line
-                x1={bx + nx * 8} y1={by + ny * 8}
+                x1={bx + nx * 12} y1={by + ny * 12}
                 x2={src.x - nx * (src.w / 2 - 2)} y2={src.y - ny * (src.h / 2 - 2)}
-                stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 0.8 : 0.5}
+                stroke="#C8C2BA" strokeWidth={src.ring === "inner" ? 1 : 0.7}
+                strokeDasharray="4 3"
               />
-              {/* Break indicator: circle with bold × */}
-              <circle cx={bx} cy={by} r={6} fill="#FAFAF8" stroke="#D4A39A" strokeWidth={0.8} />
-              <line x1={bx - 2.8} y1={by - 2.8} x2={bx + 2.8} y2={by + 2.8} stroke="#C0826A" strokeWidth={1.1} strokeLinecap="round" />
-              <line x1={bx + 2.8} y1={by - 2.8} x2={bx - 2.8} y2={by + 2.8} stroke="#C0826A" strokeWidth={1.1} strokeLinecap="round" />
+              {/* Break indicator: red-tinted circle with prominent × */}
+              <circle cx={bx} cy={by} r={8} fill="#FEF2F2" stroke="#E8A090" strokeWidth={1} />
+              <line x1={bx - 3.5} y1={by - 3.5} x2={bx + 3.5} y2={by + 3.5} stroke="#C0554A" strokeWidth={1.5} strokeLinecap="round" />
+              <line x1={bx + 3.5} y1={by - 3.5} x2={bx - 3.5} y2={by + 3.5} stroke="#C0554A" strokeWidth={1.5} strokeLinecap="round" />
             </g>
           );
         })}
