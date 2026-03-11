@@ -3,7 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Shield } from "lucide-react";
-import PlatformHubDiagram from "@/components/illustrations/PlatformHubDiagram";
+import ConnectedDataSVG from "@/components/illustrations/ConnectedDataSVG";
 import {
   MicroHacienda,
   MicroEstatuto,
@@ -117,14 +117,14 @@ export default function SolucionSection() {
           </motion.p>
         </div>
 
-        {/* Hub diagram */}
+        {/* Connected data diagram — mirror of the fragmented version */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-16"
         >
-          <PlatformHubDiagram animate={isInView} />
+          <ConnectedDataSVG animate={isInView} />
         </motion.div>
 
         {/* Compact feature grid — 2x3 on desktop, 1 col on mobile */}
