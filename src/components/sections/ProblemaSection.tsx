@@ -41,7 +41,7 @@ export default function ProblemaSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-4"
+          className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre-text mb-4"
         >
           El problema
         </motion.span>

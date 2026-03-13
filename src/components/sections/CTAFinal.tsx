@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
-import { Send, CheckCircle, Loader2 } from "lucide-react";
+import { Send, CheckCircle, Loader2, Shield } from "lucide-react";
 import { submitContactForm } from "@/app/actions/contact";
 import CTAIllustration from "@/components/illustrations/CTAIllustration";
 
@@ -38,7 +38,7 @@ export default function CTAFinal() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6 }}
-              className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-4"
+              className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre-text mb-4"
             >
               Comencemos
             </motion.span>
@@ -82,11 +82,33 @@ export default function CTAFinal() {
               ))}
             </motion.div>
 
+            {/* Trust badges */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, delay: 0.35 }}
+              className="mt-8 space-y-3"
+            >
+              <div className="flex items-center gap-3 rounded-lg bg-cream/60 border border-border-light px-4 py-3">
+                <Shield size={18} className="text-ochre-text shrink-0" />
+                <p className="text-[0.8125rem] text-gray-600 leading-snug">
+                  <span className="font-semibold text-ink">Compatible con normativa vigente</span> — Res. 111/2025 · Ley 962/2005 · Ley 1581/2012
+                </p>
+              </div>
+              <div className="flex items-center gap-6 text-[0.75rem] text-gray-400 font-medium">
+                <span>Cifrado AES-256</span>
+                <span className="w-px h-3 bg-border" />
+                <span>99.5% uptime</span>
+                <span className="w-px h-3 bg-border" />
+                <span>WCAG AA</span>
+              </div>
+            </motion.div>
+
             <motion.div
               initial={{ opacity: 0 }}
               animate={isInView ? { opacity: 1 } : {}}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="mt-10 hidden lg:block"
+              className="mt-8 hidden lg:block"
             >
               <CTAIllustration animate={isInView} />
             </motion.div>
@@ -128,9 +150,15 @@ export default function CTAFinal() {
                     <label htmlFor="cargo" className="block text-[0.8125rem] font-medium text-gray-700 mb-1.5">Cargo</label>
                     <input type="text" id="cargo" name="cargo" required className="form-input" placeholder="Ej: Secretario(a) de Hacienda" />
                   </div>
-                  <div>
-                    <label htmlFor="email" className="block text-[0.8125rem] font-medium text-gray-700 mb-1.5">Correo electrónico</label>
-                    <input type="email" id="email" name="email" required className="form-input" placeholder="correo@entidad.gov.co" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="email" className="block text-[0.8125rem] font-medium text-gray-700 mb-1.5">Correo electrónico</label>
+                      <input type="email" id="email" name="email" required className="form-input" placeholder="correo@entidad.gov.co" />
+                    </div>
+                    <div>
+                      <label htmlFor="telefono" className="block text-[0.8125rem] font-medium text-gray-700 mb-1.5">Teléfono <span className="text-gray-400 font-normal">(opcional)</span></label>
+                      <input type="tel" id="telefono" name="telefono" className="form-input" placeholder="300 123 4567" />
+                    </div>
                   </div>
                   {error && (
                     <motion.p

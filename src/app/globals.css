@@ -27,6 +27,7 @@
   --ink: #1A1A1A;
   --sepia: #6B6B6B;
   --ochre: #B8956A;
+  --ochre-text: #8F7045; /* Darker ochre for WCAG AA on light bg (4.65:1) */
   --ochre-soft: #F5F0E8;
 
   /* ── Borders ── */
@@ -53,6 +54,7 @@
   --color-ink: var(--ink);
   --color-sepia: var(--sepia);
   --color-ochre: var(--ochre);
+  --color-ochre-text: var(--ochre-text);
   --color-ochre-soft: var(--ochre-soft);
   --color-border: var(--border);
   --color-border-light: var(--border-light);
@@ -173,8 +175,8 @@ html { scroll-behavior: smooth; }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 3px rgba(184, 149, 106, 0.2);
   transform: translateY(-1px);
 }
 

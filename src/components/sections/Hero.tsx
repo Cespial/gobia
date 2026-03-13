@@ -74,9 +74,17 @@ export default function Hero() {
             Colombia
           </motion.h1>
 
+          {/* Subtitle */}
+          <motion.p
+            {...fadeUp(0.3)}
+            className="text-[1.0625rem] md:text-[1.1875rem] leading-relaxed text-gray-600 mb-7 max-w-lg"
+          >
+            Centraliza el recaudo, la normativa tributaria y los reportes de tu municipio en una sola plataforma segura.
+          </motion.p>
+
           {/* CTAs */}
           <motion.div
-            {...fadeUp(0.35)}
+            {...fadeUp(0.4)}
             className="flex flex-col sm:flex-row gap-3"
           >
             <a href="/demo" className="btn-primary">
@@ -95,11 +103,11 @@ export default function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.8 }}
-        className="relative z-10 mt-auto border-t border-border/50 bg-background/80 backdrop-blur-sm"
+        className="relative z-10 mt-auto border-t border-border bg-background/90 backdrop-blur-sm"
       >
         <div className="mx-auto max-w-[1120px] px-5 md:px-8 py-5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-x-8 gap-y-3 text-[0.8125rem]">
-            <span className="uppercase tracking-[0.1em] font-semibold text-gray-400 text-[0.75rem]">
+            <span className="uppercase tracking-[0.1em] font-semibold text-gray-500 text-[0.75rem]">
               Respaldado por
             </span>
             <div className="flex items-center gap-x-6 gap-y-2 flex-wrap justify-center">

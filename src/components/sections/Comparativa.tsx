@@ -583,7 +583,7 @@ export default function Comparativa() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre mb-4"
+            className="inline-block text-[0.8125rem] font-semibold uppercase tracking-[0.1em] text-ochre-text mb-4"
           >
             Antes vs. con Gobia
           </motion.span>
@@ -641,7 +641,7 @@ export default function Comparativa() {
                 <Clock size={14} className="text-gray-300" />
                 Flujo tradicional
               </div>
-              <div className="px-6 py-4 text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ochre border-l border-border flex items-center gap-2">
+              <div className="px-6 py-4 text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-ochre-text border-l border-border flex items-center gap-2">
                 <Zap size={14} className="text-ochre" />
                 Con Gobia
               </div>

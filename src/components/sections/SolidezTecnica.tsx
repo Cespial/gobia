@@ -42,6 +42,12 @@ export default function SolidezTecnica() {
         }}
       />
 
+      {/* Gradient fade: dark → light (bottom) */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-20 md:h-28 z-[1] pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, var(--ink), var(--paper))" }}
+      />
+
       <div className="relative z-10 mx-auto max-w-[1120px] px-5 md:px-8">
         <div className="grid gap-16 lg:grid-cols-2 lg:gap-20 items-center">
           <div>

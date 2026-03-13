@@ -19,6 +19,12 @@ export default function CerebroNormativo() {
       ref={ref}
       className="relative py-16 md:py-32 bg-ink text-paper overflow-hidden"
     >
+      {/* Gradient fade: light → dark (top) */}
+      <div
+        className="absolute top-0 left-0 right-0 h-20 md:h-28 z-[1] pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, var(--paper), var(--ink))" }}
+      />
+
       {/* Subtle grid bg */}
       <div
         className="absolute inset-0 opacity-[0.02]"
