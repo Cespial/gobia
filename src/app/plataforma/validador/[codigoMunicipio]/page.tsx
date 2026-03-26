@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { MUNICIPIO_BY_CODE } from "@/data/municipios";
 import ValidadorDashboard from "@/components/validador/ValidadorDashboard";
 
@@ -28,14 +28,23 @@ export default async function MunicipioPage({ params }: Props) {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <Link
-        href="/plataforma/validador"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--gray-400)] transition-colors hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Volver al selector
-      </Link>
+      {/* Breadcrumb + report link */}
+      <div className="mb-6 flex items-center justify-between">
+        <Link
+          href="/plataforma/validador"
+          className="inline-flex items-center gap-2 text-sm text-[var(--gray-400)] transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al selector
+        </Link>
+        <Link
+          href={`/plataforma/validador/${codigoMunicipio}/reporte`}
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--ochre)] px-4 py-2 text-sm font-semibold text-white transition-all hover:brightness-110"
+        >
+          <FileText className="h-4 w-4" />
+          Ver Reporte
+        </Link>
+      </div>
 
       {/* Municipality header */}
       <div className="mb-8">

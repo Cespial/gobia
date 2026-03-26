@@ -1,0 +1,59 @@
+name: Scrape Fiscal Data (CIFFIT + Cognos)
+
+on:
+  # Run weekly on Sundays at 3 AM UTC (10 PM COT Saturday)
+  schedule:
+    - cron: '0 3 * * 0'
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dane_code:
+        description: 'DANE municipality code (e.g., 05091 for Betania)'
+        required: false
+        default: ''
+      year:
+        description: 'Fiscal year to scrape'
+        required: false
+        default: '2024'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run scraper
+        run: |
+          if [ -n "${{ github.event.inputs.dane_code }}" ]; then
+            npx tsx scripts/scrape-fiscal-data.ts \
+              --dane ${{ github.event.inputs.dane_code }} \
+              --year ${{ github.event.inputs.year }}
+          else
+            echo "Running batch scrape for sample municipalities..."
+            for code in 05091 05001 11001 76001 27001; do
+              echo "--- Scraping $code ---"
+              npx tsx scripts/scrape-fiscal-data.ts --dane $code --year 2024 || true
+              sleep 5
+            done
+          fi
+
+      - name: Upload scraped data
+        uses: actions/upload-artifact@v4
+        with:
+          name: fiscal-data-${{ github.run_id }}
+          path: data/scraped/
+          retention-days: 30
+          if-no-files-found: warn
