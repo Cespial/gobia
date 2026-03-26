@@ -417,7 +417,9 @@ function DespuesSVG() {
 function BeforeAfterSlider() {
   const [position, setPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sliderInView = useInView(containerRef, { once: true, margin: "-40px" });
 
   const handleMove = useCallback(
     (clientX: number) => {
@@ -434,6 +436,7 @@ function BeforeAfterSlider() {
     (e: React.MouseEvent) => {
       e.preventDefault();
       setIsDragging(true);
+      setHasInteracted(true);
       handleMove(e.clientX);
     },
     [handleMove]
@@ -442,6 +445,7 @@ function BeforeAfterSlider() {
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       setIsDragging(true);
+      setHasInteracted(true);
       handleMove(e.touches[0].clientX);
     },
     [handleMove]
@@ -475,7 +479,7 @@ function BeforeAfterSlider() {
   return (
     <div
       ref={containerRef}
-      className="relative h-[200px] md:h-[300px] rounded-2xl border border-border bg-paper overflow-hidden shadow-sm select-none cursor-col-resize"
+      className="relative h-[200px] md:h-[300px] rounded-2xl border border-border bg-paper overflow-hidden shadow-sm select-none cursor-col-resize touch-none"
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       role="slider"
@@ -529,12 +533,24 @@ function BeforeAfterSlider() {
       </div>
 
       {/* Drag handle */}
-      <div
+      <motion.div
         className="absolute z-30 pointer-events-none"
         style={{
           left: `${position}%`,
           top: "50%",
           transform: "translate(-50%, -50%)",
+        }}
+        animate={
+          sliderInView && !hasInteracted
+            ? { x: [0, -6, 6, -4, 4, 0] }
+            : {}
+        }
+        transition={{
+          duration: 1.2,
+          delay: 0.8,
+          ease: "easeInOut",
+          repeat: sliderInView && !hasInteracted ? 1 : 0,
+          repeatDelay: 1.5,
         }}
       >
         <div className="w-11 h-11 md:w-10 md:h-10 rounded-full bg-white border-2 border-ochre/40 shadow-lg flex items-center justify-center pointer-events-auto cursor-col-resize transition-transform hover:scale-110 ring-4 ring-ochre/10">
@@ -563,7 +579,7 @@ function BeforeAfterSlider() {
             />
           </svg>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

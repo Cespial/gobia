@@ -49,6 +49,14 @@ const accentByType: Record<string, string> = {
   email: "#AB47BC",
 };
 
+const tooltipByType: Record<string, string> = {
+  gov: "Sincronización automática vía API",
+  excel: "Importación y exportación automatizada",
+  pdf: "Indexado con IA semántica",
+  paper: "Generación y digitalización automática",
+  email: "Notificaciones en tiempo real",
+};
+
 export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGProps) {
   const cx = 400, cy = 270;
   const innerR = 142, outerR = 248;
@@ -128,6 +136,16 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
           transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           style={{ transformOrigin: `${cx}px ${cy}px` }}
         >
+          {/* Subtle pulse ring */}
+          <motion.circle
+            cx={cx} cy={cy} r={46}
+            fill="none" stroke="#B8956A"
+            strokeWidth={0.8}
+            initial={{ opacity: 0, scale: 1 }}
+            animate={animate ? { opacity: [0, 0.3, 0], scale: [1, 1.25, 1.4] } : undefined}
+            transition={{ duration: 2.5, delay: 1.2, repeat: Infinity, repeatDelay: 3, ease: "easeOut" }}
+            style={{ transformOrigin: `${cx}px ${cy}px` }}
+          />
           <circle cx={cx} cy={cy} r={46} fill="#FAFAF8" stroke="#B8956A" strokeWidth={1.2} />
           <circle cx={cx} cy={cy} r={42} fill="none" stroke="#D4CFC7" strokeWidth={0.4} />
 
@@ -162,6 +180,7 @@ export default function ConnectedDataSVG({ animate = true }: ConnectedDataSVGPro
               animate={animate ? { opacity: 1, y: 0 } : undefined}
               transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
             >
+              <title>{src.label}: {tooltipByType[src.type]}</title>
               {/* Shadow */}
               <rect x={nx + 1} y={ny + 1.5} width={src.w} height={src.h} rx={4} fill="#00000006" />
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 
 const fadeUp = (delay: number) => ({
   initial: { opacity: 0, y: 20 },
@@ -95,6 +95,15 @@ export default function Hero() {
               Solicitar demo
             </a>
           </motion.div>
+
+          {/* Compliance micro-copy */}
+          <motion.p
+            {...fadeUp(0.5)}
+            className="flex items-center gap-1.5 text-[0.75rem] text-gray-400 mt-4"
+          >
+            <ShieldCheck size={14} className="text-gray-400 shrink-0" />
+            Cumple con Ley 962/2005 y estándares WCAG AA
+          </motion.p>
         </div>
       </div>
 

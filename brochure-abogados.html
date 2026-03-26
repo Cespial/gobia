@@ -1,0 +1,2065 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gobia — Inteligencia Normativa para Abogados Administrativistas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ══════════════════════════════════════
+     GOBIA BROCHURE — Design System
+     ══════════════════════════════════════ */
+
+  :root {
+    --ink: #1A1A1A;
+    --sepia: #6B6B6B;
+    --ochre: #B8956A;
+    --ochre-dark: #8F7045;
+    --ochre-soft: #F5F0E8;
+    --background: #F8F8F6;
+    --paper: #FFFFFF;
+    --cream: #F2F2F0;
+    --border: #E5E5E5;
+    --border-light: #F0F0F0;
+    --gray-100: #F0F0F0;
+    --gray-200: #E5E5E5;
+    --gray-300: #D4D4D4;
+    --gray-400: #A3A3A3;
+    --gray-500: #737373;
+    --gray-700: #404040;
+    --gray-800: #262626;
+
+    --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+  }
+
+  /* ── Print styles ── */
+  @media print {
+    body { background: white; }
+    .page-break { page-break-before: always; }
+    .no-print { display: none !important; }
+    section { break-inside: avoid; }
+  }
+
+  /* ══════════════════════════════════════
+     PAGE 1 — COVER
+     ══════════════════════════════════════ */
+
+  .cover {
+    min-height: 100vh;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding: 4rem 2rem;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 80%;
+    height: 140%;
+    background: radial-gradient(ellipse at center, rgba(184, 149, 106, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ochre), transparent);
+  }
+
+  /* Grid pattern overlay */
+  .cover-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(184, 149, 106, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(184, 149, 106, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  .cover-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    text-align: center;
+  }
+
+  .cover-logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ochre);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .cover-logo .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--ochre);
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .cover-eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ochre);
+    margin-bottom: 2rem;
+    opacity: 0.9;
+  }
+
+  .cover h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .cover h1 em {
+    font-style: normal;
+    color: var(--ochre);
+  }
+
+  .cover-subtitle {
+    font-size: 1.1875rem;
+    color: var(--gray-400);
+    line-height: 1.7;
+    max-width: 620px;
+    margin: 0 auto 3rem;
+    font-weight: 300;
+  }
+
+  .cover-stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(184, 149, 106, 0.2);
+  }
+
+  .cover-stat {
+    text-align: center;
+  }
+
+  .cover-stat .number {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--ochre);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .cover-stat .label {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .cover-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(184, 149, 106, 0.1);
+    border: 1px solid rgba(184, 149, 106, 0.25);
+    border-radius: 100px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8125rem;
+    color: var(--ochre);
+    font-weight: 500;
+    margin-bottom: 2.5rem;
+  }
+
+  .cover-badge .pulse {
+    width: 6px;
+    height: 6px;
+    background: var(--ochre);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ══════════════════════════════════════
+     PAGE 2 — EL PROBLEMA
+     ══════════════════════════════════════ */
+
+  .section {
+    padding: 5rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-dark {
+    background: var(--ink);
+    color: var(--paper);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .section-dark .inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-cream {
+    background: var(--cream);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .section-cream .inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-ochre-soft {
+    background: var(--ochre-soft);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .section-ochre-soft .inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ochre-dark);
+    margin-bottom: 1rem;
+  }
+
+  .section-dark .eyebrow {
+    color: var(--ochre);
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 1.0625rem;
+    color: var(--sepia);
+    line-height: 1.7;
+    max-width: 680px;
+    margin-bottom: 3rem;
+    font-weight: 300;
+  }
+
+  .section-dark .subtitle {
+    color: var(--gray-400);
+  }
+
+  /* Pain points grid */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .pain-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    position: relative;
+    transition: border-color 0.3s ease;
+  }
+
+  .pain-card:hover {
+    border-color: var(--gray-300);
+  }
+
+  .pain-card .icon {
+    width: 48px;
+    height: 48px;
+    background: #FEE2E2;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .pain-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--ink);
+  }
+
+  .pain-card p {
+    font-size: 0.9375rem;
+    color: var(--sepia);
+    line-height: 1.6;
+  }
+
+  .pain-card .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #B91C1C;
+    background: #FEF2F2;
+    padding: 0.35rem 0.75rem;
+    border-radius: 100px;
+  }
+
+  /* ══════════════════════════════════════
+     SOLUTION CARDS
+     ══════════════════════════════════════ */
+
+  .solution-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .solution-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 2rem;
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+
+  .solution-card:hover {
+    border-color: rgba(184, 149, 106, 0.3);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .solution-card .icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(184, 149, 106, 0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .solution-card h3 {
+    color: var(--paper);
+    margin-bottom: 0.75rem;
+  }
+
+  .solution-card p {
+    font-size: 0.9375rem;
+    color: var(--gray-400);
+    line-height: 1.6;
+  }
+
+  .solution-card .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ochre);
+    background: rgba(184, 149, 106, 0.1);
+    padding: 0.3rem 0.7rem;
+    border-radius: 100px;
+    border: 1px solid rgba(184, 149, 106, 0.2);
+  }
+
+  /* ══════════════════════════════════════
+     CEREBRO NORMATIVO — Hero Feature
+     ══════════════════════════════════════ */
+
+  .feature-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .feature-hero {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+
+  .feature-hero-text h2 {
+    margin-bottom: 1.25rem;
+  }
+
+  .feature-hero-text p {
+    font-size: 1rem;
+    color: var(--sepia);
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  .feature-list {
+    list-style: none;
+    margin-top: 1.5rem;
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    font-size: 0.9375rem;
+    color: var(--gray-700);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .feature-list li:last-child {
+    border-bottom: none;
+  }
+
+  .feature-list .check {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    background: var(--ochre-soft);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ochre-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  /* Knowledge graph visual */
+  .graph-visual {
+    background: var(--cream);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .graph-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 30% 40%, var(--ochre-soft) 0%, transparent 50%),
+      radial-gradient(circle at 70% 60%, rgba(184, 149, 106, 0.08) 0%, transparent 40%);
+  }
+
+  .graph-nodes {
+    position: relative;
+    height: 320px;
+  }
+
+  .graph-node {
+    position: absolute;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    white-space: nowrap;
+  }
+
+  .graph-node.primary {
+    background: var(--ochre);
+    color: var(--paper);
+    border-color: var(--ochre);
+    font-size: 0.875rem;
+    padding: 1rem 1.25rem;
+    z-index: 2;
+  }
+
+  .graph-node.secondary {
+    background: var(--ochre-soft);
+    border-color: var(--ochre);
+    color: var(--ochre-dark);
+  }
+
+  .graph-node:nth-child(1) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+  .graph-node:nth-child(2) { top: 10%; left: 15%; }
+  .graph-node:nth-child(3) { top: 5%; right: 15%; }
+  .graph-node:nth-child(4) { top: 35%; left: 5%; }
+  .graph-node:nth-child(5) { top: 70%; left: 10%; }
+  .graph-node:nth-child(6) { bottom: 5%; left: 30%; }
+  .graph-node:nth-child(7) { top: 30%; right: 5%; }
+  .graph-node:nth-child(8) { bottom: 10%; right: 15%; }
+  .graph-node:nth-child(9) { top: 65%; right: 5%; }
+
+  /* Connection lines (SVG overlay) */
+  .graph-lines {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  /* ══════════════════════════════════════
+     COMPARISON TABLE (Before/After)
+     ══════════════════════════════════════ */
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 2rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .comparison-table thead th {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    letter-spacing: 0.02em;
+  }
+
+  .comparison-table thead th:first-child {
+    width: 30%;
+  }
+
+  .comparison-table thead th.before {
+    background: var(--gray-800);
+    color: var(--gray-400);
+  }
+
+  .comparison-table thead th.after {
+    background: var(--ochre-dark);
+    color: var(--paper);
+  }
+
+  .comparison-table tbody td {
+    padding: 1rem 1.5rem;
+    font-size: 0.9375rem;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: top;
+  }
+
+  .comparison-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .comparison-table tbody td:first-child {
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--cream);
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+  }
+
+  .comparison-table tbody td.before-cell {
+    color: var(--sepia);
+    background: #FAFAFA;
+  }
+
+  .comparison-table tbody td.after-cell {
+    color: var(--ink);
+    background: var(--ochre-soft);
+    font-weight: 500;
+  }
+
+  .comparison-table .time-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+
+  .time-badge.slow {
+    background: #FEE2E2;
+    color: #B91C1C;
+  }
+
+  .time-badge.fast {
+    background: #DCFCE7;
+    color: #166534;
+  }
+
+  /* ══════════════════════════════════════
+     USE CASES FOR LAWYERS
+     ══════════════════════════════════════ */
+
+  .usecase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .usecase-card {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .usecase-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--ochre);
+  }
+
+  .usecase-number {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+
+  .usecase-card h3 {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+    color: var(--ink);
+  }
+
+  .usecase-card p {
+    font-size: 0.9375rem;
+    color: var(--sepia);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .usecase-result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ochre-dark);
+    background: var(--ochre-soft);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+  }
+
+  /* ══════════════════════════════════════
+     METRICS BANNER
+     ══════════════════════════════════════ */
+
+  .metrics-banner {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 0;
+    background: var(--ink);
+  }
+
+  @media (max-width: 768px) {
+    .metrics-banner {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .metric {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .metric:last-child {
+    border-right: none;
+  }
+
+  .metric .number {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--ochre);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric .unit {
+    font-size: 1.5rem;
+    font-weight: 400;
+    opacity: 0.7;
+  }
+
+  .metric .label {
+    font-size: 0.8125rem;
+    color: var(--gray-400);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* ══════════════════════════════════════
+     ROI SECTION
+     ══════════════════════════════════════ */
+
+  .roi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+    margin-top: 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .roi-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .roi-calculation {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .roi-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1.25rem 1.5rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .roi-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.9375rem;
+  }
+
+  .roi-row:last-child {
+    border-bottom: none;
+  }
+
+  .roi-row .label {
+    color: var(--sepia);
+  }
+
+  .roi-row .value {
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--ink);
+  }
+
+  .roi-row.total {
+    background: var(--ochre-soft);
+    font-weight: 700;
+  }
+
+  .roi-row.total .value {
+    color: var(--ochre-dark);
+    font-size: 1.125rem;
+  }
+
+  .roi-benefits {
+    list-style: none;
+  }
+
+  .roi-benefits li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .roi-benefits li:last-child {
+    border-bottom: none;
+  }
+
+  .roi-benefits .num {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    background: var(--ochre);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--paper);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-family: var(--font-display);
+  }
+
+  .roi-benefits h4 {
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .roi-benefits p {
+    font-size: 0.875rem;
+    color: var(--sepia);
+    line-height: 1.5;
+  }
+
+  /* ══════════════════════════════════════
+     TRUST / TECH SECTION
+     ══════════════════════════════════════ */
+
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .trust-item {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+  }
+
+  .trust-item .icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .trust-item h4 {
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--paper);
+    margin-bottom: 0.5rem;
+  }
+
+  .trust-item p {
+    font-size: 0.8125rem;
+    color: var(--gray-400);
+    line-height: 1.5;
+  }
+
+  /* ══════════════════════════════════════
+     CHAT DEMO MOCKUP
+     ══════════════════════════════════════ */
+
+  .chat-mockup {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+    max-width: 420px;
+  }
+
+  .chat-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  .chat-header .ai-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--ochre);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .chat-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 360px;
+    overflow: hidden;
+  }
+
+  .chat-msg {
+    max-width: 85%;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .chat-msg.user {
+    align-self: flex-end;
+    background: var(--ink);
+    color: var(--paper);
+    border-bottom-right-radius: 4px;
+  }
+
+  .chat-msg.ai {
+    align-self: flex-start;
+    background: var(--cream);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-msg .citation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--ochre-dark);
+    background: var(--ochre-soft);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+
+  .chat-input {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border-light);
+    font-size: 0.875rem;
+    color: var(--gray-400);
+  }
+
+  /* ══════════════════════════════════════
+     CTA SECTION
+     ══════════════════════════════════════ */
+
+  .cta-section {
+    background: var(--ink);
+    color: var(--paper);
+    text-align: center;
+    padding: 6rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ochre), transparent);
+  }
+
+  .cta-section::after {
+    content: '';
+    position: absolute;
+    bottom: -60%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, rgba(184, 149, 106, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .cta-content {
+    position: relative;
+    z-index: 1;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .cta-section h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin-bottom: 1.25rem;
+    color: var(--paper);
+  }
+
+  .cta-section h2 em {
+    font-style: normal;
+    color: var(--ochre);
+  }
+
+  .cta-section p {
+    font-size: 1.0625rem;
+    color: var(--gray-400);
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+    font-weight: 300;
+  }
+
+  .cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s ease;
+  }
+
+  .btn-primary {
+    background: var(--ochre);
+    color: var(--paper);
+  }
+
+  .btn-primary:hover {
+    background: var(--ochre-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(184, 149, 106, 0.3);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--ochre);
+    color: var(--ochre);
+  }
+
+  .cta-footer {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .cta-footer span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+  }
+
+  /* ══════════════════════════════════════
+     FOOTER
+     ══════════════════════════════════════ */
+
+  .footer {
+    background: var(--ink);
+    color: var(--gray-500);
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .footer a {
+    color: var(--ochre);
+    text-decoration: none;
+  }
+
+  .footer .logos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .footer .logos span {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-400);
+    letter-spacing: 0.05em;
+  }
+
+  /* ══════════════════════════════════════
+     RESPONSIVE
+     ══════════════════════════════════════ */
+
+  @media (max-width: 768px) {
+    .cover-stats {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .pain-grid,
+    .solution-grid,
+    .usecase-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .comparison-table {
+      font-size: 0.8125rem;
+    }
+
+    .comparison-table thead th,
+    .comparison-table tbody td {
+      padding: 0.75rem;
+    }
+
+    .metrics-banner {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .metric {
+      padding: 2rem 1rem;
+    }
+
+    .metric .number {
+      font-size: 2.25rem;
+    }
+  }
+
+  /* ══════════════════════════════════════
+     TESTIMONIAL / QUOTE
+     ══════════════════════════════════════ */
+
+  .quote-block {
+    background: var(--ochre-soft);
+    border-left: 3px solid var(--ochre);
+    padding: 2rem 2.5rem;
+    border-radius: 0 12px 12px 0;
+    margin: 2.5rem 0;
+  }
+
+  .quote-block p {
+    font-size: 1.125rem;
+    font-style: italic;
+    color: var(--gray-700);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  .quote-block cite {
+    font-style: normal;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ochre-dark);
+  }
+
+  /* ══════════════════════════════════════
+     MODULES STRIP
+     ══════════════════════════════════════ */
+
+  .modules-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .modules-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .module-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+  }
+
+  .module-pill:hover {
+    border-color: var(--ochre);
+    box-shadow: 0 4px 16px rgba(184, 149, 106, 0.12);
+  }
+
+  .module-pill .mod-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    background: var(--ochre-soft);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+
+  .module-pill h4 {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+  }
+
+  .module-pill p {
+    font-size: 0.75rem;
+    color: var(--sepia);
+  }
+
+  /* ══════════════════════════════════════
+     FLOW DIAGRAM
+     ══════════════════════════════════════ */
+
+  .flow-steps {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 2.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .flow-steps {
+      flex-direction: column;
+    }
+  }
+
+  .flow-step {
+    flex: 1;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--border);
+  }
+
+  .flow-step:first-child {
+    border-radius: 12px 0 0 12px;
+  }
+
+  .flow-step:last-child {
+    border-radius: 0 12px 12px 0;
+  }
+
+  .flow-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 12px solid var(--ochre);
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    z-index: 2;
+  }
+
+  .flow-step .step-num {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ochre-dark);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .flow-step h4 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--ink);
+  }
+
+  .flow-step p {
+    font-size: 0.8125rem;
+    color: var(--sepia);
+    line-height: 1.5;
+  }
+
+  /* Animated highlight */
+  .highlight {
+    position: relative;
+    display: inline;
+  }
+
+  .highlight::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: rgba(184, 149, 106, 0.25);
+    z-index: -1;
+  }
+
+  /* Divider */
+  .divider {
+    width: 60px;
+    height: 2px;
+    background: var(--ochre);
+    margin: 0 0 2rem;
+  }
+
+  .divider.center {
+    margin: 0 auto 2rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     PAGE 1 — COVER
+     ════════════════════════════════════════════ -->
+
+<section class="cover">
+  <div class="cover-grid"></div>
+  <div class="cover-content">
+    <div class="cover-logo">
+      <span class="dot"></span>
+      gobia
+    </div>
+
+    <div class="cover-badge">
+      <span class="pulse"></span>
+      Inteligencia normativa para el derecho administrativo
+    </div>
+
+    <h1>El estatuto tributario tiene <em>540+ artículos</em>.<br>Su equipo ya no tiene que buscarlos.</h1>
+
+    <p class="cover-subtitle">
+      Gobia es la primera plataforma de inteligencia normativa que conecta hacienda pública, estatutos tributarios y planeación municipal en un solo sistema con IA — diseñada para que abogados administrativistas asesoren con precisión, velocidad y evidencia verificable.
+    </p>
+
+    <div class="cover-stats">
+      <div class="cover-stat">
+        <div class="number">540<span class="unit">+</span></div>
+        <div class="label">Artículos indexados</div>
+      </div>
+      <div class="cover-stat">
+        <div class="number">1.200<span class="unit">+</span></div>
+        <div class="label">Conexiones normativas</div>
+      </div>
+      <div class="cover-stat">
+        <div class="number">6</div>
+        <div class="label">Libros del Estatuto</div>
+      </div>
+      <div class="cover-stat">
+        <div class="number">&lt;5<span class="unit">s</span></div>
+        <div class="label">Respuesta con citación</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     METRICS BANNER
+     ════════════════════════════════════════════ -->
+
+<div class="metrics-banner">
+  <div class="metric">
+    <div class="number">16<span class="unit">+</span></div>
+    <div class="label">Sistemas gubernamentales<br>que hoy consulta manualmente</div>
+  </div>
+  <div class="metric">
+    <div class="number">72<span class="unit">h</span></div>
+    <div class="label">Tiempo promedio de un<br>concepto tributario tradicional</div>
+  </div>
+  <div class="metric">
+    <div class="number">85<span class="unit">%</span></div>
+    <div class="label">Reducción en tiempo<br>de investigación normativa</div>
+  </div>
+  <div class="metric">
+    <div class="number">1.122</div>
+    <div class="label">Municipios colombianos<br>con estatutos por mapear</div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 2 — EL PROBLEMA
+     ════════════════════════════════════════════ -->
+
+<section class="section page-break">
+  <p class="eyebrow">El problema</p>
+  <h2>El derecho administrativo colombiano opera en la oscuridad informacional</h2>
+  <p class="subtitle">
+    Como abogado administrativista, usted enfrenta diariamente un ecosistema normativo fragmentado que le roba tiempo, incrementa el riesgo de error y limita su capacidad de asesorar con evidencia fiscal en tiempo real.
+  </p>
+
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="icon">&#x1F50D;</div>
+      <h3>Búsqueda normativa manual</h3>
+      <p>Buscar un artículo específico en el Estatuto Tributario Municipal implica navegar PDFs de 200+ páginas, cruzar libros, capítulos y concordancias a mano.</p>
+      <div class="stat">&#x23F1; Hasta 45 min por consulta</div>
+    </div>
+
+    <div class="pain-card">
+      <div class="icon">&#x1F4CA;</div>
+      <h3>Datos fiscales inaccesibles</h3>
+      <p>Para entender la salud fiscal de un municipio (IDF, recaudo, cartera), debe acceder a CHIP, FUT, TerriData, SECOP — cada uno con diferente interfaz y formato.</p>
+      <div class="stat">&#x26A0; 4+ sistemas desconectados</div>
+    </div>
+
+    <div class="pain-card">
+      <div class="icon">&#x2696;</div>
+      <h3>Riesgo en conceptos tributarios</h3>
+      <p>Un concepto con citación imprecisa o desactualizada puede costarle la credibilidad ante su cliente o, peor, fundamentar una decisión administrativa vulnerable.</p>
+      <div class="stat">&#x274C; Error = responsabilidad profesional</div>
+    </div>
+
+    <div class="pain-card">
+      <div class="icon">&#x1F4C1;</div>
+      <h3>Silos de información pública</h3>
+      <p>SECOP II, datos.gov.co, DNP, DANE, Contraloría, DIAN — la información pública existe pero está dispersa en 16+ plataformas sin interoperabilidad.</p>
+      <div class="stat">&#x1F504; Duplicación de esfuerzo constante</div>
+    </div>
+
+    <div class="pain-card">
+      <div class="icon">&#x23F3;</div>
+      <h3>Asesoría reactiva, no preventiva</h3>
+      <p>Sin alertas tempranas sobre indicadores fiscales críticos (IDF, cartera morosa, ejecución presupuestal), su asesoría llega cuando el problema ya escaló.</p>
+      <div class="stat">&#x1F6A8; Cero alertas tempranas hoy</div>
+    </div>
+
+    <div class="pain-card">
+      <div class="icon">&#x1F4B0;</div>
+      <h3>Horas no facturables perdidas</h3>
+      <p>El 40% del tiempo de investigación en derecho tributario territorial se invierte en localizar información, no en analizarla. Ese tiempo no se le cobra al cliente.</p>
+      <div class="stat">&#x1F4C9; ~40% del tiempo en búsqueda</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 3 — LA SOLUCIÓN
+     ════════════════════════════════════════════ -->
+
+<div class="section-dark page-break">
+  <div class="inner">
+    <p class="eyebrow">La solución</p>
+    <h2 style="color: var(--paper);">Un sistema de inteligencia normativa<br>que trabaja como piensa un abogado</h2>
+    <p class="subtitle">
+      Gobia no es un buscador de PDFs. Es un cerebro normativo que entiende la estructura jerárquica del derecho tributario territorial, conecta artículos entre sí, y le entrega respuestas con citación exacta — libro, capítulo, artículo, numeral.
+    </p>
+
+    <div class="solution-grid">
+      <div class="solution-card">
+        <div class="icon">&#x1F9E0;</div>
+        <h3>Cerebro Normativo IA</h3>
+        <p>540+ artículos del Estatuto Tributario indexados con 1.200+ conexiones normativas. Búsqueda semántica, no por palabras clave. Pregunte como le preguntaría a un colega experto.</p>
+        <div class="badge">&#x2713; Citación verificable por artículo</div>
+      </div>
+
+      <div class="solution-card">
+        <div class="icon">&#x1F4AC;</div>
+        <h3>EstatutoChat</h3>
+        <p>Asistente de IA especializado en derecho tributario territorial. Pregunte "¿cuál es la tarifa de ICA para restaurantes?" y reciba la respuesta con el artículo exacto, concordancias y base legal.</p>
+        <div class="badge">&#x2713; Respuesta en &lt;5 segundos</div>
+      </div>
+
+      <div class="solution-card">
+        <div class="icon">&#x1F3DB;</div>
+        <h3>Dashboard de Hacienda</h3>
+        <p>Visión consolidada de la salud fiscal del municipio: recaudo por impuesto, ejecución presupuestal, IDF, cartera morosa — con datos de CHIP, FUT y TerriData integrados.</p>
+        <div class="badge">&#x2713; Datos en tiempo real</div>
+      </div>
+
+      <div class="solution-card">
+        <div class="icon">&#x1F5FA;</div>
+        <h3>Gemelo Municipal</h3>
+        <p>Mapa interactivo con capas de recaudo fiscal, población, estratificación y contratos SECOP por comuna. Contexto territorial para sus conceptos y asesorías.</p>
+        <div class="badge">&#x2713; 16 comunas + 349 barrios</div>
+      </div>
+
+      <div class="solution-card">
+        <div class="icon">&#x1F4CB;</div>
+        <h3>Seguimiento PDM</h3>
+        <p>Monitoreo del Plan de Desarrollo Municipal con semáforo (verde/amarillo/rojo) por meta. Ideal para control político y asesoría en rendición de cuentas.</p>
+        <div class="badge">&#x2713; Semáforo automático</div>
+      </div>
+
+      <div class="solution-card">
+        <div class="icon">&#x1F4E4;</div>
+        <h3>Exógena y Rendición</h3>
+        <p>Generación automatizada de XML para DIAN (6 formatos) y reportes SIRECI/SIA/FUT. Minimice errores de formato que generan sanciones y devoluciones.</p>
+        <div class="badge">&#x2713; 98% precisión en formatos</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 4 — CEREBRO NORMATIVO (Hero Feature)
+     ════════════════════════════════════════════ -->
+
+<section class="section page-break">
+  <div class="feature-hero">
+    <div class="feature-hero-text">
+      <p class="eyebrow">Característica principal</p>
+      <h2>El Cerebro Normativo:<br>su biblioteca jurídica<br>con inteligencia artificial</h2>
+      <div class="divider"></div>
+      <p>
+        No es un ChatGPT genérico. Es un sistema RAG (Retrieval-Augmented Generation) entrenado específicamente sobre el Acuerdo 093 de 2023 — Estatuto Tributario de Medellín — con indexación semántica de cada artículo, parágrafo y concordancia.
+      </p>
+
+      <ul class="feature-list">
+        <li>
+          <span class="check">&#x2713;</span>
+          <span><strong>Citación verificable:</strong> Cada respuesta incluye libro, capítulo, artículo y numeral exacto. Nunca una "alucinación" sin fuente.</span>
+        </li>
+        <li>
+          <span class="check">&#x2713;</span>
+          <span><strong>Conexiones normativas:</strong> 1.200+ enlaces entre artículos — concordancias, remisiones y excepciones mapeadas automáticamente.</span>
+        </li>
+        <li>
+          <span class="check">&#x2713;</span>
+          <span><strong>Búsqueda semántica:</strong> Pregunte "¿qué exenciones aplican para ONGs?" en lenguaje natural — el sistema entiende la intención, no solo palabras clave.</span>
+        </li>
+        <li>
+          <span class="check">&#x2713;</span>
+          <span><strong>Cobertura completa:</strong> 6 libros del estatuto: Parte General, Impuestos, Procedimiento, Sanciones, Cobro Coactivo, Régimen Especial.</span>
+        </li>
+        <li>
+          <span class="check">&#x2713;</span>
+          <span><strong>Evolución continua:</strong> A medida que se actualicen los acuerdos municipales, el sistema incorpora automáticamente los cambios.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="chat-mockup">
+      <div class="chat-header">
+        <span class="ai-dot"></span>
+        EstatutoChat — Medellín
+      </div>
+      <div class="chat-body">
+        <div class="chat-msg user">
+          ¿Cuál es la tarifa de ICA para actividades de software en Medellín?
+        </div>
+        <div class="chat-msg ai">
+          La tarifa de ICA para <strong>actividades de desarrollo de software</strong> en Medellín es de <strong>7 por mil</strong> sobre los ingresos netos, clasificada bajo el código CIIU 6201.
+          <br><br>
+          Esta tarifa aplica tanto para empresas nacionales como extranjeras con establecimiento permanente en el municipio.
+          <br><br>
+          <span class="citation">&#x1F4D6; Art. 47 · Libro II · Cap. III</span>
+          <span class="citation">&#x1F517; Concordancia: Art. 52</span>
+        </div>
+        <div class="chat-msg user">
+          ¿Y para restaurantes?
+        </div>
+        <div class="chat-msg ai">
+          Los restaurantes tributan ICA con tarifa de <strong>10 por mil</strong>, clasificados como actividad de servicios bajo código CIIU 5611.
+          <br><br>
+          <span class="citation">&#x1F4D6; Art. 48 · Libro II · Cap. III</span>
+        </div>
+      </div>
+      <div class="chat-input">
+        &#x1F4DD; Pregunte sobre cualquier artículo del estatuto...
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 5 — ANTES vs DESPUÉS
+     ════════════════════════════════════════════ -->
+
+<div class="section-cream page-break">
+  <div class="inner">
+    <p class="eyebrow">Comparativa</p>
+    <h2>Su práctica antes y después de Gobia</h2>
+    <p class="subtitle">
+      Cada fila representa una tarea real que consume horas semanales en su firma. Gobia las transforma de procesos manuales y riesgosos a flujos automatizados y verificables.
+    </p>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Tarea</th>
+          <th class="before">Sin Gobia</th>
+          <th class="after">Con Gobia</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Consultar tarifa de un impuesto municipal</td>
+          <td class="before-cell">
+            Buscar en PDF del Estatuto (200+ pág.), verificar artículo, cruzar concordancias manualmente
+            <div class="time-badge slow">&#x23F1; 30–45 min</div>
+          </td>
+          <td class="after-cell">
+            Preguntar en EstatutoChat, recibir artículo exacto con concordancias y base legal
+            <div class="time-badge fast">&#x26A1; &lt;30 segundos</div>
+          </td>
+        </tr>
+        <tr>
+          <td>Evaluar salud fiscal de un municipio</td>
+          <td class="before-cell">
+            Descargar datos de CHIP, FUT, TerriData por separado. Consolidar en Excel. Interpretar indicadores IDF.
+            <div class="time-badge slow">&#x23F1; 1–2 días</div>
+          </td>
+          <td class="after-cell">
+            Dashboard integrado con IDF, recaudo, ejecución, cartera morosa en una sola vista
+            <div class="time-badge fast">&#x26A1; Tiempo real</div>
+          </td>
+        </tr>
+        <tr>
+          <td>Preparar concepto tributario fundamentado</td>
+          <td class="before-cell">
+            Investigación manual, lectura cruzada de artículos, redacción de citaciones a mano
+            <div class="time-badge slow">&#x23F1; 2–3 días</div>
+          </td>
+          <td class="after-cell">
+            Consulta IA con citación automática + contexto fiscal del municipio
+            <div class="time-badge fast">&#x26A1; 2–4 horas</div>
+          </td>
+        </tr>
+        <tr>
+          <td>Verificar contratos SECOP de un municipio</td>
+          <td class="before-cell">
+            Buscar en SECOP II con filtros limitados, exportar CSV, analizar en Excel
+            <div class="time-badge slow">&#x23F1; 2–4 horas</div>
+          </td>
+          <td class="after-cell">
+            Contratos en vivo en el dashboard, filtrados por comuna y tipo
+            <div class="time-badge fast">&#x26A1; 10 min</div>
+          </td>
+        </tr>
+        <tr>
+          <td>Monitorear cumplimiento del PDM</td>
+          <td class="before-cell">
+            Solicitar informes a la alcaldía, esperar respuesta, interpretar avance sin estándar
+            <div class="time-badge slow">&#x23F1; 1–2 semanas</div>
+          </td>
+          <td class="after-cell">
+            Semáforo automático por meta del PDM con avance porcentual
+            <div class="time-badge fast">&#x26A1; Actualización continua</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 6 — CASOS DE USO PARA ABOGADOS
+     ════════════════════════════════════════════ -->
+
+<section class="section page-break">
+  <p class="eyebrow">Casos de uso</p>
+  <h2>Tres escenarios donde Gobia transforma su práctica</h2>
+  <p class="subtitle">
+    Gobia no reemplaza al abogado. Le da superpoderes de investigación para que usted se concentre en lo que realmente importa: el análisis jurídico y la estrategia.
+  </p>
+
+  <div class="usecase-grid">
+    <div class="usecase-card">
+      <div class="usecase-number">01</div>
+      <h3>Asesoría Tributaria Municipal</h3>
+      <p>
+        Su cliente (una empresa) necesita saber qué impuestos municipales aplican, tarifas exactas, exenciones disponibles y obligaciones formales. Antes, esto requería 2-3 días de investigación manual.
+      </p>
+      <p>
+        <strong>Con Gobia:</strong> En una sola sesión, consulta las tarifas en EstatutoChat, verifica la salud fiscal del municipio en el dashboard, identifica si hay beneficios tributarios vigentes, y genera un concepto con citación exacta.
+      </p>
+      <div class="usecase-result">&#x26A1; De 3 días a 4 horas — concepto con citación verificable</div>
+    </div>
+
+    <div class="usecase-card">
+      <div class="usecase-number">02</div>
+      <h3>Defensa en Procesos Sancionatorios</h3>
+      <p>
+        Una entidad territorial sanciona a su cliente por presunto incumplimiento tributario. Necesita verificar la base legal, cruzar con el procedimiento sancionatorio del estatuto, y evaluar si la liquidación oficial es correcta.
+      </p>
+      <p>
+        <strong>Con Gobia:</strong> El Cerebro Normativo le muestra el artículo aplicable, todas las concordancias del procedimiento sancionatorio (Libro IV), los plazos legales, y los datos fiscales del municipio para contextualizar la defensa.
+      </p>
+      <div class="usecase-result">&#x2696; Defensa más sólida con evidencia normativa + fiscal</div>
+    </div>
+
+    <div class="usecase-card">
+      <div class="usecase-number">03</div>
+      <h3>Due Diligence Fiscal para Inversionistas</h3>
+      <p>
+        Un inversionista evalúa entrar a un municipio y necesita entender la carga tributaria total, la estabilidad fiscal del territorio, y los contratos públicos vigentes.
+      </p>
+      <p>
+        <strong>Con Gobia:</strong> El dashboard le muestra IDF, autonomía financiera, nivel de deuda, cartera morosa y ejecución presupuestal. El gemelo municipal geolocaliza contratos SECOP. EstatutoChat detalla cada impuesto aplicable.
+      </p>
+      <div class="usecase-result">&#x1F4CA; Due diligence fiscal completo en una plataforma</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     QUOTE
+     ════════════════════════════════════════════ -->
+
+<div class="section-ochre-soft">
+  <div class="inner">
+    <div class="quote-block" style="background: var(--paper);">
+      <p>"El abogado administrativista que domina la información fiscal y normativa antes que su contraparte no solo gana casos — define el estándar de la profesión. Gobia es esa ventaja asimétrica."</p>
+      <cite>— Propuesta de valor Gobia para el sector jurídico</cite>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     PAGE 7 — ROI
+     ════════════════════════════════════════════ -->
+
+<section class="section page-break">
+  <p class="eyebrow">Retorno de inversión</p>
+  <h2>La aritmética es clara:<br>más horas facturables, menos riesgo</h2>
+  <p class="subtitle">
+    Gobia no es un costo. Es una inversión que se paga sola al convertir horas de búsqueda en horas de análisis facturable.
+  </p>
+
+  <div class="roi-grid">
+    <div class="roi-calculation">
+      <div class="roi-header">Cálculo de recuperación mensual</div>
+      <div class="roi-row">
+        <span class="label">Horas semanales en búsqueda normativa</span>
+        <span class="value">~8h</span>
+      </div>
+      <div class="roi-row">
+        <span class="label">Reducción con Gobia</span>
+        <span class="value">85%</span>
+      </div>
+      <div class="roi-row">
+        <span class="label">Horas recuperadas / semana</span>
+        <span class="value">~6.8h</span>
+      </div>
+      <div class="roi-row">
+        <span class="label">Horas recuperadas / mes</span>
+        <span class="value">~27h</span>
+      </div>
+      <div class="roi-row">
+        <span class="label">Valor hora abogado (promedio)</span>
+        <span class="value">$180.000 COP</span>
+      </div>
+      <div class="roi-row total">
+        <span class="label">Valor recuperado / mes</span>
+        <span class="value">$4.860.000 COP</span>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom: 1.5rem;">Beneficios que no se calculan en pesos</h3>
+      <ul class="roi-benefits">
+        <li>
+          <span class="num">1</span>
+          <div>
+            <h4>Precisión en citación</h4>
+            <p>Cada concepto que emite sale con artículo exacto, libro, capítulo y concordancias verificadas. Cero riesgo de citación errónea.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num">2</span>
+          <div>
+            <h4>Ventaja competitiva</h4>
+            <p>Atienda más clientes con la misma capacidad. Entregue conceptos en horas, no en días. Su firma se posiciona como referente tecnológico.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num">3</span>
+          <div>
+            <h4>Asesoría preventiva</h4>
+            <p>Con alertas sobre indicadores fiscales críticos, puede anticipar problemas antes de que escalen a procesos sancionatorios o demandas.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num">4</span>
+          <div>
+            <h4>Conocimiento institucional</h4>
+            <p>La base de conocimiento de Gobia no se va con el asociado que renuncia. La inteligencia normativa queda en la plataforma.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     WORKFLOW
+     ════════════════════════════════════════════ -->
+
+<div class="section-cream">
+  <div class="inner">
+    <p class="eyebrow">Cómo funciona</p>
+    <h2 style="text-align: center;">De la pregunta al concepto en 4 pasos</h2>
+    <p class="subtitle" style="text-align: center; margin-left: auto; margin-right: auto;">
+      Gobia se integra a su flujo de trabajo — no lo reemplaza. Usted sigue siendo el experto. Gobia es su motor de investigación.
+    </p>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-num">Paso 1</div>
+        <h4>Pregunte</h4>
+        <p>Haga su consulta en lenguaje natural en EstatutoChat. "¿Qué exenciones de predial existen para inmuebles de interés cultural?"</p>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">Paso 2</div>
+        <h4>Verifique</h4>
+        <p>Revise la respuesta con citación exacta: artículo, libro, capítulo. Navegue las concordancias relacionadas en el grafo normativo.</p>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">Paso 3</div>
+        <h4>Contextualice</h4>
+        <p>Abra el dashboard de hacienda para ver el estado fiscal del municipio: recaudo, IDF, cartera. Fundamente su concepto con datos.</p>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">Paso 4</div>
+        <h4>Entregue</h4>
+        <p>Emita su concepto con citación normativa verificable y contexto fiscal real. Profesionalismo + velocidad.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     6 MODULES
+     ════════════════════════════════════════════ -->
+
+<section class="section">
+  <p class="eyebrow">Plataforma completa</p>
+  <h2>6 módulos diseñados para la gestión pública</h2>
+  <p class="subtitle">
+    Cada módulo resuelve un punto de dolor específico del ecosistema público colombiano. Como abogado, usted accede a la misma inteligencia que usan los secretarios de hacienda.
+  </p>
+
+  <div class="modules-strip">
+    <div class="module-pill">
+      <div class="mod-icon">&#x1F3DB;</div>
+      <div>
+        <h4>Hacienda Dashboard</h4>
+        <p>KPIs fiscales, recaudo, ejecución, IDF</p>
+      </div>
+    </div>
+    <div class="module-pill">
+      <div class="mod-icon">&#x1F9E0;</div>
+      <div>
+        <h4>Estatuto Municipal IA</h4>
+        <p>540+ artículos con búsqueda semántica</p>
+      </div>
+    </div>
+    <div class="module-pill">
+      <div class="mod-icon">&#x1F4CB;</div>
+      <div>
+        <h4>Seguimiento PDM</h4>
+        <p>Metas del Plan de Desarrollo con semáforo</p>
+      </div>
+    </div>
+    <div class="module-pill">
+      <div class="mod-icon">&#x1F4E4;</div>
+      <div>
+        <h4>Exógena Automatizada</h4>
+        <p>XML para DIAN en 6 formatos validados</p>
+      </div>
+    </div>
+    <div class="module-pill">
+      <div class="mod-icon">&#x1F5FA;</div>
+      <div>
+        <h4>Gemelo Municipal</h4>
+        <p>Mapa interactivo con capas fiscales</p>
+      </div>
+    </div>
+    <div class="module-pill">
+      <div class="mod-icon">&#x1F4CA;</div>
+      <div>
+        <h4>Rendición Automatizada</h4>
+        <p>SIRECI, SIA, FUT auto-generados</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     TRUST / SOLIDEZ
+     ════════════════════════════════════════════ -->
+
+<div class="section-dark">
+  <div class="inner">
+    <p class="eyebrow">Solidez técnica</p>
+    <h2 style="color: var(--paper); text-align: center;">Construido con estándares de clase mundial</h2>
+    <p class="subtitle" style="text-align: center; margin-left: auto; margin-right: auto;">
+      La confianza se construye con transparencia técnica. Estas son las garantías que respaldan cada respuesta de Gobia.
+    </p>
+
+    <div class="trust-grid">
+      <div class="trust-item">
+        <div class="icon">&#x1F512;</div>
+        <h4>AES-256</h4>
+        <p>Cifrado de datos en tránsito y reposo. Cumplimiento Ley 1581/2012 (Habeas Data).</p>
+      </div>
+      <div class="trust-item">
+        <div class="icon">&#x26A1;</div>
+        <h4>&lt;3s Respuesta</h4>
+        <p>Tiempo de respuesta promedio del sistema, incluyendo consultas RAG con IA.</p>
+      </div>
+      <div class="trust-item">
+        <div class="icon">&#x1F6E1;</div>
+        <h4>99.5% Uptime</h4>
+        <p>SLA garantizado con infraestructura en la nube de Vercel + redundancia.</p>
+      </div>
+      <div class="trust-item">
+        <div class="icon">&#x267F;</div>
+        <h4>WCAG AA</h4>
+        <p>Accesibilidad conforme a NTC 5854 y Decreto 767/2022 de gobierno digital.</p>
+      </div>
+      <div class="trust-item">
+        <div class="icon">&#x1F4D6;</div>
+        <h4>Citación trazable</h4>
+        <p>Cada respuesta de IA incluye fuente verificable. Nunca una afirmación sin artículo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     CTA FINAL
+     ════════════════════════════════════════════ -->
+
+<section class="cta-section page-break">
+  <div class="cta-content">
+    <p class="eyebrow" style="color: var(--ochre); text-align: center;">Próximo paso</p>
+    <h2>Deje de buscar artículos.<br>Empiece a <em>usarlos</em>.</h2>
+    <p>
+      Solicite una demo personalizada de Gobia para su firma. Le mostraremos cómo consultar el Estatuto Tributario de Medellín con IA, explorar el dashboard de hacienda, y transformar su flujo de investigación normativa.
+    </p>
+    <div class="cta-buttons">
+      <a href="https://gobia.co" class="btn btn-primary">Solicitar demo personalizada &#x2192;</a>
+      <a href="https://gobia.co/demo" class="btn btn-outline">Ver demo Medellín &#x2192;</a>
+    </div>
+    <div class="cta-footer">
+      <span>&#x2713; Sin compromiso</span>
+      <span>&#x2713; Demo en 30 minutos</span>
+      <span>&#x2713; Datos reales de Medellín</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════════════════════════
+     FOOTER
+     ════════════════════════════════════════════ -->
+
+<footer class="footer">
+  <div class="logos">
+    <span>gobia.co</span>
+    <span style="color: var(--gray-700);">|</span>
+    <span>inplux.co</span>
+    <span style="color: var(--gray-700);">|</span>
+    <span>tribai.co</span>
+    <span style="color: var(--gray-700);">|</span>
+    <span>fourier.dev</span>
+  </div>
+  <p>
+    Una plataforma de <a href="https://inplux.co">inplux.co</a> &mdash; 25 años de experiencia en tecnología para la gestión pública colombiana.
+    <br>
+    &copy; 2026 Gobia. Todos los derechos reservados. Medellín, Colombia.
+  </p>
+</footer>
+
+</body>
+</html>
