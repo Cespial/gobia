@@ -1,36 +1,16 @@
 "use client";
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
 /* ---------- helpers ---------- */
-
-function formatCOP(value: number): string {
-  if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-  if (Math.abs(value) >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-  return `$${Math.round(value).toLocaleString("es-CO")}`;
-}
-
-function scoreColor(score: number): string {
-  if (score >= 80) return "#34d399"; // emerald-400
-  if (score >= 70) return "#60a5fa"; // blue-400
-  if (score >= 60) return "#fbbf24"; // amber-400
-  if (score >= 40) return "#fb923c"; // orange-400
-  return "#f87171"; // red-400
-}
 
 function scoreColorClass(score: number): string {
   if (score >= 80) return "text-emerald-400";
@@ -53,7 +33,7 @@ function rankingLabel(score: number): string {
   if (score >= 70) return "Satisfactorio";
   if (score >= 60) return "Medio";
   if (score >= 40) return "Bajo";
-  return "Crtico";
+  return "Crítico";
 }
 
 function scoreBorderClass(score: number): string {
@@ -181,7 +161,6 @@ function IndicatorSection({
 /* ---------- main component ---------- */
 
 export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
-  // Radar chart data combining all indicators
   const radarData = [
     ...data.resultadosFiscales.map((i) => ({
       subject: i.name.length > 20 ? i.name.slice(0, 20) + "\u2026" : i.name,
@@ -204,10 +183,10 @@ export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
             className="text-xl font-bold text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            ndice de Desempeo Fiscal (IDF)
+            Índice de Desempeño Fiscal (IDF)
           </h2>
           <p className="mt-1 text-sm text-[var(--gray-400)]">
-            {municipio.name} ({municipio.dept}) &mdash; Perodo{" "}
+            {municipio.name} ({municipio.dept}) &mdash; Período{" "}
             {periodo.slice(0, 4)} T
             {(
               {
@@ -260,7 +239,7 @@ export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
             </div>
             <div className="flex-1 rounded-lg bg-[var(--gray-800)] p-3 text-center">
               <div className="text-[10px] text-[var(--gray-500)]">
-                Gestin (20%)
+                Gestión (20%)
               </div>
               <div
                 className={`mt-0.5 text-lg font-bold ${scoreColorClass(data.scoreGestion)}`}
@@ -321,7 +300,7 @@ export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
           indicators={data.resultadosFiscales}
         />
         <IndicatorSection
-          title="Gestin Financiera"
+          title="Gestión Financiera"
           weight="Peso: 20%"
           sectionScore={data.scoreGestion}
           indicators={data.gestionFinanciera}
@@ -335,7 +314,7 @@ export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
           { min: 70, label: "Satisfactorio" },
           { min: 60, label: "Medio" },
           { min: 40, label: "Bajo" },
-          { min: 0, label: "Crtico" },
+          { min: 0, label: "Crítico" },
         ].map((tier) => (
           <div key={tier.label} className="flex items-center gap-1.5">
             <div

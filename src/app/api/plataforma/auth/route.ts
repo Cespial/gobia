@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const PLATAFORMA_PASSWORD = process.env.PLATAFORMA_PASSWORD ?? "gobia2025";
-
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { password } = body;
+  const expected = process.env.PLATAFORMA_PASSWORD || "gobia2025";
 
-  if (password === PLATAFORMA_PASSWORD) {
+  if (password === expected) {
     const cookieStore = await cookies();
     cookieStore.set("gobia-auth", "authenticated", {
       httpOnly: true,
