@@ -6,8 +6,8 @@ import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
 import type { FUTCierreData, CGNSaldosData } from "@/lib/chip-parser";
 
 interface FileUploadPanelProps {
-  onFUTCierreLoaded: (data: FUTCierreData) => void;
-  onCGNSaldosLoaded: (data: CGNSaldosData) => void;
+  onFUTCierreLoaded: (data: FUTCierreData | null) => void;
+  onCGNSaldosLoaded: (data: CGNSaldosData | null) => void;
   futCierre: FUTCierreData | null;
   cgnSaldos: CGNSaldosData | null;
 }

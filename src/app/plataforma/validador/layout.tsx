@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import LogoutButton from "@/components/validador/LogoutButton";
 
 export default async function ValidadorLayout({
   children,
@@ -31,19 +32,7 @@ export default async function ValidadorLayout({
             </span>
           </Link>
 
-          <form action="/api/plataforma/auth" method="DELETE">
-            <button
-              type="submit"
-              className="text-xs text-[var(--gray-400)] transition-colors hover:text-white"
-              onClick={async (e) => {
-                e.preventDefault();
-                await fetch("/api/plataforma/auth", { method: "DELETE" });
-                window.location.href = "/plataforma/login";
-              }}
-            >
-              Cerrar sesión
-            </button>
-          </form>
+          <LogoutButton />
         </div>
       </header>
 
