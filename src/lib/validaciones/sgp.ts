@@ -37,6 +37,8 @@ export interface SGPComponentResult {
   pctRecaudo: number;
   pctEjecucion: number;
   status: "cumple" | "alerta" | "critico";
+  /** If true, the ejecutado is a global estimate, not per-component */
+  ejecutadoEstimado?: boolean;
 }
 
 export interface SGPEvaluationResult {
@@ -56,6 +58,9 @@ export interface SGPEvaluationResult {
 /**
  * Maps SGP concept IDs (SICODIS) to CUIPO account prefixes.
  * The CUIPO accounts for SGP income follow the pattern 1.1.02.06.001.XX
+ *
+ * Restricted to 1.1.02.06.001% to avoid capturing non-SGP transfers
+ * under the broader 1.1.02.06%.
  */
 const SGP_ACCOUNT_MAP: Record<string, { cuipoPrefix: string; label: string }> =
   {
@@ -72,14 +77,22 @@ const SGP_ACCOUNT_MAP: Record<string, { cuipoPrefix: string; label: string }> =
       label: "Proposito General",
     },
     [SGP_CONCEPTOS.ALIMENTACION_ESCOLAR]: {
-      cuipoPrefix: "1.1.02.06.001.04.01",
-      label: "Alimentacion Escolar",
+      cuipoPrefix: "1.1.02.06.001.04",
+      label: "Asignaciones Especiales",
     },
     [SGP_CONCEPTOS.AGUA_POTABLE]: {
       cuipoPrefix: "1.1.02.06.001.05",
       label: "Agua Potable",
     },
   };
+
+/**
+ * Additional Primera Infancia sub-component.
+ * Mapped separately for reporting but aggregated under Asignaciones Especiales
+ * in the main account map (SICODIS concept 0106).
+ * Account: 1.1.02.06.001.04.02
+ */
+const PRIMERA_INFANCIA_PREFIX = "1.1.02.06.001.04.02";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -111,6 +124,7 @@ export async function evaluateSGP(
   const { year } = parsePeriodo(periodo);
 
   // 1. Fetch data in parallel: SICODIS distribution + CUIPO income + CUIPO expenses + CUIPO programming
+  //    Restrict income queries to 1.1.02.06.001% (SGP-specific accounts only)
   const [sicodisData, cuipoIngresos, cuipoGastos, cuipoProgIngresos] =
     await Promise.all([
       fetchSGPResumen(year, deptCode, daneCode).catch(
@@ -118,7 +132,7 @@ export async function evaluateSGP(
       ),
       sodaCuipoQuery<CuipoEjecIngresos>({
         dataset: CUIPO_DATASETS.EJEC_INGRESOS,
-        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta like '1.1.02.06%'`,
+        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta like '1.1.02.06.001%'`,
         limit: 50000,
         order: "cuenta ASC",
       }),
@@ -130,115 +144,114 @@ export async function evaluateSGP(
       }),
       sodaCuipoQuery<CuipoProgIngresos>({
         dataset: CUIPO_DATASETS.PROG_INGRESOS,
-        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta like '1.1.02.06%'`,
+        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta like '1.1.02.06.001%'`,
         limit: 50000,
         order: "cuenta ASC",
       }),
     ]);
 
   // 2. Build SICODIS distribution map by concept ID
+  //    Handle gracefully if SICODIS returns different structures
   const sicodisMap = new Map<string, number>();
   for (const row of sicodisData) {
-    sicodisMap.set(row.id_concepto, row.total);
+    if (row.id_concepto && typeof row.total === "number") {
+      sicodisMap.set(row.id_concepto, row.total);
+    }
   }
 
-  // 3. Aggregate CUIPO income (recaudo) by SGP component
+  // 3. Leaf-row detection for income accounts to prevent double-counting
+  const allIncomeCuentas = new Set(cuipoIngresos.map((r) => r.cuenta || ""));
+  const allProgCuentas = new Set(cuipoProgIngresos.map((r) => r.cuenta || ""));
+
+  function isLeaf(cuenta: string, allCuentas: Set<string>): boolean {
+    const prefix = cuenta + ".";
+    for (const c of allCuentas) {
+      if (c.startsWith(prefix)) return false;
+    }
+    return true;
+  }
+
+  // 4. Aggregate CUIPO income (recaudo) by SGP component using account code matching
   const incomeByComponent = new Map<string, number>();
+  let primeraInfanciaRecaudo = 0;
+
   for (const row of cuipoIngresos) {
     const cuenta = row.cuenta || "";
+    if (!isLeaf(cuenta, allIncomeCuentas)) continue;
+
+    const recaudo = parseFloat(row.total_recaudo || "0");
+
+    // Track Primera Infancia sub-component
+    if (cuenta.startsWith(PRIMERA_INFANCIA_PREFIX)) {
+      primeraInfanciaRecaudo += recaudo;
+    }
+
+    // Match to the most specific SGP component by prefix
+    let matched = false;
     for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
       if (cuenta.startsWith(mapping.cuipoPrefix)) {
         const current = incomeByComponent.get(conceptoId) || 0;
-        incomeByComponent.set(
-          conceptoId,
-          current + parseFloat(row.total_recaudo || "0")
-        );
+        incomeByComponent.set(conceptoId, current + recaudo);
+        matched = true;
         break;
       }
     }
+
+    // If not matched to any known component but is under SGP prefix,
+    // attribute to Proposito General as catch-all
+    if (!matched && cuenta.startsWith("1.1.02.06.001")) {
+      const current =
+        incomeByComponent.get(SGP_CONCEPTOS.PROPOSITO_GENERAL) || 0;
+      incomeByComponent.set(
+        SGP_CONCEPTOS.PROPOSITO_GENERAL,
+        current + recaudo
+      );
+    }
   }
 
-  // 4. Aggregate CUIPO programming (presupuesto definitivo) by SGP component
+  // 5. Aggregate CUIPO programming (presupuesto definitivo) by SGP component
   const budgetByComponent = new Map<string, number>();
   for (const row of cuipoProgIngresos) {
     const cuenta = row.cuenta || "";
+    if (!isLeaf(cuenta, allProgCuentas)) continue;
+
+    const ppto = parseFloat(row.presupuesto_definitivo || "0");
+
     for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
       if (cuenta.startsWith(mapping.cuipoPrefix)) {
         const current = budgetByComponent.get(conceptoId) || 0;
-        budgetByComponent.set(
-          conceptoId,
-          current + parseFloat(row.presupuesto_definitivo || "0")
-        );
+        budgetByComponent.set(conceptoId, current + ppto);
         break;
       }
     }
   }
 
-  // 5. Aggregate CUIPO expenses (compromisos) by SGP-related funding source
-  //    We match expenses to components by looking at the funding source name
-  const expenseByComponent = new Map<string, number>();
+  // 6. Aggregate CUIPO expenses (compromisos) — global SGP execution total
+  //    Per-component breakdown of expenses is unreliable with fuzzy name matching.
+  //    Instead, compute a single global SGP execution figure and distribute
+  //    proportionally based on income recaudo shares.
+  let totalSGPExpenses = 0;
   for (const row of cuipoGastos) {
-    const fuenteName = (row.nom_fuentes_financiacion || "").toUpperCase();
+    totalSGPExpenses += parseFloat(row.compromisos || "0");
+  }
 
-    // Match funding source name to SGP component
-    if (
-      fuenteName.includes("EDUCACION") ||
-      fuenteName.includes("EDUCACI")
-    ) {
-      const current =
-        expenseByComponent.get(SGP_CONCEPTOS.EDUCACION) || 0;
-      expenseByComponent.set(
-        SGP_CONCEPTOS.EDUCACION,
-        current + parseFloat(row.compromisos || "0")
-      );
-    } else if (fuenteName.includes("SALUD")) {
-      const current = expenseByComponent.get(SGP_CONCEPTOS.SALUD) || 0;
-      expenseByComponent.set(
-        SGP_CONCEPTOS.SALUD,
-        current + parseFloat(row.compromisos || "0")
-      );
-    } else if (
-      fuenteName.includes("AGUA") ||
-      fuenteName.includes("SANEAMIENTO")
-    ) {
-      const current =
-        expenseByComponent.get(SGP_CONCEPTOS.AGUA_POTABLE) || 0;
-      expenseByComponent.set(
-        SGP_CONCEPTOS.AGUA_POTABLE,
-        current + parseFloat(row.compromisos || "0")
-      );
-    } else if (
-      fuenteName.includes("PROPOSITO GENERAL") ||
-      fuenteName.includes("PROP")
-    ) {
-      const current =
-        expenseByComponent.get(SGP_CONCEPTOS.PROPOSITO_GENERAL) || 0;
-      expenseByComponent.set(
-        SGP_CONCEPTOS.PROPOSITO_GENERAL,
-        current + parseFloat(row.compromisos || "0")
-      );
-    } else if (
-      fuenteName.includes("ALIMENTACION") ||
-      fuenteName.includes("ALIMENTACI")
-    ) {
-      const current =
-        expenseByComponent.get(SGP_CONCEPTOS.ALIMENTACION_ESCOLAR) || 0;
-      expenseByComponent.set(
-        SGP_CONCEPTOS.ALIMENTACION_ESCOLAR,
-        current + parseFloat(row.compromisos || "0")
-      );
-    } else {
-      // Generic SGP expense -- attribute to Proposito General as catch-all
-      const current =
-        expenseByComponent.get(SGP_CONCEPTOS.PROPOSITO_GENERAL) || 0;
-      expenseByComponent.set(
-        SGP_CONCEPTOS.PROPOSITO_GENERAL,
-        current + parseFloat(row.compromisos || "0")
-      );
+  // Calculate total SGP income for proportional distribution
+  let totalSGPIncome = 0;
+  for (const val of incomeByComponent.values()) {
+    totalSGPIncome += val;
+  }
+
+  // Distribute expenses proportionally based on income share
+  const expenseByComponent = new Map<string, number>();
+  if (totalSGPIncome > 0 && totalSGPExpenses > 0) {
+    for (const [conceptoId] of Object.entries(SGP_ACCOUNT_MAP)) {
+      const componentIncome = incomeByComponent.get(conceptoId) || 0;
+      const share = componentIncome / totalSGPIncome;
+      expenseByComponent.set(conceptoId, totalSGPExpenses * share);
     }
   }
 
-  // 6. Build component results
+  // 7. Build component results
   const componentes: SGPComponentResult[] = [];
 
   for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
@@ -257,6 +270,7 @@ export async function evaluateSGP(
       continue;
     }
 
+    // Use recaudado as reference for percentages when DNP distribution is available
     const pctPresupuesto = safePct(presupuestado, distribucionDNP);
     const pctRecaudo = safePct(recaudado, distribucionDNP);
     const pctEjecucion = safePct(ejecutado, distribucionDNP);
@@ -266,39 +280,61 @@ export async function evaluateSGP(
       distribucionDNP,
       presupuestado,
       recaudado,
-      ejecutado,
+      ejecutado: Math.round(ejecutado),
       pctPresupuesto,
       pctRecaudo,
       pctEjecucion,
       status: componentStatus(pctEjecucion),
+      ejecutadoEstimado: totalSGPExpenses > 0,
     });
   }
 
-  // 7. Calculate global totals
-  const totalDistribuido = componentes.reduce(
+  // 7b. Add Primera Infancia as informational sub-row if data exists
+  if (primeraInfanciaRecaudo > 0) {
+    componentes.push({
+      concepto: "  Primera Infancia (sub-componente)",
+      distribucionDNP: 0,
+      presupuestado: 0,
+      recaudado: primeraInfanciaRecaudo,
+      ejecutado: 0,
+      pctPresupuesto: 0,
+      pctRecaudo: 0,
+      pctEjecucion: 0,
+      status: "alerta",
+      ejecutadoEstimado: true,
+    });
+  }
+
+  // 8. Calculate global totals (excluding sub-component rows)
+  const mainComponents = componentes.filter(
+    (c) => !c.concepto.startsWith("  ")
+  );
+  const totalDistribuido = mainComponents.reduce(
     (s, c) => s + c.distribucionDNP,
     0
   );
-  const totalPresupuestado = componentes.reduce(
+  const totalPresupuestado = mainComponents.reduce(
     (s, c) => s + c.presupuestado,
     0
   );
-  const totalRecaudado = componentes.reduce((s, c) => s + c.recaudado, 0);
-  const totalEjecutado = componentes.reduce((s, c) => s + c.ejecutado, 0);
+  const totalRecaudado = mainComponents.reduce((s, c) => s + c.recaudado, 0);
+  const totalEjecutado = Math.round(totalSGPExpenses);
   const pctEjecucionGlobal = safePct(totalEjecutado, totalDistribuido);
 
-  // 8. Determine global status
-  const cumpleCount = componentes.filter((c) => c.status === "cumple").length;
-  const criticoCount = componentes.filter(
+  // 9. Determine global status
+  const cumpleCount = mainComponents.filter(
+    (c) => c.status === "cumple"
+  ).length;
+  const criticoCount = mainComponents.filter(
     (c) => c.status === "critico"
   ).length;
 
   let status: "cumple" | "parcial" | "no_cumple";
-  if (componentes.length === 0) {
+  if (mainComponents.length === 0) {
     status = "no_cumple";
-  } else if (cumpleCount === componentes.length) {
+  } else if (cumpleCount === mainComponents.length) {
     status = "cumple";
-  } else if (criticoCount === componentes.length) {
+  } else if (criticoCount === mainComponents.length) {
     status = "no_cumple";
   } else {
     status = "parcial";

@@ -9,6 +9,9 @@ function formatCOP(value: number): string {
   return `$${Math.round(value).toLocaleString("es-CO")}`;
 }
 
+/** SMLMV 2025 for display reference */
+const SMLMV_2025 = 1_423_500;
+
 /* ---------- types ---------- */
 
 interface Ley617Certification {
@@ -22,20 +25,25 @@ interface Ley617Certification {
   gastosPersoneria: number | null;
 }
 
+interface Ley617SectionData {
+  seccion: string;
+  gastosFuncionamiento: number;
+  icld: number;
+  ratio: number;
+  limite: number;
+  limiteAbsoluto?: number;
+  limiteSMLMV?: number;
+  status: "cumple" | "no_cumple";
+  tipoLimite?: "porcentaje" | "absoluto";
+}
+
 interface Ley617PanelProps {
   data: {
     icldTotal: number;
     gastosFuncionamientoTotal: number;
     ratioGlobal: number;
     limiteGlobal: number;
-    secciones: {
-      seccion: string;
-      gastosFuncionamiento: number;
-      icld: number;
-      ratio: number;
-      limite: number;
-      status: "cumple" | "no_cumple";
-    }[];
+    secciones: Ley617SectionData[];
     status: "cumple" | "no_cumple";
   };
   certifications?: Ley617Certification[];
@@ -72,7 +80,7 @@ function KPI({
   );
 }
 
-/** Semicircular gauge showing ratio vs limit */
+/** Semicircular gauge showing ratio vs limit (for percentage-based sections) */
 function Gauge({
   ratio,
   limite,
@@ -149,7 +157,7 @@ function Gauge({
           fontSize={10}
           fontWeight={600}
         >
-          Límite {limite}%
+          Limite {limite}%
         </text>
       </svg>
 
@@ -164,6 +172,165 @@ function Gauge({
         <div className="mt-1 text-xs text-[var(--gray-400)]">
           Gastos / ICLD
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Section card for percentage-based limit (Admin Central) */
+function PercentageSectionCard({ s }: { s: Ley617SectionData }) {
+  const secCumple = s.status === "cumple";
+  const limiteDisplay = s.limite * 100;
+
+  return (
+    <div className="rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)] p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h4
+          className="text-sm font-semibold text-white"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {s.seccion}
+        </h4>
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+            secCumple
+              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
+              : "border-red-400/20 bg-red-400/10 text-red-400"
+          }`}
+        >
+          {secCumple ? "CUMPLE" : "NO CUMPLE"}
+        </span>
+      </div>
+
+      <div className="mb-3 space-y-1 text-xs">
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Gastos func.</span>
+          <span className="text-[var(--gray-300)]">
+            {formatCOP(s.gastosFuncionamiento)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">ICLD</span>
+          <span className="text-[var(--gray-300)]">
+            {formatCOP(s.icld)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Ratio</span>
+          <span
+            className={`font-semibold ${secCumple ? "text-emerald-400" : "text-red-400"}`}
+          >
+            {(s.ratio * 100).toFixed(1)}%
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Limite legal (Art. 6)</span>
+          <span className="text-[var(--ochre)]">{limiteDisplay}%</span>
+        </div>
+      </div>
+
+      {/* Progress bar: ratio vs limit */}
+      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--gray-700)]">
+        <div
+          className={`h-full rounded-full transition-all ${
+            secCumple ? "bg-emerald-400" : "bg-red-400"
+          }`}
+          style={{
+            width: `${Math.min(((s.ratio * 100) / Math.max(limiteDisplay * 1.5, 100)) * 100, 100)}%`,
+          }}
+        />
+        {/* Limit marker */}
+        <div
+          className="absolute top-0 h-full w-0.5 bg-[var(--ochre)]"
+          style={{
+            left: `${(limiteDisplay / Math.max(limiteDisplay * 1.5, 100)) * 100}%`,
+          }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-[var(--gray-500)]">
+        <span>0%</span>
+        <span>{limiteDisplay}% limite</span>
+      </div>
+    </div>
+  );
+}
+
+/** Section card for absolute SMLMV-based limit (Concejo, Personeria) */
+function AbsoluteSectionCard({ s }: { s: Ley617SectionData }) {
+  const secCumple = s.status === "cumple";
+  const limiteAbsoluto = s.limiteAbsoluto ?? 0;
+  const limiteSMLMV = s.limiteSMLMV ?? 0;
+  const pctUsed = limiteAbsoluto > 0 ? (s.gastosFuncionamiento / limiteAbsoluto) * 100 : 0;
+  const artLabel = s.seccion.toUpperCase().includes("CONCEJO") ? "Art. 10" : "Art. 11";
+
+  return (
+    <div className="rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)] p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h4
+          className="text-sm font-semibold text-white"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {s.seccion}
+        </h4>
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+            secCumple
+              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
+              : "border-red-400/20 bg-red-400/10 text-red-400"
+          }`}
+        >
+          {secCumple ? "CUMPLE" : "NO CUMPLE"}
+        </span>
+      </div>
+
+      <div className="mb-3 space-y-1 text-xs">
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Gastos func.</span>
+          <span className="text-[var(--gray-300)]">
+            {formatCOP(s.gastosFuncionamiento)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Limite ({artLabel})</span>
+          <span className="text-[var(--ochre)]">
+            {limiteSMLMV} SMLMV
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Limite en COP</span>
+          <span className="text-[var(--ochre)]">
+            {formatCOP(limiteAbsoluto)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--gray-500)]">Uso del limite</span>
+          <span
+            className={`font-semibold ${secCumple ? "text-emerald-400" : "text-red-400"}`}
+          >
+            {pctUsed.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Progress bar: gastos vs absolute limit */}
+      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--gray-700)]">
+        <div
+          className={`h-full rounded-full transition-all ${
+            secCumple ? "bg-emerald-400" : "bg-red-400"
+          }`}
+          style={{
+            width: `${Math.min(pctUsed, 100)}%`,
+          }}
+        />
+        {/* 100% limit marker */}
+        <div
+          className="absolute top-0 h-full w-0.5 bg-[var(--ochre)]"
+          style={{ left: "66.67%" }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-[var(--gray-500)]">
+        <span>$0</span>
+        <span>{formatCOP(limiteAbsoluto)} limite</span>
       </div>
     </div>
   );
@@ -191,7 +358,7 @@ export default function Ley617Panel({
             Cumplimiento Ley 617/2000
           </h2>
           <p className="mt-1 text-sm text-[var(--gray-400)]">
-            {municipio.name} ({municipio.dept}) &mdash; Período{" "}
+            {municipio.name} ({municipio.dept}) &mdash; Periodo{" "}
             {periodo.slice(0, 4)} T
             {(
               {
@@ -218,8 +385,8 @@ export default function Ley617Panel({
       <div className="mb-8 grid grid-cols-1 items-center gap-6 lg:grid-cols-3">
         <div className="flex justify-center lg:col-span-1">
           <Gauge
-            ratio={data.ratioGlobal}
-            limite={data.limiteGlobal}
+            ratio={data.ratioGlobal * 100}
+            limite={data.limiteGlobal * 100}
             status={data.status}
           />
         </div>
@@ -227,94 +394,31 @@ export default function Ley617Panel({
           <KPI
             label="ICLD Total"
             value={formatCOP(data.icldTotal)}
-            subtext="Ingresos Corrientes de Libre Destinación"
+            subtext="Ingresos Corrientes de Libre Destinacion"
           />
           <KPI
             label="Gastos de Funcionamiento"
             value={formatCOP(data.gastosFuncionamientoTotal)}
-            subtext={`Ratio global: ${data.ratioGlobal.toFixed(1)}% / Límite: ${data.limiteGlobal}%`}
+            subtext={`Ratio global: ${(data.ratioGlobal * 100).toFixed(1)}% / Limite: ${(data.limiteGlobal * 100).toFixed(0)}%`}
           />
         </div>
+      </div>
+
+      {/* SMLMV reference */}
+      <div className="mb-6 rounded-lg border border-[var(--gray-800)] bg-[var(--gray-800)]/50 px-4 py-2.5 text-xs text-[var(--gray-400)]">
+        <strong className="text-[var(--gray-300)]">Referencia SMLMV 2025:</strong>{" "}
+        ${SMLMV_2025.toLocaleString("es-CO")} COP/mes. Los limites de Concejo (Art. 10) y
+        Personeria (Art. 11) son montos absolutos en SMLMV, no porcentajes del ICLD.
       </div>
 
       {/* Section cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         {data.secciones.map((s) => {
-          const secCumple = s.status === "cumple";
-          return (
-            <div
-              key={s.seccion}
-              className="rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)] p-5"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h4
-                  className="text-sm font-semibold text-white"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  {s.seccion}
-                </h4>
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                    secCumple
-                      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
-                      : "border-red-400/20 bg-red-400/10 text-red-400"
-                  }`}
-                >
-                  {secCumple ? "CUMPLE" : "NO CUMPLE"}
-                </span>
-              </div>
-
-              <div className="mb-3 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-[var(--gray-500)]">Gastos func.</span>
-                  <span className="text-[var(--gray-300)]">
-                    {formatCOP(s.gastosFuncionamiento)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--gray-500)]">ICLD</span>
-                  <span className="text-[var(--gray-300)]">
-                    {formatCOP(s.icld)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--gray-500)]">Ratio</span>
-                  <span
-                    className={`font-semibold ${secCumple ? "text-emerald-400" : "text-red-400"}`}
-                  >
-                    {s.ratio.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[var(--gray-500)]">Límite legal</span>
-                  <span className="text-[var(--ochre)]">{s.limite}%</span>
-                </div>
-              </div>
-
-              {/* Progress bar: ratio vs limit */}
-              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--gray-700)]">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    secCumple ? "bg-emerald-400" : "bg-red-400"
-                  }`}
-                  style={{
-                    width: `${Math.min((s.ratio / Math.max(s.limite * 1.5, 100)) * 100, 100)}%`,
-                  }}
-                />
-                {/* Limit marker */}
-                <div
-                  className="absolute top-0 h-full w-0.5 bg-[var(--ochre)]"
-                  style={{
-                    left: `${(s.limite / Math.max(s.limite * 1.5, 100)) * 100}%`,
-                  }}
-                />
-              </div>
-              <div className="mt-1 flex justify-between text-[10px] text-[var(--gray-500)]">
-                <span>0%</span>
-                <span>{s.limite}% límite</span>
-              </div>
-            </div>
-          );
+          const tipoLimite = s.tipoLimite ?? "porcentaje";
+          if (tipoLimite === "absoluto") {
+            return <AbsoluteSectionCard key={s.seccion} s={s} />;
+          }
+          return <PercentageSectionCard key={s.seccion} s={s} />;
         })}
       </div>
 
@@ -322,18 +426,18 @@ export default function Ley617Panel({
       {certifications && certifications.length > 0 && (
         <div className="mb-6">
           <h3 className="mb-3 text-sm font-medium text-[var(--gray-400)]">
-            Certificación oficial CGR (histórico 2011-2020)
+            Certificacion oficial CGR (historico 2011-2020)
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-[var(--gray-700)] text-left text-[var(--gray-500)]">
                   <th className="py-2 pr-3 font-medium">Vigencia</th>
-                  <th className="py-2 pr-3 font-medium">Categoría</th>
+                  <th className="py-2 pr-3 font-medium">Categoria</th>
                   <th className="py-2 pr-3 text-right font-medium">ICLD Neto</th>
                   <th className="py-2 pr-3 text-right font-medium">Gastos Func.</th>
                   <th className="py-2 pr-3 text-right font-medium">Indicador</th>
-                  <th className="py-2 text-right font-medium">Límite</th>
+                  <th className="py-2 text-right font-medium">Limite</th>
                 </tr>
               </thead>
               <tbody>
@@ -356,7 +460,7 @@ export default function Ley617Panel({
             </table>
           </div>
           <p className="mt-2 text-[10px] text-[var(--gray-600)]">
-            Fuente: datos.gov.co/resource/vztn-viv4 — Certificación CGR Ley 617
+            Fuente: datos.gov.co/resource/vztn-viv4 — Certificacion CGR Ley 617
           </p>
         </div>
       )}
@@ -364,11 +468,11 @@ export default function Ley617Panel({
       {/* Footer note */}
       <div className="rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)]/50 px-4 py-3 text-xs text-[var(--gray-500)]">
         <strong className="text-[var(--gray-400)]">Nota:</strong> La Ley
-        617/2000 establece límites al gasto de funcionamiento de las entidades
-        territoriales como proporción de sus Ingresos Corrientes de Libre
-        Destinación (ICLD). Los límites varían según la categoría del municipio.
-        El incumplimiento puede derivar en planes de ajuste fiscal y
-        restricciones presupuestales.
+        617/2000 establece limites al gasto de funcionamiento de las entidades
+        territoriales. Art. 6: Administracion Central con limite como % de ICLD
+        segun categoria. Art. 10: Concejos con limite absoluto en SMLMV. Art. 11:
+        Personerias con limite absoluto en SMLMV. El incumplimiento puede derivar
+        en planes de ajuste fiscal y restricciones presupuestales.
       </div>
     </div>
   );

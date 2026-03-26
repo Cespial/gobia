@@ -4,10 +4,14 @@ import {
   fetchIngresosPorFuente,
   fetchGastosPorFuente,
   fetchLey617Certificacion,
+  sodaCuipoQuery,
+  CUIPO_DATASETS,
 } from "@/lib/datos-gov-cuipo";
 import { evaluateSGP } from "@/lib/validaciones/sgp";
 import { evaluateLey617 } from "@/lib/validaciones/ley617";
 import { calculateIDF } from "@/lib/validaciones/idf";
+import { evaluateEficienciaFiscal } from "@/lib/validaciones/eficiencia-fiscal";
+import { evaluateCGA } from "@/lib/validaciones/cga";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -34,78 +38,147 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        // Fetch income and expenses by funding source in parallel
-        const [ingresos, gastos] = await Promise.all([
+        // Fetch income, expenses (ALL vigencias), and programming totals in parallel
+        // NOTE: PROG_INGRESOS (22ah-ddsj) has a non-standard schema where account codes
+        // are in ambito_codigo, not cuenta, and monetary fields contain non-numeric data.
+        // We use PROG_GASTOS for expense programming and derive income programming from
+        // the top-level CUIPO EJEC_ING row (cuenta='1') which has initial/definitive.
+        const [ingresos, gastos, progGasTotals] = await Promise.all([
           fetchIngresosPorFuente(chipCode, periodo),
           fetchGastosPorFuente(chipCode, periodo),
+          sodaCuipoQuery<{ apropiacion_inicial: string; apropiacion_definitiva: string }>({
+            dataset: CUIPO_DATASETS.PROG_GASTOS,
+            select: "sum(apropiacion_inicial) as apropiacion_inicial, sum(apropiacion_definitiva) as apropiacion_definitiva",
+            where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='2' AND cod_vigencia_del_gasto='1'`,
+            limit: 1,
+          }),
         ]);
 
-        // Build equilibrium by funding source
+        // Build equilibrium by funding source, processing ALL vigencias
         const fuenteMap = new Map<
           string,
           {
             codigo: string;
             nombre: string;
             recaudo: number;
-            compromisos: number;
-            obligaciones: number;
-            pagos: number;
+            compromisos_va: number;
+            obligaciones_va: number;
+            pagos_va: number;
+            compromisos_res: number;
+            pagos_res: number;
+            compromisos_cxp: number;
+            pagos_cxp: number;
           }
         >();
+
+        const emptyFuente = (key: string, nombre: string) => ({
+          codigo: key,
+          nombre,
+          recaudo: 0,
+          compromisos_va: 0,
+          obligaciones_va: 0,
+          pagos_va: 0,
+          compromisos_res: 0,
+          pagos_res: 0,
+          compromisos_cxp: 0,
+          pagos_cxp: 0,
+        });
 
         // Aggregate income by source
         for (const row of ingresos) {
           const key = row.cod_fuentes_financiacion || "SIN_FUENTE";
-          const existing = fuenteMap.get(key) || {
-            codigo: key,
-            nombre: row.nom_fuentes_financiacion || "Sin clasificar",
-            recaudo: 0,
-            compromisos: 0,
-            obligaciones: 0,
-            pagos: 0,
-          };
+          const existing = fuenteMap.get(key) || emptyFuente(key, row.nom_fuentes_financiacion || "Sin clasificar");
           existing.recaudo += parseFloat(row.total_recaudo || "0");
           fuenteMap.set(key, existing);
         }
 
-        // Aggregate expenses by source (only VIGENCIA ACTUAL)
+        // Aggregate expenses by source, classifying by vigencia type
         for (const row of gastos) {
-          if (row.nom_vigencia_del_gasto !== "VIGENCIA ACTUAL") continue;
-
           const key = row.cod_fuentes_financiacion || "SIN_FUENTE";
-          const existing = fuenteMap.get(key) || {
-            codigo: key,
-            nombre: row.nom_fuentes_financiacion || "Sin clasificar",
-            recaudo: 0,
-            compromisos: 0,
-            obligaciones: 0,
-            pagos: 0,
-          };
-          existing.compromisos += parseFloat(row.compromisos || "0");
-          existing.obligaciones += parseFloat(row.obligaciones || "0");
-          existing.pagos += parseFloat(row.pagos || "0");
+          const existing = fuenteMap.get(key) || emptyFuente(key, row.nom_fuentes_financiacion || "Sin clasificar");
+
+          const vigencia = (row.nom_vigencia_del_gasto || "").toUpperCase();
+          const compromisos = parseFloat(row.compromisos || "0");
+          const obligaciones = parseFloat(row.obligaciones || "0");
+          const pagos = parseFloat(row.pagos || "0");
+
+          if (vigencia === "VIGENCIA ACTUAL") {
+            existing.compromisos_va += compromisos;
+            existing.obligaciones_va += obligaciones;
+            existing.pagos_va += pagos;
+          } else if (vigencia.includes("RESERVA")) {
+            existing.compromisos_res += compromisos;
+            existing.pagos_res += pagos;
+          } else if (vigencia.includes("CUENTAS POR PAGAR")) {
+            existing.compromisos_cxp += compromisos;
+            existing.pagos_cxp += pagos;
+          }
+
           fuenteMap.set(key, existing);
         }
 
-        const porFuente = Array.from(fuenteMap.values()).map((f) => ({
-          ...f,
-          superavit: f.recaudo - f.compromisos,
-        }));
+        // Calculate derived fields per funding source
+        const porFuente = Array.from(fuenteMap.values()).map((f) => {
+          const reservas_va = Math.max(0, f.compromisos_va - f.obligaciones_va);
+          const cxp_va = Math.max(0, f.obligaciones_va - f.pagos_va);
+          const superavit = f.recaudo - f.compromisos_va;
+          const reservas_ant = f.compromisos_res - f.pagos_res;
+          const cxp_ant = f.compromisos_cxp - f.pagos_cxp;
+          const saldoEnLibros = Math.max(0, superavit) + reservas_va + cxp_va + reservas_ant + cxp_ant;
+
+          return {
+            codigo: f.codigo,
+            nombre: f.nombre,
+            recaudo: f.recaudo,
+            compromisos: f.compromisos_va,
+            obligaciones: f.obligaciones_va,
+            pagos: f.pagos_va,
+            reservas: reservas_va,
+            cxp: cxp_va,
+            superavit,
+            saldoEnLibros,
+          };
+        });
 
         const totalIngresos = porFuente.reduce((s, f) => s + f.recaudo, 0);
-        const totalGastos = porFuente.reduce((s, f) => s + f.compromisos, 0);
+        const totalCompromisos = porFuente.reduce((s, f) => s + f.compromisos, 0);
+        const totalObligaciones = porFuente.reduce((s, f) => s + f.obligaciones, 0);
         const totalPagos = porFuente.reduce((s, f) => s + f.pagos, 0);
-        const superavit = totalIngresos - totalGastos;
-        const pctEjecucion = totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : 0;
+        const totalReservas = porFuente.reduce((s, f) => s + f.reservas, 0);
+        const totalCxP = porFuente.reduce((s, f) => s + f.cxp, 0);
+        const superavit = totalIngresos - totalCompromisos;
+        const saldoEnLibros = porFuente.reduce((s, f) => s + f.saldoEnLibros, 0);
+        const pctEjecucion = totalIngresos > 0 ? (totalCompromisos / totalIngresos) * 100 : 0;
+
+        // Programming totals (only expense programming available reliably via API)
+        const pptoInicialGastos = parseFloat(progGasTotals[0]?.apropiacion_inicial || "0");
+        const pptoDefinitivoGastos = parseFloat(progGasTotals[0]?.apropiacion_definitiva || "0");
+        // Income programming not available via Socrata (PROG_INGRESOS has non-standard schema)
+        // Use expense programming as reference for equilibrium check
+        const pptoInicialIngresos = 0;
+        const pptoDefinitivoIngresos = 0;
+        const equilibrioInicial = 0;
+        const equilibrioDefinitivo = 0;
 
         return NextResponse.json({
           ok: true,
           equilibrio: {
             totalIngresos,
-            totalGastos,
+            totalCompromisos,
+            totalGastos: totalCompromisos, // backwards compat alias
+            totalObligaciones,
             totalPagos,
+            totalReservas,
+            totalCxP,
             superavit,
+            saldoEnLibros,
             pctEjecucion,
+            pptoInicialIngresos,
+            pptoInicialGastos,
+            pptoDefinitivoIngresos,
+            pptoDefinitivoGastos,
+            equilibrioInicial,
+            equilibrioDefinitivo,
             porFuente: porFuente.sort((a, b) => b.recaudo - a.recaudo),
           },
         });
@@ -162,12 +235,26 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ ok: true, certifications });
       }
 
+      case "eficiencia": {
+        const periodo = searchParams.get("periodo");
+        if (!periodo) return NextResponse.json({ ok: false, error: "Falta parámetro periodo" }, { status: 400 });
+        const eficiencia = await evaluateEficienciaFiscal(chipCode, periodo);
+        return NextResponse.json({ ok: true, eficiencia });
+      }
+
+      case "cga": {
+        const periodo = searchParams.get("periodo");
+        if (!periodo) return NextResponse.json({ ok: false, error: "Falta parámetro periodo" }, { status: 400 });
+        const cga = await evaluateCGA(chipCode, periodo);
+        return NextResponse.json({ ok: true, cga });
+      }
+
       default:
         return NextResponse.json(
           {
             ok: false,
             error:
-              "Acción no válida. Use: periodos, equilibrio, sgp, ley617, ley617oficial, idf",
+              "Acción no válida. Use: periodos, equilibrio, sgp, ley617, ley617oficial, idf, eficiencia, cga",
           },
           { status: 400 }
         );

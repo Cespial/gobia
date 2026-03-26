@@ -33,7 +33,7 @@ import { evaluateLey617 } from "@/lib/validaciones/ley617";
 export interface IDFIndicator {
   name: string;
   value: number;
-  score: number; // 0-100 normalized
+  score: number | null; // 0-100 normalized, null when data not available
   interpretation: string;
 }
 
@@ -145,9 +145,24 @@ function isIngresoCorriente(cuenta: string): boolean {
   return cuenta.startsWith("1.1");
 }
 
-/** Transfer income: "1.1.02" = Transferencias corrientes */
-function isTransferencia(cuenta: string): boolean {
+/** Transfer income corrientes: "1.1.02" = Transferencias corrientes */
+function isTransferenciaCorriente(cuenta: string): boolean {
   return cuenta.startsWith("1.1.02");
+}
+
+/** Transfer income capital: "1.2.02" = Transferencias de Capital */
+function isTransferenciaCapital(cuenta: string): boolean {
+  return cuenta.startsWith("1.2.02");
+}
+
+/** Debt service expenses: "2.2" = Servicio de la deuda */
+function isServicioDeuda(cuenta: string): boolean {
+  return cuenta.startsWith("2.2");
+}
+
+/** Credit income: "1.2.01" = Recursos del crédito */
+function isIngresoCreditoInterno(cuenta: string): boolean {
+  return cuenta.startsWith("1.2.01");
 }
 
 /** Own revenue: "1.1.01" = Ingresos tributarios + "1.1.03" = No tributarios (excluding transfers) */
@@ -212,15 +227,36 @@ export async function calculateIDF(
     ]);
 
   // ---------------------------------------------------------------------------
-  // Aggregate income execution
+  // Leaf-row detection: only aggregate the most detailed level available
+  // CUIPO data includes parent rows (e.g. "1") AND leaf rows (e.g. "1.1.01.01.200.01").
+  // To avoid double-counting, we only sum leaf rows (rows whose cuenta is not
+  // a prefix of any other row's cuenta).
+  // ---------------------------------------------------------------------------
+  const allIncomeCuentas = new Set(ejecIngresos.map((r) => r.cuenta || ""));
+  const allExpenseCuentas = new Set(ejecGastos.map((r) => r.cuenta || ""));
+
+  function isLeafCuenta(cuenta: string, allCuentas: Set<string>): boolean {
+    const prefix = cuenta + ".";
+    for (const c of allCuentas) {
+      if (c.startsWith(prefix)) return false;
+    }
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Aggregate income execution (leaf rows only)
   // ---------------------------------------------------------------------------
   let ingresosTotales = 0;
   let ingresosCorrientes = 0;
-  let ingresosTransferencias = 0;
+  let ingresosTransferenciasCorrientes = 0;
+  let ingresosTransferenciasCapital = 0;
+  let ingresosCredito = 0;
   let ingresosPropiosRecaudo = 0; // For programming capacity
 
   for (const row of ejecIngresos) {
     const cuenta = row.cuenta || "";
+    if (!isLeafCuenta(cuenta, allIncomeCuentas)) continue;
+
     const recaudo = parseFloat(row.total_recaudo || "0");
 
     ingresosTotales += recaudo;
@@ -228,24 +264,37 @@ export async function calculateIDF(
     if (isIngresoCorriente(cuenta)) {
       ingresosCorrientes += recaudo;
     }
-    if (isTransferencia(cuenta)) {
-      ingresosTransferencias += recaudo;
+    if (isTransferenciaCorriente(cuenta)) {
+      ingresosTransferenciasCorrientes += recaudo;
+    }
+    if (isTransferenciaCapital(cuenta)) {
+      ingresosTransferenciasCapital += recaudo;
+    }
+    if (isIngresoCreditoInterno(cuenta)) {
+      ingresosCredito += recaudo;
     }
     if (isIngresoPropioForProgramming(cuenta)) {
       ingresosPropiosRecaudo += recaudo;
     }
   }
 
+  // Total transfers = corrientes + capital
+  const ingresosTransferencias =
+    ingresosTransferenciasCorrientes + ingresosTransferenciasCapital;
+
   // ---------------------------------------------------------------------------
-  // Aggregate expense execution
+  // Aggregate expense execution (leaf rows only)
   // ---------------------------------------------------------------------------
   let gastosCorrientes = 0;
   let gastosInversion = 0;
   let formacionBrutaCapital = 0;
   let compromisosTotal = 0;
+  let servicioDeuda = 0;
 
   for (const row of ejecGastos) {
     const cuenta = row.cuenta || "";
+    if (!isLeafCuenta(cuenta, allExpenseCuentas)) continue;
+
     const compromisos = parseFloat(row.compromisos || "0");
 
     compromisosTotal += compromisos;
@@ -259,14 +308,21 @@ export async function calculateIDF(
     if (isFormacionBrutaCapital(cuenta)) {
       formacionBrutaCapital += compromisos;
     }
+    if (isServicioDeuda(cuenta)) {
+      servicioDeuda += compromisos;
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Aggregate programming data
+  // Aggregate programming data (leaf rows only)
   // ---------------------------------------------------------------------------
+  const allProgIngCuentas = new Set(progIngresos.map((r) => r.cuenta || ""));
+  const allProgGasCuentas = new Set(progGastos.map((r) => r.cuenta || ""));
+
   let presupuestoInicialPropios = 0;
   for (const row of progIngresos) {
     const cuenta = row.cuenta || "";
+    if (!isLeafCuenta(cuenta, allProgIngCuentas)) continue;
     if (isIngresoPropioForProgramming(cuenta)) {
       presupuestoInicialPropios += parseFloat(
         row.presupuesto_inicial || "0"
@@ -276,6 +332,8 @@ export async function calculateIDF(
 
   let apropiacionDefinitivaTotal = 0;
   for (const row of progGastos) {
+    const cuenta = row.cuenta || "";
+    if (!isLeafCuenta(cuenta, allProgGasCuentas)) continue;
     apropiacionDefinitivaTotal += parseFloat(
       row.apropiacion_definitiva || "0"
     );
@@ -296,10 +354,10 @@ export async function calculateIDF(
   const fbkRatio = safeDivide(formacionBrutaCapital, gastosInversion);
   const fbkScore = normalizeDirect(fbkRatio);
 
-  // 3. Endeudamiento LP (placeholder -- needs CGN balance sheet data)
-  //    We assign a neutral score of 60 when data is not available
+  // 3. Endeudamiento LP — requires CGN Saldos (balance sheet) data
+  //    Set to null; excluded from score average when not available
   const deudaRatio = 0;
-  const deudaScore = 60;
+  const deudaScore: number | null = null;
 
   // 4. Ahorro corriente
   const ahorroCorrienteRatio = safeDivide(
@@ -310,15 +368,25 @@ export async function calculateIDF(
     Math.max(0, ahorroCorrienteRatio)
   );
 
-  // 5. Balance fiscal primario (placeholder)
-  //    Simplified: (Ingresos - Gastos) / Ingresos
-  const balancePrimarioRatio = safeDivide(
-    ingresosTotales - compromisosTotal,
-    ingresosTotales
-  );
+  // 5. Balance fiscal primario
+  //    Formula: (Ingresos totales - Crédito) - (Gastos totales - Servicio deuda)
+  //    Ratio:   Balance primario / (Ingresos totales - Crédito)
+  //    If credit/debt separation not available, fall back to simplified formula
+  const ingresosNetos = ingresosTotales - ingresosCredito; // Ingresos sin crédito
+  const gastosNetos = compromisosTotal - servicioDeuda; // Gastos sin servicio deuda
+  const balancePrimario = ingresosNetos - gastosNetos;
+
+  // Use the proper formula when debt components are identifiable
+  const hasDebtBreakdown = ingresosCredito > 0 || servicioDeuda > 0;
+  const balancePrimarioRatio = hasDebtBreakdown
+    ? safeDivide(balancePrimario, ingresosNetos)
+    : safeDivide(ingresosTotales - compromisosTotal, ingresosTotales);
   const balanceScore = normalizeDirect(
     Math.max(0, balancePrimarioRatio)
   );
+  const balanceLabel = hasDebtBreakdown
+    ? "Balance fiscal primario"
+    : "Balance fiscal (simplificado)";
 
   const resultadosFiscales: IDFIndicator[] = [
     {
@@ -338,7 +406,7 @@ export async function calculateIDF(
       value: Math.round(deudaRatio * 10000) / 100,
       score: deudaScore,
       interpretation:
-        "Dato no disponible en CUIPO. Requiere balance CGN.",
+        "No disponible \u2014 requiere CGN Saldos",
     },
     {
       name: "Ahorro corriente",
@@ -347,7 +415,7 @@ export async function calculateIDF(
       interpretation: interpretAhorro(ahorroCorrienteRatio),
     },
     {
-      name: "Balance fiscal primario",
+      name: balanceLabel,
       value: Math.round(balancePrimarioRatio * 10000) / 100,
       score: balanceScore,
       interpretation:
@@ -405,14 +473,15 @@ export async function calculateIDF(
   // Composite IDF Score
   // ---------------------------------------------------------------------------
 
-  // Average each group
-  const scoreResultados =
-    resultadosFiscales.reduce((s, i) => s + i.score, 0) /
-    resultadosFiscales.length;
+  // Average each group — exclude null indicators from the average
+  function avgNonNull(indicators: IDFIndicator[]): number {
+    const valid = indicators.filter((i) => i.score !== null);
+    if (valid.length === 0) return 0;
+    return valid.reduce((s, i) => s + (i.score as number), 0) / valid.length;
+  }
 
-  const scoreGestion =
-    gestionFinanciera.reduce((s, i) => s + i.score, 0) /
-    gestionFinanciera.length;
+  const scoreResultados = avgNonNull(resultadosFiscales);
+  const scoreGestion = avgNonNull(gestionFinanciera);
 
   // Weighted: 80% results + 20% management
   const idfTotal =

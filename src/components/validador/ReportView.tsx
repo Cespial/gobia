@@ -87,13 +87,15 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
           results.push({
             name: "Ley 617/2000",
             status: l.status,
-            detail: `Ratio: ${l.ratioGlobal.toFixed(1)}% — Límite: ${l.limiteGlobal}%`,
+            detail: `Ratio: ${(l.ratioGlobal * 100).toFixed(1)}% — Límite: ${(l.limiteGlobal * 100).toFixed(0)}%`,
             metrics: [
               { label: "ICLD", value: formatCOP(l.icldTotal) },
               { label: "Gastos Funcionamiento", value: formatCOP(l.gastosFuncionamientoTotal) },
               ...l.secciones.map((s: any) => ({
                 label: s.seccion.replace("ENTIDADES TERRITORIALES - ", ""),
-                value: `${s.ratio.toFixed(1)}% / ${s.limite}% (${s.status === "cumple" ? "OK" : "ALERTA"})`,
+                value: s.tipoLimite === "absoluto"
+                  ? `${formatCOP(s.gastosFuncionamiento)} / ${formatCOP(s.limiteAbsoluto)} (${s.status === "cumple" ? "OK" : "ALERTA"})`
+                  : `${(s.ratio * 100).toFixed(1)}% / ${(s.limite * 100).toFixed(0)}% (${s.status === "cumple" ? "OK" : "ALERTA"})`,
               })),
             ],
           });
@@ -125,7 +127,7 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
               { label: "Score Gestión (20%)", value: `${i.scoreGestion.toFixed(1)}` },
               ...i.resultadosFiscales.map((ind: any) => ({
                 label: ind.name,
-                value: `${ind.score.toFixed(0)} pts`,
+                value: ind.score !== null ? `${ind.score.toFixed(0)} pts` : "N/D",
               })),
             ],
           });

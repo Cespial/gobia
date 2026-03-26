@@ -11,7 +11,10 @@ interface EquilibrioFuente {
   compromisos: number;
   obligaciones: number;
   pagos: number;
+  reservas: number;
+  cxp: number;
   superavit: number;
+  saldoEnLibros?: number;
 }
 
 interface CierreVsCuipoProps {
@@ -50,9 +53,15 @@ export default function CierreVsCuipoPanel({
   periodo,
   municipio,
 }: CierreVsCuipoProps) {
-  const { comparisonRows, totals, cumple, matchedCount, totalCount } =
+  const { comparisonRows, totals, cumple, matchedCount, totalCount, futOnlyRows, cuipoOnlyRows } =
     useMemo(() => {
       const rows: ComparisonRow[] = [];
+
+      // FUT uses codes like "C.1", "C.1.1" while CUIPO uses funding source codes.
+      // 1:1 matching by code is not possible. Instead, we show:
+      //   - TOTAL comparison (FUT total vs CUIPO total) as the main metric
+      //   - FUT detail rows (from uploaded file) for reference
+      //   - CUIPO detail rows (from equilibrio) for reference
 
       // Build a map of FUT Cierre rows by code for lookup
       const futMap = new Map(
@@ -86,17 +95,25 @@ export default function CierreVsCuipoPanel({
         return a.localeCompare(b);
       });
 
+      // Track FUT-only vs CUIPO-only rows
+      let futOnly = 0;
+      let cuipoOnly = 0;
+
       for (const code of sortedCodes) {
         const fut = futMap.get(code);
         const cuipo = cuipoMap.get(code);
 
-        // For CUIPO, derive book balance as recaudo - pagos (simplified)
-        const cuipoSaldoLibros = cuipo ? cuipo.superavit : 0;
-        // CUIPO does not directly report reserves/CxP per source,
-        // so we approximate: compromisos - pagos = pending obligations (reserves + CxP)
-        const cuipoPending = cuipo ? cuipo.compromisos - cuipo.pagos : 0;
-        const cuipoReservas = cuipoPending > 0 ? cuipoPending * 0.5 : 0;
-        const cuipoCxP = cuipoPending > 0 ? cuipoPending * 0.5 : 0;
+        if (fut && !cuipo) futOnly++;
+        if (cuipo && !fut) cuipoOnly++;
+
+        // CUIPO: use real reservas and cxp from equilibrio data
+        //   Reservas = Compromisos - Obligaciones
+        //   CxP = Obligaciones - Pagos
+        const cuipoSaldoLibros = cuipo
+          ? (cuipo.saldoEnLibros ?? cuipo.superavit)
+          : 0;
+        const cuipoReservas = cuipo ? cuipo.reservas : 0;
+        const cuipoCxP = cuipo ? cuipo.cxp : 0;
 
         const futSaldoLibros = fut ? fut.saldoEnLibros : 0;
         const futReservas = fut ? fut.reservasPresupuestales : 0;
@@ -171,6 +188,8 @@ export default function CierreVsCuipoPanel({
         cumple: allCumple,
         matchedCount: matched,
         totalCount: rows.length,
+        futOnlyRows: futOnly,
+        cuipoOnlyRows: cuipoOnly,
       };
     }, [futCierre, equilibrioData]);
 
@@ -274,14 +293,28 @@ export default function CierreVsCuipoPanel({
         </div>
       </div>
 
-      {/* Warning about approximation */}
+      {/* Warning about code mapping */}
       <div className="mb-6 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-300">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>
-          Los valores de CUIPO (Reservas, CxP) son aproximaciones derivadas de
-          compromisos menos pagos. Para una conciliacion exacta se requiere el
-          detalle por fuente del cierre CUIPO.
-        </span>
+        <div className="space-y-1">
+          <p>
+            <strong>Reservas CUIPO</strong> = Compromisos &minus; Obligaciones.{" "}
+            <strong>CxP CUIPO</strong> = Obligaciones &minus; Pagos. Valores
+            derivados de la ejecucion por fuente.
+          </p>
+          <p>
+            FUT usa codigos tipo &quot;C.1&quot;, &quot;C.1.1&quot; mientras
+            CUIPO usa codigos de fuente de financiacion. La comparacion
+            por fuente individual requiere mapeo manual; la
+            conciliacion de <strong>totales</strong> es confiable.
+            {(futOnlyRows > 0 || cuipoOnlyRows > 0) && (
+              <span>
+                {" "}({futOnlyRows} fuentes solo en FUT, {cuipoOnlyRows} solo en
+                CUIPO)
+              </span>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* Comparison table */}

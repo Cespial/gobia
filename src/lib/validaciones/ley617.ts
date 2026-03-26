@@ -13,14 +13,21 @@
  * - Quinta: 80%
  * - Sexta: 80%
  *
- * For Concejos (Art. 10) and Personerias (Art. 11) there are separate limits
- * based on SMLMV -- these are checked per-section against the same ICLD base.
+ * Art. 10 (Concejos): Absolute limits in SMLMV (not % of ICLD).
+ * Art. 11 (Personerias): Absolute limits in SMLMV (not % of ICLD).
  */
 
 import {
   fetchIngresosPorFuente,
   fetchGastosPorSeccion,
 } from "@/lib/datos-gov-cuipo";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Salario Mínimo Legal Mensual Vigente 2025 */
+const SMLMV_2025 = 1_423_500;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,8 +38,15 @@ export interface Ley617Section {
   gastosFuncionamiento: number;
   icld: number;
   ratio: number;
+  /** For Admin Central: percentage limit (0-1). For Concejo/Personeria: not used directly */
   limite: number;
+  /** Absolute limit in COP for Concejo/Personeria */
+  limiteAbsoluto?: number;
+  /** Limit expressed in SMLMV units for Concejo/Personeria */
+  limiteSMLMV?: number;
   status: "cumple" | "no_cumple";
+  /** Indicates whether limit is a percentage of ICLD or an absolute COP amount */
+  tipoLimite: "porcentaje" | "absoluto";
 }
 
 export interface Ley617Result {
@@ -63,29 +77,30 @@ const LIMITES_LEY617: Record<number, number> = {
 };
 
 /**
- * Per-section limits as fraction of ICLD.
- * Art. 10 (Concejos): 1.5% for cat 1-2, 1.8% for cat 3-6
- * Art. 11 (Personerias): ~1.5-2.5% depending on category
- * These are approximate caps used as warning thresholds.
+ * Art. 10 (Concejos): Absolute annual limits in SMLMV.
+ * These cover honorarios + gastos operativos del Concejo.
  */
-const LIMITES_CONCEJO: Record<number, number> = {
-  0: 0.015,
-  1: 0.015,
-  2: 0.015,
-  3: 0.018,
-  4: 0.018,
-  5: 0.018,
-  6: 0.018,
+const LIMITES_CONCEJO_SMLMV: Record<number, number> = {
+  0: 150, // Especial — simplified; actual formula depends on #concejales x sesiones x factor
+  1: 150, // Primera
+  2: 120, // Segunda
+  3: 60,  // Tercera
+  4: 40,  // Cuarta
+  5: 30,  // Quinta
+  6: 25,  // Sexta
 };
 
-const LIMITES_PERSONERIA: Record<number, number> = {
-  0: 0.015,
-  1: 0.015,
-  2: 0.018,
-  3: 0.02,
-  4: 0.02,
-  5: 0.025,
-  6: 0.025,
+/**
+ * Art. 11 (Personerias): Absolute annual limits in SMLMV.
+ */
+const LIMITES_PERSONERIA_SMLMV: Record<number, number> = {
+  0: 500, // Especial
+  1: 350, // Primera
+  2: 280, // Segunda
+  3: 190, // Tercera
+  4: 150, // Cuarta
+  5: 120, // Quinta
+  6: 100, // Sexta
 };
 
 // ---------------------------------------------------------------------------
@@ -96,29 +111,19 @@ function getGlobalLimit(categoria: number): number {
   return LIMITES_LEY617[categoria] ?? LIMITES_LEY617[6];
 }
 
-function getSectionLimit(
-  seccionName: string,
-  categoria: number,
-  globalLimit: number
-): number {
-  const upper = seccionName.toUpperCase();
-
-  if (upper.includes("CONCEJO")) {
-    return LIMITES_CONCEJO[categoria] ?? LIMITES_CONCEJO[6];
-  }
-  if (upper.includes("PERSONERIA")) {
-    return LIMITES_PERSONERIA[categoria] ?? LIMITES_PERSONERIA[6];
-  }
-
-  // Administracion Central and any other section use the global Art. 6 limit
-  return globalLimit;
-}
-
 function isICLDSource(fuenteName: string): boolean {
   const upper = (fuenteName || "").toUpperCase();
   return (
     upper.includes("LIBRE DESTINACION") || upper.includes("LIBRE DESTINACI")
   );
+}
+
+function isConcejo(seccionName: string): boolean {
+  return seccionName.toUpperCase().includes("CONCEJO");
+}
+
+function isPersoneria(seccionName: string): boolean {
+  return seccionName.toUpperCase().includes("PERSONERIA");
 }
 
 // ---------------------------------------------------------------------------
@@ -177,16 +182,51 @@ export async function evaluateLey617(
     gastosFuncionamientoTotal += gastos;
 
     const ratio = icldTotal > 0 ? gastos / icldTotal : 0;
-    const limite = getSectionLimit(seccionName, categoria, limiteGlobal);
 
-    secciones.push({
-      seccion: seccionName,
-      gastosFuncionamiento: gastos,
-      icld: icldTotal,
-      ratio: Math.round(ratio * 10000) / 10000,
-      limite,
-      status: ratio <= limite ? "cumple" : "no_cumple",
-    });
+    if (isConcejo(seccionName)) {
+      // Art. 10: Absolute limit in SMLMV
+      const limiteSMLMV = LIMITES_CONCEJO_SMLMV[categoria] ?? LIMITES_CONCEJO_SMLMV[6];
+      const limiteAbsoluto = limiteSMLMV * SMLMV_2025;
+
+      secciones.push({
+        seccion: seccionName,
+        gastosFuncionamiento: gastos,
+        icld: icldTotal,
+        ratio: Math.round(ratio * 10000) / 10000,
+        limite: 0, // not applicable for absolute limits
+        limiteAbsoluto,
+        limiteSMLMV,
+        status: gastos <= limiteAbsoluto ? "cumple" : "no_cumple",
+        tipoLimite: "absoluto",
+      });
+    } else if (isPersoneria(seccionName)) {
+      // Art. 11: Absolute limit in SMLMV
+      const limiteSMLMV = LIMITES_PERSONERIA_SMLMV[categoria] ?? LIMITES_PERSONERIA_SMLMV[6];
+      const limiteAbsoluto = limiteSMLMV * SMLMV_2025;
+
+      secciones.push({
+        seccion: seccionName,
+        gastosFuncionamiento: gastos,
+        icld: icldTotal,
+        ratio: Math.round(ratio * 10000) / 10000,
+        limite: 0, // not applicable for absolute limits
+        limiteAbsoluto,
+        limiteSMLMV,
+        status: gastos <= limiteAbsoluto ? "cumple" : "no_cumple",
+        tipoLimite: "absoluto",
+      });
+    } else {
+      // Admin Central & others: Art. 6 percentage limit
+      secciones.push({
+        seccion: seccionName,
+        gastosFuncionamiento: gastos,
+        icld: icldTotal,
+        ratio: Math.round(ratio * 10000) / 10000,
+        limite: limiteGlobal,
+        status: ratio <= limiteGlobal ? "cumple" : "no_cumple",
+        tipoLimite: "porcentaje",
+      });
+    }
   }
 
   // Sort sections: Administracion Central first, then alphabetical
@@ -200,7 +240,7 @@ export async function evaluateLey617(
     return a.seccion.localeCompare(b.seccion);
   });
 
-  // 4. Global ratio and status
+  // 4. Global ratio (Art. 6 — Admin Central ratio only, but using total gastos for overview)
   const ratioGlobal =
     icldTotal > 0 ? gastosFuncionamientoTotal / icldTotal : 0;
   const ratioGlobalRounded = Math.round(ratioGlobal * 10000) / 10000;

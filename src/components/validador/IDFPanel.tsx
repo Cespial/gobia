@@ -71,13 +71,13 @@ interface IDFPanelProps {
     resultadosFiscales: {
       name: string;
       value: number;
-      score: number;
+      score: number | null;
       interpretation: string;
     }[];
     gestionFinanciera: {
       name: string;
       value: number;
-      score: number;
+      score: number | null;
       interpretation: string;
     }[];
     scoreResultados: number;
@@ -104,7 +104,7 @@ function IndicatorSection({
   indicators: {
     name: string;
     value: number;
-    score: number;
+    score: number | null;
     interpretation: string;
   }[];
 }) {
@@ -129,30 +129,36 @@ function IndicatorSection({
       </div>
 
       <div className="space-y-4">
-        {indicators.map((ind) => (
-          <div key={ind.name}>
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs text-[var(--gray-400)]">{ind.name}</span>
-              <span className="text-xs font-medium text-white">
-                {ind.value.toFixed(1)}%
-              </span>
+        {indicators.map((ind) => {
+          const isNull = ind.score === null;
+          const displayScore = ind.score ?? 0;
+          return (
+            <div key={ind.name} className={isNull ? "opacity-50" : ""}>
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-[var(--gray-400)]">{ind.name}</span>
+                <span className="text-xs font-medium text-white">
+                  {isNull ? "N/D" : `${ind.value.toFixed(1)}%`}
+                </span>
+              </div>
+              <div className="mb-1 h-2 w-full overflow-hidden rounded-full bg-[var(--gray-700)]">
+                {!isNull && (
+                  <div
+                    className={`h-full rounded-full ${scoreBgClass(displayScore)}`}
+                    style={{ width: `${Math.min(displayScore, 100)}%` }}
+                  />
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-[var(--gray-500)]">
+                  {ind.interpretation}
+                </span>
+                <span className={`font-semibold ${isNull ? "text-[var(--gray-500)]" : scoreColorClass(displayScore)}`}>
+                  {isNull ? "Sin dato" : `${displayScore.toFixed(1)} pts`}
+                </span>
+              </div>
             </div>
-            <div className="mb-1 h-2 w-full overflow-hidden rounded-full bg-[var(--gray-700)]">
-              <div
-                className={`h-full rounded-full ${scoreBgClass(ind.score)}`}
-                style={{ width: `${Math.min(ind.score, 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-[var(--gray-500)]">
-                {ind.interpretation}
-              </span>
-              <span className={`font-semibold ${scoreColorClass(ind.score)}`}>
-                {ind.score.toFixed(1)} pts
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -162,16 +168,20 @@ function IndicatorSection({
 
 export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
   const radarData = [
-    ...data.resultadosFiscales.map((i) => ({
-      subject: i.name.length > 20 ? i.name.slice(0, 20) + "\u2026" : i.name,
-      score: i.score,
-      fullMark: 100,
-    })),
-    ...data.gestionFinanciera.map((i) => ({
-      subject: i.name.length > 20 ? i.name.slice(0, 20) + "\u2026" : i.name,
-      score: i.score,
-      fullMark: 100,
-    })),
+    ...data.resultadosFiscales
+      .filter((i) => i.score !== null)
+      .map((i) => ({
+        subject: i.name.length > 20 ? i.name.slice(0, 20) + "\u2026" : i.name,
+        score: i.score as number,
+        fullMark: 100,
+      })),
+    ...data.gestionFinanciera
+      .filter((i) => i.score !== null)
+      .map((i) => ({
+        subject: i.name.length > 20 ? i.name.slice(0, 20) + "\u2026" : i.name,
+        score: i.score as number,
+        fullMark: 100,
+      })),
   ];
 
   return (
@@ -326,6 +336,13 @@ export default function IDFPanel({ data, periodo, municipio }: IDFPanelProps) {
           </div>
         ))}
       </div>
+
+      {/* Estimation disclaimer */}
+      <p className="mt-4 text-center text-[10px] text-[var(--gray-500)]">
+        Estimacion Gobia &mdash; el IDF oficial DNP usa ranking percentil
+        nacional de los 1.104 municipios. Indicadores sin dato se excluyen del
+        promedio.
+      </p>
     </div>
   );
 }

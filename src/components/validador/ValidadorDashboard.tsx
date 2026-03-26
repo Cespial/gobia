@@ -21,12 +21,16 @@ import type { SGPEvaluationResult, SGPComponentResult } from "@/lib/validaciones
 import type { Ley617Result } from "@/lib/validaciones/ley617";
 import type { IDFResult } from "@/lib/validaciones/idf";
 import type { Ley617Certification } from "@/lib/datos-gov-cuipo";
+import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fiscal";
+import type { CGAResult } from "@/lib/validaciones/cga";
 import EquilibrioPanel from "./EquilibrioPanel";
 import SGPPanel from "./SGPPanel";
 import Ley617Panel from "./Ley617Panel";
 import IDFPanel from "./IDFPanel";
 import FileUploadPanel from "./FileUploadPanel";
 import CierreVsCuipoPanel from "./CierreVsCuipoPanel";
+import EficienciaFiscalPanel from "./EficienciaFiscalPanel";
+import CGAPanel from "./CGAPanel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,10 +44,21 @@ interface ValidationResult {
 
 interface EquilibrioData {
   totalIngresos: number;
-  totalGastos: number;
+  totalCompromisos?: number;
+  totalGastos?: number;
+  totalObligaciones?: number;
   totalPagos: number;
+  totalReservas?: number;
+  totalCxP?: number;
   superavit: number;
+  saldoEnLibros?: number;
   pctEjecucion: number;
+  pptoInicialIngresos?: number;
+  pptoInicialGastos?: number;
+  pptoDefinitivoIngresos?: number;
+  pptoDefinitivoGastos?: number;
+  equilibrioInicial?: number;
+  equilibrioDefinitivo?: number;
   porFuente: {
     codigo: string;
     nombre: string;
@@ -51,7 +66,10 @@ interface EquilibrioData {
     compromisos: number;
     obligaciones: number;
     pagos: number;
+    reservas: number;
+    cxp: number;
     superavit: number;
+    saldoEnLibros?: number;
   }[];
 }
 
@@ -61,8 +79,8 @@ const VALIDACIONES = [
   { id: "ley-617", icon: Landmark, label: "Ley 617 Funcionamiento", auto: true },
   { id: "idf", icon: TrendingUp, label: "Desempeño Fiscal (IDF)", auto: true },
   { id: "cierre-cuipo", icon: FileCheck, label: "Cierre FUT vs CUIPO", auto: false },
-  { id: "cga", icon: ShieldCheck, label: "Equilibrio CGA", auto: false },
-  { id: "eficiencia", icon: Receipt, label: "Eficiencia Fiscal", auto: false },
+  { id: "cga", icon: ShieldCheck, label: "Equilibrio CGA", auto: true },
+  { id: "eficiencia", icon: Receipt, label: "Eficiencia Fiscal", auto: true },
   { id: "agua", icon: Droplets, label: "Evaluación Agua Potable", auto: true },
 ];
 
@@ -124,6 +142,8 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [futCierre, setFutCierre] = useState<FUTCierreData | null>(null);
   const [cgnSaldos, setCgnSaldos] = useState<CGNSaldosData | null>(null);
   const [ley617Certifications, setLey617Certifications] = useState<Ley617Certification[]>([]);
+  const [eficienciaData, setEficienciaData] = useState<EficienciaFiscalResult | null>(null);
+  const [cgaData, setCgaData] = useState<CGAResult | null>(null);
 
   // -----------------------------------------------------------------------
   // Fetch periods
@@ -236,7 +256,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         "ley-617": {
           status: ley617Result.ley617.status,
           label: "Ley 617",
-          detail: `Funcionamiento ${ley617Result.ley617.ratioGlobal.toFixed(1)}% del ICLD (límite: ${ley617Result.ley617.limiteGlobal}%)`,
+          detail: `Funcionamiento ${(ley617Result.ley617.ratioGlobal * 100).toFixed(1)}% del ICLD (límite: ${(ley617Result.ley617.limiteGlobal * 100).toFixed(0)}%)`,
         },
       }));
     }
@@ -272,6 +292,37 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
               detail: `Ejecutado ${aguaComp.pctEjecucion.toFixed(1)}% del SGP-APSB (${formatCOP(aguaComp.ejecutado)} de ${formatCOP(aguaComp.distribucionDNP)})`,
             }
           : { status: "error", label: "Sin datos de agua potable en SGP" },
+      }));
+    }
+
+    // 6. CGA (automatic)
+    const cgaResult = await runValidation("cga", "cga");
+    if (cgaResult) {
+      setCgaData(cgaResult.cga);
+      const noCumple = cgaResult.cga.checks.filter((c: { status: string }) => c.status === "no_cumple").length;
+      setResults((prev) => ({
+        ...prev,
+        cga: {
+          status: cgaResult.cga.status,
+          label: "Equilibrio CGA",
+          detail: `${cgaResult.cga.checks.length} verificaciones — ${noCumple > 0 ? `${noCumple} no cumple` : "Todas cumplen"}`,
+        },
+      }));
+    }
+
+    // 7. Eficiencia Fiscal (automatic — CUIPO side only, CGN requires upload)
+    const efResult = await runValidation("eficiencia", "eficiencia");
+    if (efResult) {
+      setEficienciaData(efResult.eficiencia);
+      setResults((prev) => ({
+        ...prev,
+        eficiencia: {
+          status: efResult.eficiencia.status,
+          label: "Eficiencia Fiscal",
+          detail: efResult.eficiencia.hasCGNData
+            ? `${efResult.eficiencia.refrendaCount} refrendan, ${efResult.eficiencia.noRefrendaCount} no`
+            : `${efResult.eficiencia.tributos.filter((t: { cuipoTotal: number }) => t.cuipoTotal > 0).length} tributos con recaudo — CGN pendiente`,
+        },
       }));
     }
   }, [periodo, municipio, runValidation, futCierre, cgnSaldos]);
@@ -438,6 +489,12 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
           periodo={periodo}
           municipio={municipio}
         />
+      )}
+      {activePanel === "cga" && cgaData && (
+        <CGAPanel data={cgaData} periodo={periodo} municipio={municipio} />
+      )}
+      {activePanel === "eficiencia" && eficienciaData && (
+        <EficienciaFiscalPanel data={eficienciaData} periodo={periodo} municipio={municipio} />
       )}
     </div>
   );
