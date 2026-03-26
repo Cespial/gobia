@@ -20,6 +20,7 @@ import type { FUTCierreData, CGNSaldosData } from "@/lib/chip-parser";
 import type { SGPEvaluationResult, SGPComponentResult } from "@/lib/validaciones/sgp";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
 import type { IDFResult } from "@/lib/validaciones/idf";
+import type { Ley617Certification } from "@/lib/datos-gov-cuipo";
 import EquilibrioPanel from "./EquilibrioPanel";
 import SGPPanel from "./SGPPanel";
 import Ley617Panel from "./Ley617Panel";
@@ -122,6 +123,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [idfData, setIdfData] = useState<IDFResult | null>(null);
   const [futCierre, setFutCierre] = useState<FUTCierreData | null>(null);
   const [cgnSaldos, setCgnSaldos] = useState<CGNSaldosData | null>(null);
+  const [ley617Certifications, setLey617Certifications] = useState<Ley617Certification[]>([]);
 
   // -----------------------------------------------------------------------
   // Fetch periods
@@ -220,8 +222,13 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       }));
     }
 
-    // 3. Ley 617
-    const ley617Result = await runValidation("ley-617", "ley617");
+    // 3. Ley 617 (calculated + official certifications in parallel)
+    const [ley617Result, ley617OfficialResult] = await Promise.all([
+      runValidation("ley-617", "ley617"),
+      fetch(`/api/plataforma/cuipo?action=ley617oficial&chip=${municipio.chipCode}`)
+        .then(r => r.json())
+        .catch(() => null),
+    ]);
     if (ley617Result) {
       setLey617Data(ley617Result.ley617);
       setResults((prev) => ({
@@ -232,6 +239,9 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
           detail: `Funcionamiento ${ley617Result.ley617.ratioGlobal.toFixed(1)}% del ICLD (límite: ${ley617Result.ley617.limiteGlobal}%)`,
         },
       }));
+    }
+    if (ley617OfficialResult?.ok) {
+      setLey617Certifications(ley617OfficialResult.certifications);
     }
 
     // 4. IDF
@@ -416,7 +426,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         <SGPPanel data={sgpData} periodo={periodo} municipio={municipio} />
       )}
       {activePanel === "ley-617" && ley617Data && (
-        <Ley617Panel data={ley617Data} periodo={periodo} municipio={municipio} />
+        <Ley617Panel data={ley617Data} certifications={ley617Certifications} periodo={periodo} municipio={municipio} />
       )}
       {activePanel === "idf" && idfData && (
         <IDFPanel data={idfData} periodo={periodo} municipio={municipio} />

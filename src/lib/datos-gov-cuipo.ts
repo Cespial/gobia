@@ -24,6 +24,10 @@ export const CUIPO_DATASETS = {
   CHIP_ENTIDADES: "5c7g-ptic",
   /** Registro de Deuda Pública Territorial */
   DEUDA_PUBLICA: "9ksa-mf4g",
+  /** Certificación Ley 617 (ICLD oficial CGR) — 11K rows, 2011-2020 */
+  LEY617_ICLD: "vztn-viv4",
+  /** Presupuesto de Gastos Ordinarios Histórico — 26.5M rows */
+  PRESUPUESTO_HISTORICO: "i4a7-qxuj",
 } as const;
 
 /** Ambito code for municipalities */
@@ -318,6 +322,50 @@ export async function fetchIngresosPorFuente(
     limit: 5000,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Ley 617 ICLD Certification (CGR official data, 2011-2020)
+// ---------------------------------------------------------------------------
+
+export interface Ley617Certification {
+  codigochip: string;
+  nombre: string;
+  categoria: string;
+  vigencia: string;
+  limiteGF: number;
+  icldNeto: number;
+  gastosFuncionamiento: number;
+  indicadorLey617: number;
+  gastosConcejo: number | null;
+  gastosPersoneria: number | null;
+}
+
+/** Fetch official Ley 617 certification from CGR (2011-2020) */
+export async function fetchLey617Certificacion(
+  chipCode: string
+): Promise<Ley617Certification[]> {
+  const raw = await sodaCuipoQuery<Record<string, string>>({
+    dataset: CUIPO_DATASETS.LEY617_ICLD,
+    where: `codigochip='${chipCode}'`,
+    order: "vigencia DESC",
+    limit: 20,
+  });
+
+  return raw.map((r) => ({
+    codigochip: r.codigochip,
+    nombre: r.nombremunicipiodepartamento,
+    categoria: r.categoria,
+    vigencia: r.vigencia,
+    limiteGF: parseFloat(r.limitelegalgastodepartamentomunicipio || "0"),
+    icldNeto: parseFloat(r.totalicldnetodepartamentomunicipio || "0"),
+    gastosFuncionamiento: parseFloat(r.totalgastosfuncionamientodepartamentomunicipio || "0"),
+    indicadorLey617: parseFloat(r.indicadorley617gficlddepartamentomunicipio || "0"),
+    gastosConcejo: r.gastoscomprometidosconcejo !== "NA" ? parseFloat(r.gastoscomprometidosconcejo || "0") : null,
+    gastosPersoneria: r.gastoscomprometidospersoneria !== "NA" ? parseFloat(r.gastoscomprometidospersoneria || "0") : null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
 
 /** Fetch expense execution by section (Admin Central, Concejo, Personería) for Ley 617 */
 export async function fetchGastosPorSeccion(

@@ -3,6 +3,7 @@ import {
   fetchPeriodosDisponibles,
   fetchIngresosPorFuente,
   fetchGastosPorFuente,
+  fetchLey617Certificacion,
 } from "@/lib/datos-gov-cuipo";
 import { evaluateSGP } from "@/lib/validaciones/sgp";
 import { evaluateLey617 } from "@/lib/validaciones/ley617";
@@ -156,12 +157,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ ok: true, idf });
       }
 
+      case "ley617oficial": {
+        const certifications = await fetchLey617Certificacion(chipCode);
+        return NextResponse.json({ ok: true, certifications });
+      }
+
       default:
         return NextResponse.json(
           {
             ok: false,
             error:
-              "Acción no válida. Use: periodos, equilibrio, sgp, ley617, idf",
+              "Acción no válida. Use: periodos, equilibrio, sgp, ley617, ley617oficial, idf",
           },
           { status: 400 }
         );

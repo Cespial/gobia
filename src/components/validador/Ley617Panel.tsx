@@ -11,6 +11,17 @@ function formatCOP(value: number): string {
 
 /* ---------- types ---------- */
 
+interface Ley617Certification {
+  vigencia: string;
+  categoria: string;
+  icldNeto: number;
+  gastosFuncionamiento: number;
+  indicadorLey617: number;
+  limiteGF: number;
+  gastosConcejo: number | null;
+  gastosPersoneria: number | null;
+}
+
 interface Ley617PanelProps {
   data: {
     icldTotal: number;
@@ -27,6 +38,7 @@ interface Ley617PanelProps {
     }[];
     status: "cumple" | "no_cumple";
   };
+  certifications?: Ley617Certification[];
   periodo: string;
   municipio: { code: string; name: string; dept: string };
 }
@@ -161,6 +173,7 @@ function Gauge({
 
 export default function Ley617Panel({
   data,
+  certifications,
   periodo,
   municipio,
 }: Ley617PanelProps) {
@@ -304,6 +317,49 @@ export default function Ley617Panel({
           );
         })}
       </div>
+
+      {/* Historical CGR Certifications */}
+      {certifications && certifications.length > 0 && (
+        <div className="mb-6">
+          <h3 className="mb-3 text-sm font-medium text-[var(--gray-400)]">
+            Certificación oficial CGR (histórico 2011-2020)
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[var(--gray-700)] text-left text-[var(--gray-500)]">
+                  <th className="py-2 pr-3 font-medium">Vigencia</th>
+                  <th className="py-2 pr-3 font-medium">Categoría</th>
+                  <th className="py-2 pr-3 text-right font-medium">ICLD Neto</th>
+                  <th className="py-2 pr-3 text-right font-medium">Gastos Func.</th>
+                  <th className="py-2 pr-3 text-right font-medium">Indicador</th>
+                  <th className="py-2 text-right font-medium">Límite</th>
+                </tr>
+              </thead>
+              <tbody>
+                {certifications.map((c) => {
+                  const cumple = c.indicadorLey617 <= c.limiteGF;
+                  return (
+                    <tr key={c.vigencia} className="border-b border-[var(--gray-800)]/50">
+                      <td className="py-2 pr-3 font-medium text-white">{c.vigencia}</td>
+                      <td className="py-2 pr-3 text-[var(--gray-400)]">{c.categoria}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--gray-300)]">{formatCOP(c.icldNeto)}</td>
+                      <td className="py-2 pr-3 text-right text-[var(--gray-300)]">{formatCOP(c.gastosFuncionamiento)}</td>
+                      <td className={`py-2 pr-3 text-right font-medium ${cumple ? "text-emerald-400" : "text-red-400"}`}>
+                        {c.indicadorLey617.toFixed(1)}%
+                      </td>
+                      <td className="py-2 text-right text-[var(--gray-500)]">{c.limiteGF}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[10px] text-[var(--gray-600)]">
+            Fuente: datos.gov.co/resource/vztn-viv4 — Certificación CGR Ley 617
+          </p>
+        </div>
+      )}
 
       {/* Footer note */}
       <div className="rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)]/50 px-4 py-3 text-xs text-[var(--gray-500)]">
