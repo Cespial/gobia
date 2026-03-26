@@ -40,6 +40,10 @@ export default function FileUploadPanel({
   const handleFUTFile = useCallback(
     async (file: File) => {
       setFutError(null);
+      if (file.size > 15 * 1024 * 1024) {
+        setFutError("El archivo supera 15MB. Verifica que sea el correcto.");
+        return;
+      }
       setFutLoading(true);
       try {
         const buffer = await file.arrayBuffer();
@@ -65,6 +69,10 @@ export default function FileUploadPanel({
   const handleCGNFile = useCallback(
     async (file: File) => {
       setCgnError(null);
+      if (file.size > 15 * 1024 * 1024) {
+        setCgnError("El archivo supera 15MB. Verifica que sea el correcto.");
+        return;
+      }
       setCgnLoading(true);
       try {
         const buffer = await file.arrayBuffer();

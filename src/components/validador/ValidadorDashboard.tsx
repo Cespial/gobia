@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import type { Municipio } from "@/data/municipios";
 import type { FUTCierreData, CGNSaldosData } from "@/lib/chip-parser";
+import type { SGPEvaluationResult, SGPComponentResult } from "@/lib/validaciones/sgp";
+import type { Ley617Result } from "@/lib/validaciones/ley617";
+import type { IDFResult } from "@/lib/validaciones/idf";
 import EquilibrioPanel from "./EquilibrioPanel";
 import SGPPanel from "./SGPPanel";
 import Ley617Panel from "./Ley617Panel";
@@ -50,8 +53,6 @@ interface EquilibrioData {
     superavit: number;
   }[];
 }
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const VALIDACIONES = [
   { id: "equilibrio", icon: Scale, label: "Equilibrio Presupuestal", auto: true },
@@ -116,9 +117,9 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
 
   // Data stores
   const [equilibrioData, setEquilibrioData] = useState<EquilibrioData | null>(null);
-  const [sgpData, setSgpData] = useState<any>(null);
-  const [ley617Data, setLey617Data] = useState<any>(null);
-  const [idfData, setIdfData] = useState<any>(null);
+  const [sgpData, setSgpData] = useState<SGPEvaluationResult | null>(null);
+  const [ley617Data, setLey617Data] = useState<Ley617Result | null>(null);
+  const [idfData, setIdfData] = useState<IDFResult | null>(null);
   const [futCierre, setFutCierre] = useState<FUTCierreData | null>(null);
   const [cgnSaldos, setCgnSaldos] = useState<CGNSaldosData | null>(null);
 
@@ -250,7 +251,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     // 5. Agua Potable (derived from SGP water component)
     if (sgpResult) {
       const aguaComp = sgpResult.sgp.componentes.find(
-        (c: any) => c.concepto.toLowerCase().includes("agua")
+        (c: SGPComponentResult) => c.concepto.toLowerCase().includes("agua")
       );
       setResults((prev) => ({
         ...prev,
