@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Globe } from "lucide-react";
+import { ArrowLeft, MapPin, Globe, Map } from "lucide-react";
 import GobiaLogo from "@/components/illustrations/GobiaLogo";
 
 const SECOPPanel = dynamic(() => import("@/components/dashboard/SECOPPanel"));
@@ -14,8 +15,23 @@ const GemeloMap = dynamic(() => import("@/components/dashboard/GemeloMap"), {
     </div>
   ),
 });
+const AntioquiaMap = dynamic(
+  () => import("@/components/dashboard/AntioquiaMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[560px] bg-cream rounded-xl animate-pulse flex items-center justify-center">
+        <span className="text-[0.75rem] text-gray-400">Cargando mapa de Antioquia...</span>
+      </div>
+    ),
+  }
+);
+
+type MapScope = "medellin" | "antioquia";
 
 export default function GemeloPage() {
+  const [scope, setScope] = useState<MapScope>("antioquia");
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top nav */}
@@ -34,10 +50,17 @@ export default function GemeloPage() {
             <GobiaLogo variant="navbar-dark" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ochre-soft border border-ochre/20 px-3 py-1 text-[0.6875rem] font-semibold text-ochre">
-              <MapPin size={12} />
-              Medellín — Gemelo Municipal
-            </span>
+            {scope === "medellin" ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-ochre-soft border border-ochre/20 px-3 py-1 text-[0.6875rem] font-semibold text-ochre">
+                <MapPin size={12} />
+                Medellín — 16 comunas
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-ochre-soft border border-ochre/20 px-3 py-1 text-[0.6875rem] font-semibold text-ochre">
+                <Map size={12} />
+                125 municipios · Antioquia
+              </span>
+            )}
           </div>
         </div>
       </nav>
@@ -58,21 +81,49 @@ export default function GemeloPage() {
           <h1 className="font-serif text-[2rem] md:text-[2.75rem] leading-[1.08] tracking-[-0.02em] text-ink mb-3">
             Gemelo Municipal
           </h1>
-          <p className="text-[0.9375rem] leading-relaxed text-gray-500 max-w-2xl">
-            Mapa interactivo con capas de datos fiscales, poblacionales y socioeconómicos
-            de las 16 comunas de Medellín. Selecciona una capa para explorar la distribución
-            territorial de los indicadores.
+          <p className="text-[0.9375rem] leading-relaxed text-gray-500 max-w-2xl mb-6">
+            {scope === "medellin"
+              ? "Mapa interactivo con capas de datos fiscales, poblacionales y socioeconómicos de las 16 comunas de Medellín."
+              : "Visualización de los 125 municipios de Antioquia por categoría municipal y subregión. Datos de DIVIPOLA y DANE 2024."}
           </p>
+
+          {/* Scope selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-[0.75rem] text-gray-400 mr-2">Alcance:</span>
+            <button
+              onClick={() => setScope("medellin")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.75rem] font-medium transition-all duration-200 ${
+                scope === "medellin"
+                  ? "bg-ink text-paper"
+                  : "bg-cream text-gray-500 hover:bg-gray-200 hover:text-ink"
+              }`}
+            >
+              <MapPin size={12} />
+              Medellín (demo)
+            </button>
+            <button
+              onClick={() => setScope("antioquia")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.75rem] font-medium transition-all duration-200 ${
+                scope === "antioquia"
+                  ? "bg-ink text-paper"
+                  : "bg-cream text-gray-500 hover:bg-gray-200 hover:text-ink"
+              }`}
+            >
+              <Map size={12} />
+              Antioquia (125 municipios)
+            </button>
+          </div>
         </motion.div>
 
         {/* Map */}
         <motion.div
+          key={scope}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
           className="mb-8"
         >
-          <GemeloMap />
+          {scope === "medellin" ? <GemeloMap /> : <AntioquiaMap />}
         </motion.div>
 
         {/* SECOP Live */}
