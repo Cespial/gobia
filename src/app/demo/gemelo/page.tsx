@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Globe, Map } from "lucide-react";
 import GobiaLogo from "@/components/illustrations/GobiaLogo";
+import type { AntioquiaMunicipality } from "@/data/antioquia-municipalities";
 
 const SECOPPanel = dynamic(() => import("@/components/dashboard/SECOPPanel"));
 const GemeloMap = dynamic(() => import("@/components/dashboard/GemeloMap"), {
@@ -26,11 +27,31 @@ const AntioquiaMap = dynamic(
     ),
   }
 );
+const MunicipalityPanel = dynamic(
+  () => import("@/components/dashboard/MunicipalityPanel"),
+  { ssr: false }
+);
 
 type MapScope = "medellin" | "antioquia";
 
 export default function GemeloPage() {
   const [scope, setScope] = useState<MapScope>("antioquia");
+  const [selectedMunicipality, setSelectedMunicipality] = useState<AntioquiaMunicipality | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  const handleMunicipalitySelect = useCallback((municipality: AntioquiaMunicipality) => {
+    setSelectedMunicipality(municipality);
+    setIsPanelOpen(true);
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setIsPanelOpen(false);
+  }, []);
+
+  const handleDeselect = useCallback(() => {
+    setSelectedMunicipality(null);
+    setIsPanelOpen(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,8 +144,25 @@ export default function GemeloPage() {
           transition={{ duration: 0.6, delay: 0.15 }}
           className="mb-8"
         >
-          {scope === "medellin" ? <GemeloMap /> : <AntioquiaMap />}
+          {scope === "medellin" ? (
+            <GemeloMap />
+          ) : (
+            <AntioquiaMap
+              onMunicipalitySelect={handleMunicipalitySelect}
+              onDeselect={handleDeselect}
+              selectedCode={selectedMunicipality?.codigo_dane}
+            />
+          )}
         </motion.div>
+
+        {/* Municipality Panel (Antioquia only) */}
+        {scope === "antioquia" && (
+          <MunicipalityPanel
+            municipality={selectedMunicipality}
+            isOpen={isPanelOpen}
+            onClose={handlePanelClose}
+          />
+        )}
 
         {/* SECOP Live */}
         <motion.div

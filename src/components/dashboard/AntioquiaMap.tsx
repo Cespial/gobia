@@ -23,6 +23,10 @@ type ColorMode = "categoria" | "subregion";
 interface AntioquiaMapProps {
   /** Callback cuando se selecciona un municipio */
   onMunicipalitySelect?: (municipality: AntioquiaMunicipality) => void;
+  /** Callback cuando se deselecciona */
+  onDeselect?: () => void;
+  /** Código DANE del municipio seleccionado externamente */
+  selectedCode?: string | null;
   /** Altura del mapa */
   height?: string;
   /** Modo de coloración inicial */
@@ -31,6 +35,8 @@ interface AntioquiaMapProps {
 
 export default function AntioquiaMap({
   onMunicipalitySelect,
+  onDeselect,
+  selectedCode,
   height = "560px",
   initialColorMode = "categoria",
 }: AntioquiaMapProps) {
@@ -51,6 +57,18 @@ export default function AntioquiaMap({
     stats,
     mapConfig,
   } = useAntioquiaMunicipalities({ fetchGeoJSON: true });
+
+  // Sync external selection with internal state
+  useEffect(() => {
+    if (selectedCode === null || selectedCode === undefined) {
+      setSelectedMunicipality(null);
+    } else if (selectedCode && selectedCode !== selectedMunicipality?.codigo_dane) {
+      const muni = getMunicipality(selectedCode);
+      if (muni) {
+        setSelectedMunicipality(muni);
+      }
+    }
+  }, [selectedCode, selectedMunicipality?.codigo_dane, getMunicipality]);
 
   // Initialize map
   useEffect(() => {
@@ -243,6 +261,39 @@ export default function AntioquiaMap({
     );
   }, [colorMode, mapLoaded]);
 
+  // Update highlight when selection changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !map.getLayer("municipalities-circles")) return;
+
+    if (selectedMunicipality) {
+      // Highlight selected municipality
+      map.setPaintProperty("municipalities-circles", "circle-stroke-width", [
+        "case",
+        ["==", ["get", "codigo_dane"], selectedMunicipality.codigo_dane],
+        3.5,
+        1.5,
+      ]);
+      map.setPaintProperty("municipalities-circles", "circle-stroke-color", [
+        "case",
+        ["==", ["get", "codigo_dane"], selectedMunicipality.codigo_dane],
+        "#B8956A", // ochre
+        "#FFFFFF",
+      ]);
+      map.setPaintProperty("municipalities-circles", "circle-opacity", [
+        "case",
+        ["==", ["get", "codigo_dane"], selectedMunicipality.codigo_dane],
+        1,
+        0.6,
+      ]);
+    } else {
+      // Reset to default styles
+      map.setPaintProperty("municipalities-circles", "circle-stroke-width", 1.5);
+      map.setPaintProperty("municipalities-circles", "circle-stroke-color", "#FFFFFF");
+      map.setPaintProperty("municipalities-circles", "circle-opacity", 0.85);
+    }
+  }, [selectedMunicipality, mapLoaded]);
+
   // Zoom controls
   const handleZoomIn = useCallback(() => {
     mapRef.current?.zoomIn();
@@ -259,7 +310,8 @@ export default function AntioquiaMap({
       duration: 1000,
     });
     setSelectedMunicipality(null);
-  }, [mapConfig]);
+    onDeselect?.();
+  }, [mapConfig, onDeselect]);
 
   const toggleFullscreen = useCallback(() => {
     if (!mapContainer.current?.parentElement) return;
