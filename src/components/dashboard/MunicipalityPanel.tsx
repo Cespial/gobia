@@ -5,20 +5,20 @@ import {
   X,
   ArrowLeft,
   Building2,
-  Landmark,
   Users,
   FileText,
   TrendingUp,
   TrendingDown,
   Minus,
   ExternalLink,
-  MapPin,
   Award,
 } from "lucide-react";
 import type { AntioquiaMunicipality } from "@/data/antioquia-municipalities";
 import { CATEGORIA_LABELS } from "@/data/antioquia-municipalities";
 import { useMunicipalityData, type MunicipalityFullData } from "@/hooks/useMunicipalityData";
+import { useFiscalData } from "@/hooks/useFiscalData";
 import { ANTIOQUIA_AVERAGES, getIndicatorStatus } from "@/data/antioquia-averages";
+import FiscalPanel from "./FiscalPanel";
 
 interface MunicipalityPanelProps {
   municipality: AntioquiaMunicipality | null;
@@ -112,6 +112,11 @@ function PanelContent({
   data: MunicipalityFullData;
   municipality: AntioquiaMunicipality;
 }) {
+  // Fetch detailed fiscal data
+  const { data: fiscalData, loading: fiscalLoading } = useFiscalData(
+    municipality.codigo_dane
+  );
+
   return (
     <div className="divide-y divide-border">
       {/* Perfil General */}
@@ -128,38 +133,19 @@ function PanelContent({
         </div>
       </Section>
 
-      {/* Indicadores Fiscales */}
-      <Section icon={<Landmark size={16} />} title="Indicadores Fiscales">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.8125rem] text-gray-600">IDF (2023)</span>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-ink">{data.fiscal.idf}</span>
-              <StatusBadge status={getIndicatorStatus(data.fiscal.idf, "idf")} />
-            </div>
+      {/* Fiscal Panel - Enhanced with FUT data */}
+      <div className="px-5 py-4">
+        {fiscalData ? (
+          <FiscalPanel data={fiscalData} loading={fiscalLoading} />
+        ) : fiscalLoading ? (
+          <div className="animate-pulse space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-32" />
+            <div className="h-24 bg-gray-100 rounded" />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <DataItem
-              label="Recaudo predial"
-              value={formatCurrency(data.fiscal.recaudo_predial)}
-            />
-            <DataItem
-              label="Recaudo ICA"
-              value={formatCurrency(data.fiscal.recaudo_ica)}
-            />
-            <DataItem
-              label="Ejecucion gastos"
-              value={`${data.fiscal.ejecucion_gastos}%`}
-              status={getIndicatorStatus(data.fiscal.ejecucion_gastos, "ejecucion")}
-            />
-            <DataItem
-              label="Dep. transferencias"
-              value={`${data.fiscal.dependencia_transferencias}%`}
-            />
-          </div>
-        </div>
-      </Section>
+        ) : (
+          <FiscalPanelFallback data={data} />
+        )}
+      </div>
 
       {/* Indicadores Sociales */}
       <Section icon={<Users size={16} />} title="Indicadores Sociales (TerriData)">
@@ -424,4 +410,48 @@ function formatCurrency(num: number): string {
     return `$${(num / 1_000_000).toFixed(1)}M`;
   }
   return `$${formatNumber(num)}`;
+}
+
+// Fallback component when FUT fiscal data is not available
+function FiscalPanelFallback({ data }: { data: MunicipalityFullData }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-ochre">
+          <Award size={16} />
+        </span>
+        <h3 className="text-[0.8125rem] font-semibold text-ink uppercase tracking-wide">
+          Indicadores Fiscales
+        </h3>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-[0.8125rem] text-gray-600">IDF (2023)</span>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-ink">{data.fiscal.idf}</span>
+          <StatusBadge status={getIndicatorStatus(data.fiscal.idf, "idf")} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <DataItem
+          label="Recaudo predial"
+          value={formatCurrency(data.fiscal.recaudo_predial)}
+        />
+        <DataItem
+          label="Recaudo ICA"
+          value={formatCurrency(data.fiscal.recaudo_ica)}
+        />
+        <DataItem
+          label="Ejecucion gastos"
+          value={`${data.fiscal.ejecucion_gastos}%`}
+          status={getIndicatorStatus(data.fiscal.ejecucion_gastos, "ejecucion")}
+        />
+        <DataItem
+          label="Dep. transferencias"
+          value={`${data.fiscal.dependencia_transferencias}%`}
+        />
+      </div>
+    </div>
+  );
 }
