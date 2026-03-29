@@ -12,6 +12,8 @@ export interface DepartmentAverages {
   tasa_desempleo: number;         // Promedio desempleo
   cobertura_acueducto: number;    // Promedio cobertura acueducto
   cobertura_alcantarillado: number;
+  cobertura_energia: number;      // Promedio cobertura energía
+  cobertura_internet: number;     // Promedio cobertura internet
 
   // Indicadores fiscales (DNP/FUT)
   idf: number;                    // Promedio IDF departamental
@@ -37,6 +39,8 @@ export const ANTIOQUIA_AVERAGES: DepartmentAverages = {
   tasa_desempleo: 10.2,
   cobertura_acueducto: 78.4,
   cobertura_alcantarillado: 68.9,
+  cobertura_energia: 91.2,
+  cobertura_internet: 42.6,
 
   // Indicadores fiscales
   idf: 68.4,

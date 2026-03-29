@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -12,13 +13,19 @@ import {
   Minus,
   ExternalLink,
   Award,
+  Landmark,
+  Heart,
 } from "lucide-react";
 import type { AntioquiaMunicipality } from "@/data/antioquia-municipalities";
 import { CATEGORIA_LABELS } from "@/data/antioquia-municipalities";
 import { useMunicipalityData, type MunicipalityFullData } from "@/hooks/useMunicipalityData";
 import { useFiscalData } from "@/hooks/useFiscalData";
+import { useSocialData } from "@/hooks/useSocialData";
 import { ANTIOQUIA_AVERAGES, getIndicatorStatus } from "@/data/antioquia-averages";
 import FiscalPanel from "./FiscalPanel";
+import SocialPanel from "./SocialPanel";
+
+type PanelTab = "general" | "fiscal" | "social" | "contratos";
 
 interface MunicipalityPanelProps {
   municipality: AntioquiaMunicipality | null;
@@ -112,13 +119,125 @@ function PanelContent({
   data: MunicipalityFullData;
   municipality: AntioquiaMunicipality;
 }) {
+  const [activeTab, setActiveTab] = useState<PanelTab>("general");
+
   // Fetch detailed fiscal data
   const { data: fiscalData, loading: fiscalLoading } = useFiscalData(
     municipality.codigo_dane
   );
 
+  // Fetch detailed social data
+  const { data: socialData, loading: socialLoading } = useSocialData(
+    municipality.codigo_dane
+  );
+
   return (
-    <div className="divide-y divide-border">
+    <div>
+      {/* Tab Bar */}
+      <div className="flex border-b border-border bg-cream/50 px-2">
+        <TabButton
+          active={activeTab === "general"}
+          onClick={() => setActiveTab("general")}
+          icon={<Building2 size={14} />}
+          label="General"
+        />
+        <TabButton
+          active={activeTab === "fiscal"}
+          onClick={() => setActiveTab("fiscal")}
+          icon={<Landmark size={14} />}
+          label="Fiscal"
+        />
+        <TabButton
+          active={activeTab === "social"}
+          onClick={() => setActiveTab("social")}
+          icon={<Heart size={14} />}
+          label="Social"
+        />
+        <TabButton
+          active={activeTab === "contratos"}
+          onClick={() => setActiveTab("contratos")}
+          icon={<FileText size={14} />}
+          label="Contratos"
+        />
+      </div>
+
+      {/* Tab Content */}
+      <div className="divide-y divide-border">
+        {activeTab === "general" && (
+          <GeneralTabContent data={data} />
+        )}
+
+        {activeTab === "fiscal" && (
+          <div className="px-5 py-4">
+            {fiscalData ? (
+              <FiscalPanel data={fiscalData} loading={fiscalLoading} />
+            ) : fiscalLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-32" />
+                <div className="h-24 bg-gray-100 rounded" />
+              </div>
+            ) : (
+              <FiscalPanelFallback data={data} />
+            )}
+          </div>
+        )}
+
+        {activeTab === "social" && (
+          <div className="px-5 py-4">
+            {socialData ? (
+              <SocialPanel data={socialData} loading={socialLoading} />
+            ) : socialLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-36" />
+                <div className="h-24 bg-gray-100 rounded" />
+              </div>
+            ) : (
+              <SocialTabFallback data={data} />
+            )}
+          </div>
+        )}
+
+        {activeTab === "contratos" && (
+          <ContratosTabContent data={data} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        flex items-center gap-1.5 px-3 py-2.5 text-[0.6875rem] font-medium
+        border-b-2 transition-all duration-200
+        ${
+          active
+            ? "border-ochre text-ochre"
+            : "border-transparent text-gray-500 hover:text-ink hover:border-gray-300"
+        }
+      `}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function GeneralTabContent({ data }: { data: MunicipalityFullData }) {
+  return (
+    <>
       {/* Perfil General */}
       <Section icon={<Building2 size={16} />} title="Perfil General">
         <div className="grid grid-cols-2 gap-3">
@@ -133,31 +252,18 @@ function PanelContent({
         </div>
       </Section>
 
-      {/* Fiscal Panel - Enhanced with FUT data */}
-      <div className="px-5 py-4">
-        {fiscalData ? (
-          <FiscalPanel data={fiscalData} loading={fiscalLoading} />
-        ) : fiscalLoading ? (
-          <div className="animate-pulse space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-32" />
-            <div className="h-24 bg-gray-100 rounded" />
-          </div>
-        ) : (
-          <FiscalPanelFallback data={data} />
-        )}
-      </div>
-
-      {/* Indicadores Sociales */}
-      <Section icon={<Users size={16} />} title="Indicadores Sociales (TerriData)">
+      {/* Quick Stats */}
+      <Section icon={<Award size={16} />} title="Resumen">
         <div className="grid grid-cols-2 gap-3">
+          <DataItem
+            label="IDF"
+            value={data.fiscal.idf.toString()}
+            status={getIndicatorStatus(data.fiscal.idf, "idf")}
+          />
           <DataItem
             label="NBI"
             value={`${data.terridata.nbi}%`}
             status={getIndicatorStatus(data.terridata.nbi, "nbi")}
-          />
-          <DataItem
-            label="IPM"
-            value={`${data.terridata.ipm}%`}
           />
           <DataItem
             label="Cobertura educacion"
@@ -169,56 +275,6 @@ function PanelContent({
             value={`${data.terridata.afiliacion_salud}%`}
             status={getIndicatorStatus(data.terridata.afiliacion_salud, "cobertura")}
           />
-          <DataItem
-            label="Cobertura acueducto"
-            value={`${data.terridata.cobertura_acueducto}%`}
-          />
-          <DataItem
-            label="Tasa desempleo"
-            value={`${data.terridata.tasa_desempleo}%`}
-          />
-        </div>
-      </Section>
-
-      {/* Contratacion SECOP */}
-      <Section icon={<FileText size={16} />} title="Contratacion (SECOP)">
-        <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <DataItem label="Contratos" value={data.contracts.total_count.toString()} />
-            <DataItem label="Activos" value={data.contracts.active.toString()} />
-            <DataItem label="Valor total" value={formatCurrency(data.contracts.total_value)} />
-          </div>
-
-          {data.contracts.top_sectores.length > 0 && (
-            <div className="pt-2">
-              <p className="text-[0.6875rem] text-gray-400 uppercase tracking-wider mb-2">
-                Top sectores
-              </p>
-              <div className="space-y-1.5">
-                {data.contracts.top_sectores.slice(0, 3).map((sector) => (
-                  <div
-                    key={sector.sector}
-                    className="flex items-center justify-between text-[0.75rem]"
-                  >
-                    <span className="text-gray-600">{sector.sector}</span>
-                    <span className="font-medium text-ink">
-                      {formatCurrency(sector.value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <a
-            href={`https://www.colombiacompra.gov.co/secop-ii`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[0.75rem] text-ochre hover:underline mt-2"
-          >
-            Ver detalle en SECOP
-            <ExternalLink size={12} />
-          </a>
         </div>
       </Section>
 
@@ -253,7 +309,88 @@ function PanelContent({
           </div>
         </div>
       </Section>
-    </div>
+    </>
+  );
+}
+
+function ContratosTabContent({ data }: { data: MunicipalityFullData }) {
+  return (
+    <Section icon={<FileText size={16} />} title="Contratacion (SECOP)">
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-3">
+          <DataItem label="Contratos" value={data.contracts.total_count.toString()} />
+          <DataItem label="Activos" value={data.contracts.active.toString()} />
+          <DataItem label="Valor total" value={formatCurrency(data.contracts.total_value)} />
+        </div>
+
+        {data.contracts.top_sectores.length > 0 && (
+          <div className="pt-2">
+            <p className="text-[0.6875rem] text-gray-400 uppercase tracking-wider mb-2">
+              Top sectores
+            </p>
+            <div className="space-y-1.5">
+              {data.contracts.top_sectores.slice(0, 3).map((sector) => (
+                <div
+                  key={sector.sector}
+                  className="flex items-center justify-between text-[0.75rem]"
+                >
+                  <span className="text-gray-600">{sector.sector}</span>
+                  <span className="font-medium text-ink">
+                    {formatCurrency(sector.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <a
+          href={`https://www.colombiacompra.gov.co/secop-ii`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[0.75rem] text-ochre hover:underline mt-2"
+        >
+          Ver detalle en SECOP
+          <ExternalLink size={12} />
+        </a>
+      </div>
+    </Section>
+  );
+}
+
+function SocialTabFallback({ data }: { data: MunicipalityFullData }) {
+  return (
+    <Section icon={<Users size={16} />} title="Indicadores Sociales (TerriData)">
+      <div className="grid grid-cols-2 gap-3">
+        <DataItem
+          label="NBI"
+          value={`${data.terridata.nbi}%`}
+          status={getIndicatorStatus(data.terridata.nbi, "nbi")}
+        />
+        <DataItem
+          label="IPM"
+          value={`${data.terridata.ipm}%`}
+        />
+        <DataItem
+          label="Cobertura educacion"
+          value={`${data.terridata.cobertura_educacion}%`}
+          status={getIndicatorStatus(data.terridata.cobertura_educacion, "cobertura")}
+        />
+        <DataItem
+          label="Afiliacion salud"
+          value={`${data.terridata.afiliacion_salud}%`}
+          status={getIndicatorStatus(data.terridata.afiliacion_salud, "cobertura")}
+        />
+        <DataItem
+          label="Cobertura acueducto"
+          value={`${data.terridata.cobertura_acueducto}%`}
+        />
+        <DataItem
+          label="Tasa desempleo"
+          value={`${data.terridata.tasa_desempleo}%`}
+        />
+      </div>
+    </Section>
   );
 }
 
