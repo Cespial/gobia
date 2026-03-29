@@ -17,10 +17,26 @@ import {
 } from "@/data/antioquia-municipalities";
 import type { IDFRanking } from "@/lib/fut-client";
 import { IDF_CHOROPLETH_STOPS, getIDFColor } from "@/data/antioquia-idf-2023";
+import {
+  getContractCountColor,
+  getContractValueColor,
+  getEjecucionCuipoColor,
+  getTipoPredominanteColor,
+  type ContractLayerType,
+} from "./ContractLayer";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
-type ColorMode = "categoria" | "subregion" | "idf";
+type ColorMode = "categoria" | "subregion" | "idf" | "contratos";
+
+export interface ContractMetrics {
+  codigo_dane: string;
+  municipio: string;
+  total_contratos: number;
+  valor_total: number;
+  tipo_predominante: string;
+  porcentaje_ejecucion: number;
+}
 
 interface AntioquiaMapProps {
   /** Callback cuando se selecciona un municipio */
@@ -35,6 +51,10 @@ interface AntioquiaMapProps {
   initialColorMode?: ColorMode;
   /** Datos fiscales (IDF) para colorear por desempeno fiscal */
   fiscalData?: IDFRanking[];
+  /** Datos de contratación para colorear por métricas de contratos */
+  contractData?: ContractMetrics[];
+  /** Tipo de capa de contratación activa */
+  contractLayerType?: ContractLayerType;
   /** Callback cuando cambia el modo de coloracion */
   onColorModeChange?: (mode: ColorMode) => void;
 }
@@ -46,6 +66,8 @@ export default function AntioquiaMap({
   height = "560px",
   initialColorMode = "categoria",
   fiscalData = [],
+  contractData = [],
+  contractLayerType = "cantidad",
   onColorModeChange,
 }: AntioquiaMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -162,7 +184,7 @@ export default function AntioquiaMap({
           500000, 24,
           2600000, 32,
         ],
-        "circle-color": buildColorExpression(colorMode, fiscalData),
+        "circle-color": buildColorExpression(colorMode, fiscalData, contractData, contractLayerType),
         "circle-stroke-width": 1.5,
         "circle-stroke-color": "#FFFFFF",
         "circle-opacity": 0.85,
@@ -265,9 +287,9 @@ export default function AntioquiaMap({
     map.setPaintProperty(
       "municipalities-circles",
       "circle-color",
-      buildColorExpression(colorMode, fiscalData)
+      buildColorExpression(colorMode, fiscalData, contractData, contractLayerType)
     );
-  }, [colorMode, mapLoaded, fiscalData]);
+  }, [colorMode, mapLoaded, fiscalData, contractData, contractLayerType]);
 
   // Update highlight when selection changes
   useEffect(() => {
@@ -419,12 +441,27 @@ export default function AntioquiaMap({
                 Desempeno Fiscal (IDF)
               </button>
             )}
+            {contractData.length > 0 && (
+              <button
+                onClick={() => {
+                  setColorMode("contratos");
+                  onColorModeChange?.("contratos");
+                }}
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-[0.75rem] font-medium transition-all duration-200 ${
+                  colorMode === "contratos"
+                    ? "bg-ochre-soft text-ochre"
+                    : "text-gray-400 hover:bg-cream hover:text-ink"
+                }`}
+              >
+                Contratacion SECOP
+              </button>
+            )}
           </div>
         </div>
 
         {/* Legend */}
         <div className="absolute bottom-16 left-3 z-10">
-          <Legend colorMode={colorMode} />
+          <Legend colorMode={colorMode} contractLayerType={contractLayerType} />
         </div>
 
         {/* Custom controls */}
@@ -502,7 +539,7 @@ export default function AntioquiaMap({
 }
 
 // Legend component
-function Legend({ colorMode }: { colorMode: ColorMode }) {
+function Legend({ colorMode, contractLayerType = "cantidad" }: { colorMode: ColorMode; contractLayerType?: ContractLayerType }) {
   if (colorMode === "categoria") {
     const categorias: CategoríaMunicipal[] = [0, 1, 2, 3, 4, 5, 6];
     return (
@@ -555,6 +592,101 @@ function Legend({ colorMode }: { colorMode: ColorMode }) {
     );
   }
 
+  if (colorMode === "contratos") {
+    return (
+      <div className="bg-paper/95 backdrop-blur-sm rounded-lg border border-border shadow-lg px-3 py-2">
+        <div className="text-[0.5625rem] text-gray-400 mb-2 font-medium">
+          {contractLayerType === "cantidad" && "Total Contratos"}
+          {contractLayerType === "valor" && "Valor Contratacion"}
+          {contractLayerType === "ejecucion_cuipo" && "Ejecucion CUIPO"}
+          {contractLayerType === "tipo_predominante" && "Tipo Predominante"}
+        </div>
+        <div className="space-y-1">
+          {contractLayerType === "cantidad" && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#22C55E" }} />
+                <span className="text-[0.625rem] text-gray-600">500+ contratos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EAB308" }} />
+                <span className="text-[0.625rem] text-gray-600">100-499 contratos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#F97316" }} />
+                <span className="text-[0.625rem] text-gray-600">50-99 contratos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EF4444" }} />
+                <span className="text-[0.625rem] text-gray-600">&lt;50 contratos</span>
+              </div>
+            </>
+          )}
+          {contractLayerType === "valor" && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#22C55E" }} />
+                <span className="text-[0.625rem] text-gray-600">$100B+ COP</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EAB308" }} />
+                <span className="text-[0.625rem] text-gray-600">$50B-$100B COP</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#F97316" }} />
+                <span className="text-[0.625rem] text-gray-600">$20B-$50B COP</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EF4444" }} />
+                <span className="text-[0.625rem] text-gray-600">&lt;$20B COP</span>
+              </div>
+            </>
+          )}
+          {contractLayerType === "ejecucion_cuipo" && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#22C55E" }} />
+                <span className="text-[0.625rem] text-gray-600">85%+ (Excelente)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EAB308" }} />
+                <span className="text-[0.625rem] text-gray-600">70-84% (Bueno)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#F97316" }} />
+                <span className="text-[0.625rem] text-gray-600">50-69% (Regular)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EF4444" }} />
+                <span className="text-[0.625rem] text-gray-600">&lt;50% (Bajo)</span>
+              </div>
+            </>
+          )}
+          {contractLayerType === "tipo_predominante" && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#3B82F6" }} />
+                <span className="text-[0.625rem] text-gray-600">Prestacion servicios</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#8B5CF6" }} />
+                <span className="text-[0.625rem] text-gray-600">Suministro</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#F97316" }} />
+                <span className="text-[0.625rem] text-gray-600">Obra publica</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#EC4899" }} />
+                <span className="text-[0.625rem] text-gray-600">Consultoria</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   const subregiones: Subregion[] = [
     "Valle de Aburrá",
     "Oriente",
@@ -592,7 +724,9 @@ function Legend({ colorMode }: { colorMode: ColorMode }) {
 // Build Mapbox color expression based on mode
 function buildColorExpression(
   mode: ColorMode,
-  fiscalData: IDFRanking[] = []
+  fiscalData: IDFRanking[] = [],
+  contractData: ContractMetrics[] = [],
+  contractLayerType: ContractLayerType = "cantidad"
 ): mapboxgl.Expression {
   if (mode === "categoria") {
     return [
@@ -622,6 +756,41 @@ function buildColorExpression(
       ["get", "codigo_dane"],
       ...matchPairs,
       "#DDD4C4", // default for municipalities without IDF data
+    ] as mapboxgl.Expression;
+  }
+
+  if (mode === "contratos" && contractData.length > 0) {
+    // Build match expression for contract coloring
+    const matchPairs: (string | number)[] = [];
+
+    contractData.forEach((item) => {
+      matchPairs.push(item.codigo_dane);
+
+      let color: string;
+      switch (contractLayerType) {
+        case "cantidad":
+          color = getContractCountColor(item.total_contratos);
+          break;
+        case "valor":
+          color = getContractValueColor(item.valor_total);
+          break;
+        case "ejecucion_cuipo":
+          color = getEjecucionCuipoColor(item.porcentaje_ejecucion);
+          break;
+        case "tipo_predominante":
+          color = getTipoPredominanteColor(item.tipo_predominante);
+          break;
+        default:
+          color = "#DDD4C4";
+      }
+      matchPairs.push(color);
+    });
+
+    return [
+      "match",
+      ["get", "codigo_dane"],
+      ...matchPairs,
+      "#DDD4C4", // default for municipalities without contract data
     ] as mapboxgl.Expression;
   }
 

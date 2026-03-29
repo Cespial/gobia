@@ -24,6 +24,7 @@ import { useSocialData } from "@/hooks/useSocialData";
 import { ANTIOQUIA_AVERAGES, getIndicatorStatus } from "@/data/antioquia-averages";
 import FiscalPanel from "./FiscalPanel";
 import SocialPanel from "./SocialPanel";
+import ContractPanel from "./ContractPanel";
 
 type PanelTab = "general" | "fiscal" | "social" | "contratos";
 
@@ -198,7 +199,7 @@ function PanelContent({
         )}
 
         {activeTab === "contratos" && (
-          <ContratosTabContent data={data} />
+          <ContratosTabContent data={data} codigoDane={municipality.codigo_dane} />
         )}
       </div>
     </div>
@@ -313,48 +314,21 @@ function GeneralTabContent({ data }: { data: MunicipalityFullData }) {
   );
 }
 
-function ContratosTabContent({ data }: { data: MunicipalityFullData }) {
+function ContratosTabContent({
+  data,
+  codigoDane,
+}: {
+  data: MunicipalityFullData;
+  codigoDane: string;
+}) {
   return (
-    <Section icon={<FileText size={16} />} title="Contratacion (SECOP)">
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-3">
-          <DataItem label="Contratos" value={data.contracts.total_count.toString()} />
-          <DataItem label="Activos" value={data.contracts.active.toString()} />
-          <DataItem label="Valor total" value={formatCurrency(data.contracts.total_value)} />
-        </div>
-
-        {data.contracts.top_sectores.length > 0 && (
-          <div className="pt-2">
-            <p className="text-[0.6875rem] text-gray-400 uppercase tracking-wider mb-2">
-              Top sectores
-            </p>
-            <div className="space-y-1.5">
-              {data.contracts.top_sectores.slice(0, 3).map((sector) => (
-                <div
-                  key={sector.sector}
-                  className="flex items-center justify-between text-[0.75rem]"
-                >
-                  <span className="text-gray-600">{sector.sector}</span>
-                  <span className="font-medium text-ink">
-                    {formatCurrency(sector.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <a
-          href={`https://www.colombiacompra.gov.co/secop-ii`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[0.75rem] text-ochre hover:underline mt-2"
-        >
-          Ver detalle en SECOP
-          <ExternalLink size={12} />
-        </a>
-      </div>
-    </Section>
+    <div className="px-5 py-4">
+      <ContractPanel
+        codigoDane={codigoDane}
+        municipioNombre={data.profile.nombre}
+        vigencia={2024}
+      />
+    </div>
   );
 }
 
