@@ -21,6 +21,7 @@ import { CATEGORIA_LABELS } from "@/data/antioquia-municipalities";
 import { useMunicipalityData, type MunicipalityFullData } from "@/hooks/useMunicipalityData";
 import { useFiscalData } from "@/hooks/useFiscalData";
 import { useSocialData } from "@/hooks/useSocialData";
+import { useCuipoData } from "@/hooks/useCuipoData";
 import { ANTIOQUIA_AVERAGES, getIndicatorStatus } from "@/data/antioquia-averages";
 import FiscalPanel from "./FiscalPanel";
 import SocialPanel from "./SocialPanel";
@@ -132,6 +133,11 @@ function PanelContent({
     municipality.codigo_dane
   );
 
+  // Fetch CUIPO execution data
+  const { data: cuipoData, loading: cuipoLoading } = useCuipoData(
+    municipality.codigo_dane
+  );
+
   return (
     <div>
       {/* Tab Bar */}
@@ -171,7 +177,7 @@ function PanelContent({
         {activeTab === "fiscal" && (
           <div className="px-5 py-4">
             {fiscalData ? (
-              <FiscalPanel data={fiscalData} loading={fiscalLoading} />
+              <FiscalPanel data={fiscalData} loading={fiscalLoading} cuipoData={cuipoData} cuipoLoading={cuipoLoading} />
             ) : fiscalLoading ? (
               <div className="animate-pulse space-y-3">
                 <div className="h-4 bg-gray-200 rounded w-32" />

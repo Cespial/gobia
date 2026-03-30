@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Landmark, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from "lucide-react";
+import { Landmark, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Activity } from "lucide-react";
 import type { FiscalData, IDFCategoria } from "@/lib/fut-client";
+import type { CuipoSummary, CuipoEjecucionByCategoria } from "@/lib/cuipo-client";
 
 // ============================================================================
 // Types
@@ -11,6 +12,8 @@ import type { FiscalData, IDFCategoria } from "@/lib/fut-client";
 interface FiscalPanelProps {
   data: FiscalData;
   loading?: boolean;
+  cuipoData?: CuipoSummary | null;
+  cuipoLoading?: boolean;
 }
 
 interface ProgressBarProps {
@@ -175,7 +178,7 @@ function IngresoRow({
 // Main Component
 // ============================================================================
 
-export default function FiscalPanel({ data, loading = false }: FiscalPanelProps) {
+export default function FiscalPanel({ data, loading = false, cuipoData, cuipoLoading = false }: FiscalPanelProps) {
   if (loading) {
     return <FiscalPanelSkeleton />;
   }
@@ -360,6 +363,20 @@ export default function FiscalPanel({ data, loading = false }: FiscalPanelProps)
         </div>
       </div>
 
+      {/* CUIPO Execution Section */}
+      {cuipoLoading ? (
+        <div className="rounded-lg border border-border bg-paper p-3 animate-pulse">
+          <div className="w-36 h-3 bg-gray-200 rounded mb-3" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-6 bg-gray-100 rounded" />
+            ))}
+          </div>
+        </div>
+      ) : cuipoData ? (
+        <CuipoSection cuipoData={cuipoData} />
+      ) : null}
+
       {/* IDF Indicators */}
       <div>
         <div className="text-[0.6875rem] font-semibold text-gray-700 uppercase tracking-wider mb-2">
@@ -397,6 +414,124 @@ export default function FiscalPanel({ data, loading = false }: FiscalPanelProps)
             higherIsBetter={true}
           />
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// CUIPO Section
+// ============================================================================
+
+const CATEGORIA_COLORS: Record<string, string> = {
+  "Educación": "#3B82F6",
+  "Salud": "#EF4444",
+  "Agua/Saneamiento": "#06B6D4",
+  "Vivienda": "#8B5CF6",
+  "Cultura/Deporte": "#F59E0B",
+  "Protección Social": "#EC4899",
+  "Orden Público": "#6366F1",
+  "Servicios Generales": "#6B7280",
+  "Otros": "#9CA3AF",
+};
+
+function CuipoSection({ cuipoData }: { cuipoData: CuipoSummary }) {
+  const topCategorias = cuipoData.ejecucion_por_categoria
+    .slice(0, 8)
+    .sort((a, b) => b.ejecutado - a.ejecutado);
+
+  const maxPresupuesto = Math.max(...topCategorias.map((c) => c.presupuesto), 1);
+
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-3">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity size={14} className="text-blue-600" />
+          <span className="text-[0.6875rem] font-semibold text-blue-800 uppercase tracking-wider">
+            Ejecución CUIPO
+          </span>
+        </div>
+        <span className="text-[0.625rem] text-gray-400">
+          Vigencia {cuipoData.vigencia}
+        </span>
+      </div>
+
+      {/* Overall execution */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[0.6875rem] text-gray-600">Ejecución total</span>
+        <span
+          className="text-[0.875rem] font-bold"
+          style={{
+            color:
+              cuipoData.porcentaje_ejecucion >= 85
+                ? "#22C55E"
+                : cuipoData.porcentaje_ejecucion >= 70
+                  ? "#EAB308"
+                  : "#EF4444",
+          }}
+        >
+          {cuipoData.porcentaje_ejecucion}%
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-[0.625rem] text-gray-500 mb-3">
+        <span>Presupuesto: {formatCurrency(cuipoData.total_presupuesto)}</span>
+        <span>Ejecutado: {formatCurrency(cuipoData.total_ejecutado)}</span>
+      </div>
+
+      {/* Bars by category */}
+      <div className="space-y-1.5">
+        {topCategorias.map((cat) => (
+          <CuipoCategoriaBar
+            key={cat.categoria}
+            categoria={cat}
+            maxPresupuesto={maxPresupuesto}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CuipoCategoriaBar({
+  categoria,
+  maxPresupuesto,
+}: {
+  categoria: CuipoEjecucionByCategoria;
+  maxPresupuesto: number;
+}) {
+  const barWidth = (categoria.presupuesto / maxPresupuesto) * 100;
+  const fillWidth = categoria.porcentaje;
+  const color = CATEGORIA_COLORS[categoria.categoria] || "#9CA3AF";
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-[0.625rem] text-gray-600 truncate max-w-[140px]">
+          {categoria.categoria}
+        </span>
+        <span
+          className="text-[0.625rem] font-medium"
+          style={{
+            color:
+              categoria.porcentaje >= 85
+                ? "#22C55E"
+                : categoria.porcentaje >= 70
+                  ? "#EAB308"
+                  : "#EF4444",
+          }}
+        >
+          {categoria.porcentaje}%
+        </span>
+      </div>
+      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden" style={{ width: `${barWidth}%` }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${fillWidth}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+        />
       </div>
     </div>
   );
