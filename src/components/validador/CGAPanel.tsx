@@ -11,25 +11,40 @@ function formatCOP(value: number): string {
   return `$${Math.round(value).toLocaleString("es-CO")}`;
 }
 
-function globalStatusColor(s: "cumple" | "no_cumple") {
+type Status = "cumple" | "no_cumple" | "pendiente";
+
+function globalStatusColor(s: Status) {
   if (s === "cumple") return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+  if (s === "pendiente") return "text-amber-400 bg-amber-400/10 border-amber-400/20";
   return "text-red-400 bg-red-400/10 border-red-400/20";
 }
 
-function globalStatusLabel(s: "cumple" | "no_cumple") {
+function globalStatusLabel(s: Status) {
   if (s === "cumple") return "Cumple";
+  if (s === "pendiente") return "Pendiente";
   return "No Cumple";
 }
 
-function checkStatusColor(s: "cumple" | "no_cumple") {
+function checkStatusColor(s: Status) {
   if (s === "cumple") return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+  if (s === "pendiente") return "text-amber-400 bg-amber-400/10 border-amber-400/20";
   return "text-red-400 bg-red-400/10 border-red-400/20";
 }
 
-function differenceColor(diff: number, status: "cumple" | "no_cumple") {
+function differenceColor(status: Status) {
   if (status === "cumple") return "text-emerald-400";
+  if (status === "pendiente") return "text-amber-400";
   return "text-red-400";
 }
+
+const GROUP_LABELS: Record<string, string> = {
+  equilibrio: "Equilibrio Presupuestal",
+  vigencia_2025: "Vigencia 2025",
+  superavit: "Superávit Fiscal",
+  cross_vigencia: "Cruce Vigencia 2024 → 2025",
+};
+
+const GROUP_ORDER = ["equilibrio", "vigencia_2025", "superavit", "cross_vigencia"];
 
 /* ---------- sub-components ---------- */
 
@@ -47,7 +62,7 @@ function CheckCard({ check }: { check: CGACheck }) {
         <span
           className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${checkStatusColor(check.status)}`}
         >
-          {check.status === "cumple" ? "Cumple" : "No Cumple"}
+          {globalStatusLabel(check.status)}
         </span>
       </div>
 
@@ -77,18 +92,26 @@ function CheckCard({ check }: { check: CGACheck }) {
         </div>
       </div>
 
-      {/* Difference */}
+      {/* Difference + tolerance */}
       <div className="rounded-lg bg-[var(--gray-900)] px-3 py-2">
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--gray-500)]">Diferencia</span>
           <span
-            className={`text-sm font-bold ${differenceColor(check.difference, check.status)}`}
+            className={`text-sm font-bold ${differenceColor(check.status)}`}
             style={{ fontFamily: "var(--font-display)" }}
           >
             {check.difference >= 0 ? "+" : ""}
             {formatCOP(check.difference)}
           </span>
         </div>
+        {check.tolerance > 0 && (
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] text-[var(--gray-600)]">Tolerancia</span>
+            <span className="text-[10px] text-[var(--gray-500)]">
+              ±{formatCOP(check.tolerance)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -105,6 +128,13 @@ interface CGAPanelProps {
 /* ---------- main component ---------- */
 
 export default function CGAPanel({ data, periodo, municipio }: CGAPanelProps) {
+  // Group checks by group field
+  const grouped = GROUP_ORDER.map((g) => ({
+    key: g,
+    label: GROUP_LABELS[g] || g,
+    checks: data.checks.filter((c) => c.group === g),
+  })).filter((g) => g.checks.length > 0);
+
   return (
     <div className="rounded-2xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-6">
       {/* Header */}
@@ -136,19 +166,31 @@ export default function CGAPanel({ data, periodo, municipio }: CGAPanelProps) {
         </span>
       </div>
 
-      {/* Check cards grid */}
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {data.checks.map((check) => (
-          <CheckCard key={check.name} check={check} />
-        ))}
-      </div>
+      {/* Grouped check cards */}
+      {grouped.map((group) => (
+        <div key={group.key} className="mb-6">
+          <h3
+            className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--gray-400)]"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {group.label}
+          </h3>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {group.checks.map((check) => (
+              <CheckCard key={check.name} check={check} />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* Footer note */}
       <div className="rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)]/50 px-4 py-3">
         <p className="text-xs text-[var(--gray-500)]">
           <span className="font-semibold text-[var(--gray-400)]">Nota:</span>{" "}
-          Las reservas y CxP se comparan contra valores calculados de CUIPO.
-          Para comparacion contra FUT Cierre, cargue el archivo correspondiente.
+          Los checks marcados como{" "}
+          <span className="font-semibold text-amber-400">Pendiente</span>{" "}
+          requieren carga del archivo FUT Cierre correspondiente para su
+          validación completa.
         </p>
       </div>
     </div>

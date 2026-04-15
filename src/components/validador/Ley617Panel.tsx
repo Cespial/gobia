@@ -37,6 +37,12 @@ interface Ley617SectionData {
   tipoLimite?: "porcentaje" | "absoluto";
 }
 
+interface GastoDeducidoDetalle {
+  codigo: string;
+  nombre: string;
+  valor: number;
+}
+
 interface Ley617PanelProps {
   data: {
     icldTotal: number;
@@ -45,6 +51,15 @@ interface Ley617PanelProps {
     limiteGlobal: number;
     secciones: Ley617SectionData[];
     status: "cumple" | "no_cumple";
+    // New ICLD breakdown fields
+    icldBruto?: number;
+    icldValidado?: number;
+    deduccionFondos?: number;
+    icldNeto?: number;
+    accionesMejora?: number;
+    gastosDeducidos?: number;
+    gastosFuncionamientoNeto?: number;
+    gastosDeducidosDetalle?: GastoDeducidoDetalle[];
   };
   certifications?: Ley617Certification[];
   periodo: string;
@@ -410,6 +425,134 @@ export default function Ley617Panel({
         ${SMLMV_2025.toLocaleString("es-CO")} COP/mes. Los limites de Concejo (Art. 10) y
         Personeria (Art. 11) son montos absolutos en SMLMV, no porcentajes del ICLD.
       </div>
+
+      {/* ICLD Desglose */}
+      {data.icldBruto !== undefined && (
+        <div className="mb-6 rounded-xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-5">
+          <h3
+            className="mb-4 text-sm font-semibold text-white"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Desglose ICLD
+          </h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--gray-400)]">ICLD Bruto (registrado)</span>
+              <span className="font-medium text-white">{formatCOP(data.icldBruto!)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--gray-400)]">
+                (&minus;) En rubros no válidos
+              </span>
+              <span className="font-medium text-red-400">
+                {data.accionesMejora! > 0 ? `-${formatCOP(data.accionesMejora!)}` : formatCOP(0)}
+              </span>
+            </div>
+            <div className="my-1 border-t border-[var(--gray-800)]" />
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-white">= ICLD Validado</span>
+              <span className="font-semibold text-white">{formatCOP(data.icldValidado ?? data.icldBruto!)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--gray-400)]">
+                (&minus;) Fondos legales (3%)
+              </span>
+              <span className="font-medium text-[var(--gray-400)]">
+                -{formatCOP(data.deduccionFondos ?? 0)}
+              </span>
+            </div>
+            <div className="my-1 border-t border-[var(--gray-800)]" />
+            <div className="flex items-center justify-between rounded-lg bg-[var(--gray-800)] px-3 py-2">
+              <span
+                className="font-semibold text-white"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                = ICLD Neto
+              </span>
+              <span
+                className="font-bold text-white"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {formatCOP(data.icldNeto ?? data.icldTotal)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Acciones de Mejora alert */}
+      {(data.accionesMejora ?? 0) > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-amber-400">⚠</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-400">
+                Acciones de Mejora: {formatCOP(data.accionesMejora!)} en rubros que no cuentan como ICLD
+              </p>
+              <p className="mt-1 text-xs text-amber-400/80">
+                Este valor fue registrado en fuentes de libre destinación pero en cuentas que la
+                Contraloría no acepta. Reclasificar mejoraría el indicador.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gastos Deducibles table */}
+      {data.gastosDeducidosDetalle && data.gastosDeducidosDetalle.length > 0 && (
+        <div className="mb-6 rounded-xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-5">
+          <h3
+            className="mb-3 text-sm font-semibold text-white"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Gastos deducidos del funcionamiento
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[var(--gray-700)] text-left text-[var(--gray-500)]">
+                  <th className="py-2 pr-4 font-medium">Código</th>
+                  <th className="py-2 pr-4 font-medium">Nombre</th>
+                  <th className="py-2 text-right font-medium">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.gastosDeducidosDetalle.map((item) => (
+                  <tr
+                    key={item.codigo}
+                    className="border-b border-[var(--gray-800)]/50"
+                  >
+                    <td className="py-2 pr-4 font-mono text-[var(--gray-500)]">
+                      {item.codigo}
+                    </td>
+                    <td className="py-2 pr-4 text-[var(--gray-300)]">{item.nombre}</td>
+                    <td className="py-2 text-right text-[var(--gray-300)]">
+                      {formatCOP(item.valor)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-[var(--gray-700)]">
+                  <td
+                    colSpan={2}
+                    className="py-2 pr-4 font-semibold text-white"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    Total deducido
+                  </td>
+                  <td
+                    className="py-2 text-right font-bold text-white"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    {formatCOP(data.gastosDeducidos ?? data.gastosDeducidosDetalle.reduce((s, i) => s + i.valor, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Section cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">

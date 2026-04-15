@@ -13,21 +13,30 @@
  * - Quinta: 80%
  * - Sexta: 80%
  *
- * Art. 10 (Concejos): Absolute limits in SMLMV (not % of ICLD).
+ * Art. 10 (Concejos): Absolute limits calculated via formula (honorarios + gastos generales).
  * Art. 11 (Personerias): Absolute limits in SMLMV (not % of ICLD).
+ *
+ * ICLD validation: Only income under specific CUIPO account codes counts.
+ * The old approach (string-matching "LIBRE DESTINACION") has been replaced
+ * with exact account-code + funding-source validation per CGR SI.17 methodology.
  */
 
 import {
-  fetchIngresosPorFuente,
+  fetchEjecucionIngresos,
   fetchGastosPorSeccion,
 } from "@/lib/datos-gov-cuipo";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** Salario Mínimo Legal Mensual Vigente 2025 */
-const SMLMV_2025 = 1_423_500;
+import {
+  isICLDFuente,
+  isICLDCuenta,
+  isGastoDeducible617,
+  GASTOS_DEDUCIBLES_617,
+  TOTAL_DEDUCCION_FONDOS,
+  LIMITES_ADMIN_CENTRAL,
+  LIMITES_PERSONERIA_SMLMV,
+  SMLMV_2025,
+  calcularLimiteConcejoAnual,
+} from "@/data/icld-rubros-validos";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,72 +59,38 @@ export interface Ley617Section {
 }
 
 export interface Ley617Result {
+  /** Backward compat: alias for icldNeto (used by Ley617Panel) */
   icldTotal: number;
+  /** Sum of all income where funding source name is ICLD (before account validation) */
+  icldBruto: number;
+  /** Sum of income where funding source is ICLD AND account code is valid */
+  icldValidado: number;
+  /** 3% legal fund deduction from icldValidado */
+  deduccionFondos: number;
+  /** icldValidado - deduccionFondos — the denominator for ratio calculations */
+  icldNeto: number;
+  /** icldBruto - icldValidado — money in ICLD sources but wrong account codes */
+  accionesMejora: number;
+  /** Total 2.1.* compromisos for Admin Central (before deductions) */
   gastosFuncionamientoTotal: number;
+  /** Sum of deductible expense compromisos (Admin Central only) */
+  gastosDeducidos: number;
+  /** gastosFuncionamientoTotal - gastosDeducidos (Admin Central only, after deductions) */
+  gastosFuncionamientoNeto: number;
   ratioGlobal: number;
   limiteGlobal: number;
   secciones: Ley617Section[];
+  /** Detailed breakdown of each deducted expense */
+  gastosDeducidosDetalle: { codigo: string; nombre: string; valor: number }[];
   status: "cumple" | "no_cumple";
 }
-
-// ---------------------------------------------------------------------------
-// Legal limits (Art. 6 Ley 617/2000)
-// ---------------------------------------------------------------------------
-
-/**
- * Maximum ratio of gastos de funcionamiento / ICLD by municipal category.
- * Category 0 = Especial.
- */
-const LIMITES_LEY617: Record<number, number> = {
-  0: 0.5, // Especial
-  1: 0.65, // Primera
-  2: 0.7, // Segunda
-  3: 0.7, // Tercera
-  4: 0.8, // Cuarta
-  5: 0.8, // Quinta
-  6: 0.8, // Sexta
-};
-
-/**
- * Art. 10 (Concejos): Absolute annual limits in SMLMV.
- * These cover honorarios + gastos operativos del Concejo.
- */
-const LIMITES_CONCEJO_SMLMV: Record<number, number> = {
-  0: 150, // Especial — simplified; actual formula depends on #concejales x sesiones x factor
-  1: 150, // Primera
-  2: 120, // Segunda
-  3: 60,  // Tercera
-  4: 40,  // Cuarta
-  5: 30,  // Quinta
-  6: 25,  // Sexta
-};
-
-/**
- * Art. 11 (Personerias): Absolute annual limits in SMLMV.
- */
-const LIMITES_PERSONERIA_SMLMV: Record<number, number> = {
-  0: 500, // Especial
-  1: 350, // Primera
-  2: 280, // Segunda
-  3: 190, // Tercera
-  4: 150, // Cuarta
-  5: 120, // Quinta
-  6: 100, // Sexta
-};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function getGlobalLimit(categoria: number): number {
-  return LIMITES_LEY617[categoria] ?? LIMITES_LEY617[6];
-}
-
-function isICLDSource(fuenteName: string): boolean {
-  const upper = (fuenteName || "").toUpperCase();
-  return (
-    upper.includes("LIBRE DESTINACION") || upper.includes("LIBRE DESTINACI")
-  );
+  return LIMITES_ADMIN_CENTRAL[categoria] ?? LIMITES_ADMIN_CENTRAL[6];
 }
 
 function isConcejo(seccionName: string): boolean {
@@ -124,6 +99,11 @@ function isConcejo(seccionName: string): boolean {
 
 function isPersoneria(seccionName: string): boolean {
   return seccionName.toUpperCase().includes("PERSONERIA");
+}
+
+function isAdminCentral(seccionName: string): boolean {
+  const upper = seccionName.toUpperCase();
+  return upper.includes("ADMINISTRACION") || upper.includes("CENTRAL");
 }
 
 // ---------------------------------------------------------------------------
@@ -139,88 +119,160 @@ export async function evaluateLey617(
   const limiteGlobal = getGlobalLimit(categoria);
 
   // Fetch CUIPO data in parallel
-  const [ingresosPorFuente, gastosPorSeccion] = await Promise.all([
-    fetchIngresosPorFuente(chipCode, periodo),
+  // Using fetchEjecucionIngresos (full rows with `cuenta`) instead of
+  // fetchIngresosPorFuente (which only returns aggregates without `cuenta`)
+  const [ingresosRows, gastosPorSeccion] = await Promise.all([
+    fetchEjecucionIngresos(chipCode, periodo),
     fetchGastosPorSeccion(chipCode, periodo),
   ]);
 
-  // 1. Calculate total ICLD (Ingresos Corrientes de Libre Destinacion)
-  let icldTotal = 0;
-  for (const row of ingresosPorFuente) {
-    if (isICLDSource(row.nom_fuentes_financiacion)) {
-      icldTotal += parseFloat(row.total_recaudo || "0");
+  // -------------------------------------------------------------------------
+  // 1. Calculate ICLD: bruto, validado, acciones de mejora, neto
+  // -------------------------------------------------------------------------
+  let icldBruto = 0;
+  let icldValidado = 0;
+
+  for (const row of ingresosRows) {
+    const fuenteIsICLD = isICLDFuente(row.nom_fuentes_financiacion);
+    if (!fuenteIsICLD) continue;
+
+    const recaudo = parseFloat(row.total_recaudo || "0");
+    icldBruto += recaudo;
+
+    // Only count toward validated ICLD if account code is also valid
+    if (isICLDCuenta(row.cuenta)) {
+      icldValidado += recaudo;
     }
   }
 
+  const accionesMejora = icldBruto - icldValidado;
+  const deduccionFondos = icldValidado * TOTAL_DEDUCCION_FONDOS;
+  const icldNeto = icldValidado - deduccionFondos;
+
+  // -------------------------------------------------------------------------
   // 2. Aggregate operating expenses (cuenta starts with "2.1") by section,
   //    filtered to ICLD funding sources only.
-  //    The fetchGastosPorSeccion already filters for cuenta like '2.1%' and VIGENCIA ACTUAL.
+  //    fetchGastosPorSeccion already filters for cuenta like '2.1%' and VIGENCIA ACTUAL.
+  //    It returns individual account rows (with `cuenta`) for deduction matching.
+  // -------------------------------------------------------------------------
   const seccionMap = new Map<
     string,
-    { gastos: number; seccionCode: string }
+    {
+      gastos: number;
+      gastosDeducidos: number;
+      seccionCode: string;
+      deducidosDetalle: { codigo: string; nombre: string; valor: number }[];
+    }
   >();
 
   for (const row of gastosPorSeccion) {
     // Only count expenses funded by ICLD
-    if (!isICLDSource(row.nom_fuentes_financiacion)) continue;
+    if (!isICLDFuente(row.nom_fuentes_financiacion)) continue;
 
     const seccionName = row.nom_seccion_presupuestal || "SIN SECCION";
+    const compromisos = parseFloat(row.compromisos || "0");
+    const cuenta = row.cuenta || "";
+
     const existing = seccionMap.get(seccionName) || {
       gastos: 0,
+      gastosDeducidos: 0,
       seccionCode: row.cod_seccion_presupuestal || "",
+      deducidosDetalle: [],
     };
-    existing.gastos += parseFloat(row.compromisos || "0");
+
+    existing.gastos += compromisos;
+
+    // Check if this expense is deductible (for Admin Central primarily)
+    if (isGastoDeducible617(cuenta) && compromisos > 0) {
+      existing.gastosDeducidos += compromisos;
+      // Find the canonical name from GASTOS_DEDUCIBLES_617
+      const gastoInfo = GASTOS_DEDUCIBLES_617.find(
+        (g) => g.codigo === cuenta.trim()
+      );
+      existing.deducidosDetalle.push({
+        codigo: cuenta.trim(),
+        nombre: gastoInfo?.nombre || row.nombre_cuenta || cuenta,
+        valor: compromisos,
+      });
+    }
+
     seccionMap.set(seccionName, existing);
   }
 
+  // -------------------------------------------------------------------------
   // 3. Build per-section results
+  // -------------------------------------------------------------------------
   const secciones: Ley617Section[] = [];
   let gastosFuncionamientoTotal = 0;
+  let gastosDeducidosTotal = 0;
+  const gastosDeducidosDetalle: { codigo: string; nombre: string; valor: number }[] = [];
 
   for (const [seccionName, data] of seccionMap.entries()) {
-    const gastos = data.gastos;
-    gastosFuncionamientoTotal += gastos;
+    // For Admin Central, use net expenses (after deductions)
+    const isAdmin = isAdminCentral(seccionName);
+    const gastosForRatio = isAdmin
+      ? data.gastos - data.gastosDeducidos
+      : data.gastos;
 
-    const ratio = icldTotal > 0 ? gastos / icldTotal : 0;
+    gastosFuncionamientoTotal += data.gastos;
+
+    if (isAdmin) {
+      gastosDeducidosTotal += data.gastosDeducidos;
+      gastosDeducidosDetalle.push(...data.deducidosDetalle);
+    }
+
+    // Use icldNeto as denominator for ratio calculations
+    const ratio = icldNeto > 0 ? gastosForRatio / icldNeto : 0;
 
     if (isConcejo(seccionName)) {
-      // Art. 10: Absolute limit in SMLMV
-      const limiteSMLMV = LIMITES_CONCEJO_SMLMV[categoria] ?? LIMITES_CONCEJO_SMLMV[6];
-      const limiteAbsoluto = limiteSMLMV * SMLMV_2025;
+      // Art. 10: Use calcularLimiteConcejoAnual formula
+      // TODO: Accept numConcejales and numSesiones as user input.
+      // For now, using defaults for Cat 6 municipalities: 9 concejales, 120 sessions.
+      const numConcejales = 9;
+      const numSesiones = 120;
+      const concejoLimite = calcularLimiteConcejoAnual(
+        icldNeto,
+        numConcejales,
+        numSesiones
+      );
+      const limiteAbsoluto = concejoLimite.total;
+      const limiteSMLMV = Math.round(limiteAbsoluto / SMLMV_2025);
 
       secciones.push({
         seccion: seccionName,
-        gastosFuncionamiento: gastos,
-        icld: icldTotal,
+        gastosFuncionamiento: data.gastos,
+        icld: icldNeto,
         ratio: Math.round(ratio * 10000) / 10000,
         limite: 0, // not applicable for absolute limits
         limiteAbsoluto,
         limiteSMLMV,
-        status: gastos <= limiteAbsoluto ? "cumple" : "no_cumple",
+        status: data.gastos <= limiteAbsoluto ? "cumple" : "no_cumple",
         tipoLimite: "absoluto",
       });
     } else if (isPersoneria(seccionName)) {
       // Art. 11: Absolute limit in SMLMV
-      const limiteSMLMV = LIMITES_PERSONERIA_SMLMV[categoria] ?? LIMITES_PERSONERIA_SMLMV[6];
+      const limiteSMLMV =
+        LIMITES_PERSONERIA_SMLMV[categoria] ?? LIMITES_PERSONERIA_SMLMV[6];
       const limiteAbsoluto = limiteSMLMV * SMLMV_2025;
 
       secciones.push({
         seccion: seccionName,
-        gastosFuncionamiento: gastos,
-        icld: icldTotal,
+        gastosFuncionamiento: data.gastos,
+        icld: icldNeto,
         ratio: Math.round(ratio * 10000) / 10000,
         limite: 0, // not applicable for absolute limits
         limiteAbsoluto,
         limiteSMLMV,
-        status: gastos <= limiteAbsoluto ? "cumple" : "no_cumple",
+        status: data.gastos <= limiteAbsoluto ? "cumple" : "no_cumple",
         tipoLimite: "absoluto",
       });
     } else {
       // Admin Central & others: Art. 6 percentage limit
+      // For Admin Central, ratio uses net expenses (after deductions)
       secciones.push({
         seccion: seccionName,
-        gastosFuncionamiento: gastos,
-        icld: icldTotal,
+        gastosFuncionamiento: isAdmin ? gastosForRatio : data.gastos,
+        icld: icldNeto,
         ratio: Math.round(ratio * 10000) / 10000,
         limite: limiteGlobal,
         status: ratio <= limiteGlobal ? "cumple" : "no_cumple",
@@ -231,29 +283,43 @@ export async function evaluateLey617(
 
   // Sort sections: Administracion Central first, then alphabetical
   secciones.sort((a, b) => {
-    const aIsAdmin = a.seccion.toUpperCase().includes("ADMINISTRACION")
-      || a.seccion.toUpperCase().includes("CENTRAL");
-    const bIsAdmin = b.seccion.toUpperCase().includes("ADMINISTRACION")
-      || b.seccion.toUpperCase().includes("CENTRAL");
+    const aIsAdmin = isAdminCentral(a.seccion);
+    const bIsAdmin = isAdminCentral(b.seccion);
     if (aIsAdmin && !bIsAdmin) return -1;
     if (!aIsAdmin && bIsAdmin) return 1;
     return a.seccion.localeCompare(b.seccion);
   });
 
-  // 4. Global ratio (Art. 6 — Admin Central ratio only, but using total gastos for overview)
+  // -------------------------------------------------------------------------
+  // 4. Global ratio (Art. 6 — using net expenses / icldNeto)
+  // -------------------------------------------------------------------------
+  const gastosFuncionamientoNeto =
+    gastosFuncionamientoTotal - gastosDeducidosTotal;
   const ratioGlobal =
-    icldTotal > 0 ? gastosFuncionamientoTotal / icldTotal : 0;
+    icldNeto > 0 ? gastosFuncionamientoNeto / icldNeto : 0;
   const ratioGlobalRounded = Math.round(ratioGlobal * 10000) / 10000;
 
   const globalCumple = ratioGlobal <= limiteGlobal;
   const allSectionsCumple = secciones.every((s) => s.status === "cumple");
 
   return {
-    icldTotal,
+    // Backward compat: icldTotal = icldNeto (so Ley617Panel still works)
+    icldTotal: icldNeto,
+    // New detailed ICLD fields
+    icldBruto,
+    icldValidado,
+    deduccionFondos,
+    icldNeto,
+    accionesMejora,
+    // Expense fields
     gastosFuncionamientoTotal,
+    gastosDeducidos: gastosDeducidosTotal,
+    gastosFuncionamientoNeto,
+    // Ratios
     ratioGlobal: ratioGlobalRounded,
     limiteGlobal,
     secciones,
+    gastosDeducidosDetalle,
     status: globalCumple && allSectionsCumple ? "cumple" : "no_cumple",
   };
 }
