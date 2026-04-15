@@ -10,13 +10,14 @@ import {
   Banknote,
   Receipt,
   TrendingUp,
+  MapPin,
   Loader2,
   AlertTriangle,
   RefreshCw,
   Upload,
 } from "lucide-react";
 import type { Municipio } from "@/data/municipios";
-import type { FUTCierreData, CGNSaldosData } from "@/lib/chip-parser";
+import type { FUTCierreData, CGNSaldosData, MapaInversionesData } from "@/lib/chip-parser";
 import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
 import type { IDFResult } from "@/lib/validaciones/idf";
@@ -25,6 +26,7 @@ import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fisca
 import type { CGAResult } from "@/lib/validaciones/cga";
 import { evaluateCierreVsCuipo, type CierreVsCuipoResult } from "@/lib/validaciones/cierre-vs-cuipo";
 import { evaluateAguaPotable, type AguaPotableResult } from "@/lib/validaciones/agua-potable";
+import { evaluateMapaInversiones, type MapaInversionesResult } from "@/lib/validaciones/mapa-inversiones";
 import EquilibrioPanel from "./EquilibrioPanel";
 import SGPPanel from "./SGPPanel";
 import Ley617Panel from "./Ley617Panel";
@@ -34,6 +36,7 @@ import CierreVsCuipoPanel from "./CierreVsCuipoPanel";
 import EficienciaFiscalPanel from "./EficienciaFiscalPanel";
 import CGAPanel from "./CGAPanel";
 import AguaPotablePanel from "./AguaPotablePanel";
+import MapaInversionesPanel from "./MapaInversionesPanel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,6 +95,7 @@ const VALIDACIONES = [
   { id: "cga", icon: ShieldCheck, label: "Equilibrio CGA", auto: true },
   { id: "eficiencia", icon: Receipt, label: "Eficiencia Fiscal", auto: true },
   { id: "agua", icon: Droplets, label: "Evaluación Agua Potable", auto: true },
+  { id: "mapa", icon: MapPin, label: "Mapa de Inversiones (PDM)", auto: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -158,6 +162,8 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [cgaData, setCgaData] = useState<CGAResult | null>(null);
   const [cierreVsCuipoData, setCierreVsCuipoData] = useState<CierreVsCuipoResult | null>(null);
   const [aguaData, setAguaData] = useState<AguaPotableResult | null>(null);
+  const [mapaData, setMapaData] = useState<MapaInversionesData | null>(null);
+  const [mapaInversionesData, setMapaInversionesData] = useState<MapaInversionesResult | null>(null);
 
   // -----------------------------------------------------------------------
   // Fetch periods
@@ -220,6 +226,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       "cierre-cuipo": { status: needsUpload ? "upload_needed" : "pendiente", label: "Requiere FUT Cierre" },
       cga: { status: needsUpload ? "upload_needed" : "pendiente", label: "Requiere FUT Cierre" },
       eficiencia: { status: !cgnSaldos ? "upload_needed" : "pendiente", label: "Requiere CGN Saldos" },
+      mapa: { status: !mapaData ? "upload_needed" : "loading", label: !mapaData ? "Requiere Mapa de Inversiones" : "Calculando..." },
     }));
 
     // 1. Equilibrio
@@ -479,6 +486,56 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     return () => { cancelled = true; };
   }, [cgnSaldos, periodo, municipio.chipCode]);
 
+  // Run Mapa de Inversiones validation whenever mapa upload or period changes
+  useEffect(() => {
+    if (!periodo || !municipio.chipCode) return;
+    let cancelled = false;
+
+    const runMapa = async () => {
+      setResults((prev) => ({
+        ...prev,
+        mapa: mapaData
+          ? { status: "loading", label: "Calculando..." }
+          : { status: "upload_needed", label: "Requiere Mapa de Inversiones" },
+      }));
+      try {
+        const result = await evaluateMapaInversiones(
+          municipio.chipCode,
+          periodo,
+          mapaData
+        );
+        if (cancelled) return;
+        setMapaInversionesData(result);
+        setResults((prev) => ({
+          ...prev,
+          mapa: {
+            status: result.status === "pendiente"
+              ? (mapaData ? "pendiente" : "upload_needed")
+              : result.status,
+            label: "Mapa de Inversiones",
+            detail:
+              result.status === "pendiente"
+                ? `${result.totalBepinesCuipo} BPIN en CUIPO — cargue el mapa para validar`
+                : `${result.bepinesConCruce}/${result.totalBepinesCuipo} BPIN cruzan (${result.pctCruceValor.toFixed(1)}% del valor)`,
+          },
+        }));
+      } catch (err) {
+        if (!cancelled) {
+          setResults((prev) => ({
+            ...prev,
+            mapa: {
+              status: "error",
+              label: err instanceof Error ? err.message : "Error en Mapa de Inversiones",
+            },
+          }));
+        }
+      }
+    };
+
+    runMapa();
+    return () => { cancelled = true; };
+  }, [mapaData, periodo, municipio.chipCode]);
+
   // -----------------------------------------------------------------------
   // Count summary
   // -----------------------------------------------------------------------
@@ -576,10 +633,12 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
             onFUTCierre2024Loaded={setFutCierre2024}
             onCGNSaldosLoaded={setCgnSaldos}
             onCGNSaldosILoaded={setCgnSaldosI}
+            onMapaInversionesLoaded={setMapaData}
             futCierre={futCierre}
             futCierre2024={futCierre2024}
             cgnSaldos={cgnSaldos}
             cgnSaldosI={cgnSaldosI}
+            mapaInversiones={mapaData}
           />
         </div>
       )}
@@ -593,7 +652,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
             result &&
             result.status !== "pendiente" &&
             result.status !== "loading" &&
-            result.status !== "upload_needed";
+            (result.status !== "upload_needed" || v.id === "mapa");
 
           return (
             <button
@@ -644,6 +703,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         <EficienciaFiscalPanel data={eficienciaData} periodo={periodo} municipio={municipio} />
       )}
       {activePanel === "agua" && <AguaPotablePanel data={aguaData} />}
+      {activePanel === "mapa" && <MapaInversionesPanel data={mapaInversionesData} />}
     </div>
   );
 }
