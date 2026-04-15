@@ -41,23 +41,16 @@ export async function GET(request: NextRequest) {
 
         // Fetch income, expenses (ALL vigencias), and programming totals in parallel
         // NOTE: PROG_INGRESOS (22ah-ddsj) has a non-standard schema where account codes
-        // are in ambito_codigo, not cuenta, and monetary fields contain non-numeric data.
-        // We use PROG_GASTOS for expense programming and derive income programming from
-        // the top-level CUIPO EJEC_ING row (cuenta='1') which has initial/definitive.
-        const [ingresos, gastos, progGasTotals, progIngTotals] = await Promise.all([
+        // are in ambito_codigo, not cuenta, and monetary fields are TEXT with "NO APLICA".
+        // Income programming is NOT available via API — only via file upload.
+        // We use PROG_GASTOS for expense programming only.
+        const [ingresos, gastos, progGasTotals] = await Promise.all([
           fetchIngresosPorFuente(chipCode, periodo),
           fetchGastosPorFuente(chipCode, periodo),
           sodaCuipoQuery<{ apropiacion_inicial: string; apropiacion_definitiva: string }>({
             dataset: CUIPO_DATASETS.PROG_GASTOS,
             select: "sum(apropiacion_inicial) as apropiacion_inicial, sum(apropiacion_definitiva) as apropiacion_definitiva",
             where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='2' AND cod_vigencia_del_gasto='1'`,
-            limit: 1,
-          }),
-          // Income programming from EJEC_ING top-level row (cuenta='1')
-          sodaCuipoQuery<{ presupuesto_inicial: string; presupuesto_definitivo: string }>({
-            dataset: CUIPO_DATASETS.EJEC_INGRESOS,
-            select: "presupuesto_inicial, presupuesto_definitivo",
-            where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='1'`,
             limit: 1,
           }),
         ]);
@@ -169,8 +162,10 @@ export async function GET(request: NextRequest) {
         // Programming totals
         const pptoInicialGastos = parseFloat(progGasTotals[0]?.apropiacion_inicial || "0");
         const pptoDefinitivoGastos = parseFloat(progGasTotals[0]?.apropiacion_definitiva || "0");
-        const pptoInicialIngresos = parseFloat(progIngTotals[0]?.presupuesto_inicial || "0");
-        const pptoDefinitivoIngresos = parseFloat(progIngTotals[0]?.presupuesto_definitivo || "0");
+        // Income programming NOT available via API (PROG_INGRESOS has broken schema)
+        // These will be enriched client-side when user uploads CUIPO PROG_ING file
+        const pptoInicialIngresos = 0;
+        const pptoDefinitivoIngresos = 0;
         const equilibrioInicial = pptoInicialIngresos - pptoInicialGastos;
         const equilibrioDefinitivo = pptoDefinitivoIngresos - pptoDefinitivoGastos;
 
