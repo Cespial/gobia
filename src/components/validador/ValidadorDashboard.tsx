@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Scale,
   FileCheck,
@@ -167,6 +167,14 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [mapaData, setMapaData] = useState<MapaInversionesData | null>(null);
   const [mapaInversionesData, setMapaInversionesData] = useState<MapaInversionesResult | null>(null);
 
+  // Refs to avoid stale closures in runAll
+  const futCierreRef = useRef(futCierre);
+  const cgnSaldosRef = useRef(cgnSaldos);
+  const mapaDataRef = useRef(mapaData);
+  useEffect(() => { futCierreRef.current = futCierre; }, [futCierre]);
+  useEffect(() => { cgnSaldosRef.current = cgnSaldos; }, [cgnSaldos]);
+  useEffect(() => { mapaDataRef.current = mapaData; }, [mapaData]);
+
   // -----------------------------------------------------------------------
   // Fetch periods
   // -----------------------------------------------------------------------
@@ -221,34 +229,40 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const runAll = useCallback(async () => {
     if (!periodo || !municipio.chipCode) return;
 
+    // Read latest values via refs to avoid stale closures
+    const currentFutCierre = futCierreRef.current;
+    const currentCgnSaldos = cgnSaldosRef.current;
+    const currentMapaData = mapaDataRef.current;
+
     // Mark upload-dependent validations
-    const needsUpload = !futCierre;
+    const needsUpload = !currentFutCierre;
     setResults((prev) => ({
       ...prev,
       "cierre-cuipo": { status: needsUpload ? "upload_needed" : "pendiente", label: "Requiere FUT Cierre" },
       cga: { status: needsUpload ? "upload_needed" : "pendiente", label: "Requiere FUT Cierre" },
-      eficiencia: { status: !cgnSaldos ? "upload_needed" : "pendiente", label: "Requiere CGN Saldos" },
-      mapa: { status: !mapaData ? "upload_needed" : "loading", label: !mapaData ? "Requiere Mapa de Inversiones" : "Calculando..." },
+      eficiencia: { status: !currentCgnSaldos ? "upload_needed" : "pendiente", label: "Requiere CGN Saldos" },
+      mapa: { status: !currentMapaData ? "upload_needed" : "loading", label: !currentMapaData ? "Requiere Mapa de Inversiones" : "Calculando..." },
     }));
 
     // 1. Equilibrio
     const eqData = await runValidation("equilibrio", "equilibrio");
     if (eqData) {
       setEquilibrioData(eqData.equilibrio);
-      const diff = Math.abs(eqData.equilibrio.totalIngresos - eqData.equilibrio.totalGastos);
+      const totalGastos = eqData.equilibrio.totalCompromisos ?? eqData.equilibrio.totalGastos ?? 0;
+      const diff = Math.abs(eqData.equilibrio.totalIngresos - totalGastos);
       const tol = eqData.equilibrio.totalIngresos * 0.01;
       setResults((prev) => ({
         ...prev,
         equilibrio: {
           status: diff <= tol ? "cumple" : "no_cumple",
           label: "Equilibrio Presupuestal",
-          detail: `Ingresos ${formatCOP(eqData.equilibrio.totalIngresos)} vs Gastos ${formatCOP(eqData.equilibrio.totalGastos)} — ${eqData.equilibrio.pctEjecucion.toFixed(1)}%`,
+          detail: `Ingresos ${formatCOP(eqData.equilibrio.totalIngresos)} vs Gastos ${formatCOP(totalGastos)} — ${eqData.equilibrio.pctEjecucion.toFixed(1)}%`,
         },
       }));
 
       // Cierre vs CUIPO (if FUT is already loaded)
-      if (futCierre && eqData?.equilibrio) {
-        const cierreResult = evaluateCierreVsCuipo(futCierre, eqData.equilibrio.porFuente);
+      if (currentFutCierre && eqData?.equilibrio) {
+        const cierreResult = evaluateCierreVsCuipo(currentFutCierre, eqData.equilibrio.porFuente);
         setCierreVsCuipoData(cierreResult);
         const diffCount = cierreResult.cruces.filter(
           (c) => c.consolidacion !== null &&

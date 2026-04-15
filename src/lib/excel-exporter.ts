@@ -632,7 +632,7 @@ function addMapaSheet(wb: XLSX.WorkBook, data: MapaInversionesResult): void {
       c.valorCuipo,
       c.existeEnMapa ? "Si" : "No",
       c.valorMapa,
-      c.status,
+      c.status.toUpperCase(),
     ]);
   }
 

@@ -87,7 +87,7 @@ export const TAX_MAPPING = [
   },
   {
     name: "Publicidad Exterior Visual",
-    cuipo: "1.1.01.02.202",
+    cuipo: "1.1.01.02.211",  // was "1.1.01.02.202" which conflicted with Bomberil
     cgnCxC: "1.3.05.58",
     cgnIncome: "4.1.05.58",
     cgnAdjustment: "4.1.95.44",
@@ -219,9 +219,9 @@ export async function evaluateEficienciaFiscal(
     // CUIPO total: find exact match or prefix match
     let cuipoTotal = cuipoMap.get(tax.cuipo) || 0;
     if (cuipoTotal === 0) {
-      // Try prefix match
+      // Aggregate child accounts (e.g., "1.1.01.01.200" + "1.1.01.01.200.01")
       for (const [code, val] of cuipoMap.entries()) {
-        if (code.startsWith(tax.cuipo) && code.length === tax.cuipo.length) {
+        if (code.startsWith(tax.cuipo + ".")) {
           cuipoTotal += val;
         }
       }

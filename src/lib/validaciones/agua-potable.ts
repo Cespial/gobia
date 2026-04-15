@@ -198,11 +198,11 @@ export async function evaluateAguaPotable(
     const cuenta = row.cuenta || "";
     const compromisos = parseFloat(row.compromisos || "0");
 
-    if (cuenta.endsWith(".01") || cuenta.includes(".004.01")) {
+    if (cuenta.includes(".004.01")) {
       subsidioAcueducto += compromisos;
-    } else if (cuenta.endsWith(".02") || cuenta.includes(".004.02")) {
+    } else if (cuenta.includes(".004.02")) {
       subsidioAlcantarillado += compromisos;
-    } else if (cuenta.endsWith(".03") || cuenta.includes(".004.03")) {
+    } else if (cuenta.includes(".004.03")) {
       subsidioAseo += compromisos;
     } else {
       // Unclassified subsidy — add to acueducto as default
