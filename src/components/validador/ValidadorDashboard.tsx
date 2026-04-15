@@ -23,6 +23,7 @@ import type { IDFResult } from "@/lib/validaciones/idf";
 import type { Ley617Certification } from "@/lib/datos-gov-cuipo";
 import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fiscal";
 import type { CGAResult } from "@/lib/validaciones/cga";
+import { evaluateCierreVsCuipo, type CierreVsCuipoResult } from "@/lib/validaciones/cierre-vs-cuipo";
 import EquilibrioPanel from "./EquilibrioPanel";
 import SGPPanel from "./SGPPanel";
 import Ley617Panel from "./Ley617Panel";
@@ -152,6 +153,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [ley617Certifications, setLey617Certifications] = useState<Ley617Certification[]>([]);
   const [eficienciaData, setEficienciaData] = useState<EficienciaFiscalResult | null>(null);
   const [cgaData, setCgaData] = useState<CGAResult | null>(null);
+  const [cierreVsCuipoData, setCierreVsCuipoData] = useState<CierreVsCuipoResult | null>(null);
 
   // -----------------------------------------------------------------------
   // Fetch periods
@@ -230,6 +232,26 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
           detail: `Ingresos ${formatCOP(eqData.equilibrio.totalIngresos)} vs Gastos ${formatCOP(eqData.equilibrio.totalGastos)} — ${eqData.equilibrio.pctEjecucion.toFixed(1)}%`,
         },
       }));
+
+      // Cierre vs CUIPO (if FUT is already loaded)
+      if (futCierre && eqData?.equilibrio) {
+        const cierreResult = evaluateCierreVsCuipo(futCierre, eqData.equilibrio.porFuente);
+        setCierreVsCuipoData(cierreResult);
+        const diffCount = cierreResult.cruces.filter(
+          (c) => c.consolidacion !== null &&
+          (Math.abs(c.diffSaldoLibros) > 1 || Math.abs(c.diffReservas) > 1 || Math.abs(c.diffCxP) > 1)
+        ).length;
+        setResults((prev) => ({
+          ...prev,
+          "cierre-cuipo": {
+            status: cierreResult.status,
+            label: "Cierre FUT vs CUIPO",
+            detail: diffCount === 0
+              ? "Todos los cruces coinciden"
+              : `${diffCount} diferencia(s) encontrada(s)`,
+          },
+        }));
+      }
     }
 
     // 2. SGP
@@ -338,6 +360,28 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   useEffect(() => {
     if (periodo) runAll();
   }, [periodo, runAll]);
+
+  // Re-run cierre validation when FUT is uploaded after initial load
+  useEffect(() => {
+    if (futCierre && equilibrioData) {
+      const cierreResult = evaluateCierreVsCuipo(futCierre, equilibrioData.porFuente);
+      setCierreVsCuipoData(cierreResult);
+      const diffCount = cierreResult.cruces.filter(
+        (c) => c.consolidacion !== null &&
+        (Math.abs(c.diffSaldoLibros) > 1 || Math.abs(c.diffReservas) > 1 || Math.abs(c.diffCxP) > 1)
+      ).length;
+      setResults((prev) => ({
+        ...prev,
+        "cierre-cuipo": {
+          status: cierreResult.status,
+          label: "Cierre FUT vs CUIPO",
+          detail: diffCount === 0
+            ? "Todos los cruces coinciden"
+            : `${diffCount} diferencia(s) encontrada(s)`,
+        },
+      }));
+    }
+  }, [futCierre, equilibrioData]);
 
   // -----------------------------------------------------------------------
   // Count summary
@@ -492,13 +536,8 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       {activePanel === "idf" && idfData && (
         <IDFPanel data={idfData} periodo={periodo} municipio={municipio} />
       )}
-      {activePanel === "cierre-cuipo" && futCierre && equilibrioData && (
-        <CierreVsCuipoPanel
-          futCierre={futCierre}
-          equilibrioData={equilibrioData}
-          periodo={periodo}
-          municipio={municipio}
-        />
+      {activePanel === "cierre-cuipo" && (
+        <CierreVsCuipoPanel data={cierreVsCuipoData} />
       )}
       {activePanel === "cga" && cgaData && (
         <CGAPanel data={cgaData} periodo={periodo} municipio={municipio} />

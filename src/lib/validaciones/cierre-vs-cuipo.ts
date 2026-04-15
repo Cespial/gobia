@@ -41,7 +41,7 @@ export interface CierreVsCuipoResult {
 
 interface EquilibrioFuente {
   consolidacion: number | null;
-  saldoEnLibros: number;
+  saldoEnLibros?: number;
   reservas: number;
   cxp: number;
 }
@@ -59,7 +59,7 @@ export function evaluateCierreVsCuipo(
   for (const f of equilibrioPorFuente) {
     if (f.consolidacion === null) continue;
     const existing = eqByConsolidacion.get(f.consolidacion) || { saldoEnLibros: 0, reservas: 0, cxp: 0 };
-    existing.saldoEnLibros += f.saldoEnLibros;
+    existing.saldoEnLibros += f.saldoEnLibros ?? 0;
     existing.reservas += f.reservas;
     existing.cxp += f.cxp;
     eqByConsolidacion.set(f.consolidacion, existing);
