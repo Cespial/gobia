@@ -347,14 +347,18 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       }
       // Recompute overall status after enrichment
       const noCumple = checks.filter((c: { status: string }) => c.status === "no_cumple").length;
-      cgaResult.cga.status = noCumple === 0 ? "cumple" : "no_cumple";
+      const pendiente = checks.filter((c: { status: string }) => c.status === "pendiente").length;
+      cgaResult.cga.status = noCumple > 0 ? "no_cumple" : pendiente > 0 ? "pendiente" : "cumple";
       setCgaData(cgaResult.cga);
+      const detailParts: string[] = [];
+      if (noCumple > 0) detailParts.push(`${noCumple} no cumple`);
+      if (pendiente > 0) detailParts.push(`${pendiente} pendiente`);
       setResults((prev) => ({
         ...prev,
         cga: {
           status: cgaResult.cga.status,
           label: "Equilibrio CGA",
-          detail: `${checks.length} verificaciones — ${noCumple > 0 ? `${noCumple} no cumple` : "Todas cumplen"}`,
+          detail: `${checks.length} verificaciones — ${detailParts.length > 0 ? detailParts.join(", ") : "Todas cumplen"}`,
         },
       }));
     }
