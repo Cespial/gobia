@@ -23,9 +23,13 @@ interface EquilibrioData {
   pptoDefinitivoGastos?: number;
   equilibrioInicial?: number;
   equilibrioDefinitivo?: number;
+  totalReservasVigAnterior?: number;
+  totalCxpVigAnterior?: number;
+  totalValidador?: number;
   porFuente: {
     codigo: string;
     nombre: string;
+    consolidacion?: number | null;
     recaudo: number;
     compromisos: number;
     obligaciones?: number;
@@ -33,6 +37,9 @@ interface EquilibrioData {
     reservas?: number;
     cxp?: number;
     superavit: number;
+    validador?: number;
+    reservasVigAnterior?: number;
+    cxpVigAnterior?: number;
     saldoEnLibros?: number;
   }[];
 }
@@ -301,6 +308,9 @@ export default function EquilibrioPanel({
                 <th className="py-2 pr-4 text-right font-medium">Reservas</th>
                 <th className="py-2 pr-4 text-right font-medium">CxP</th>
                 <th className="py-2 pr-4 text-right font-medium">Superavit</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-[var(--gray-500)] uppercase tracking-wider">Validador</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-[var(--gray-500)] uppercase tracking-wider">Res. Vig. Ant.</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-[var(--gray-500)] uppercase tracking-wider">CxP Vig. Ant.</th>
                 <th className="py-2 text-right font-medium">Saldo Libros</th>
               </tr>
             </thead>
@@ -336,6 +346,15 @@ export default function EquilibrioPanel({
                   >
                     {formatCOP(f.superavit)}
                   </td>
+                  <td className={`px-3 py-2 text-right text-sm tabular-nums ${(f.validador ?? 0) !== 0 ? 'text-red-400 font-bold' : 'text-[var(--gray-400)]'}`}>
+                    {formatCOP(f.validador ?? 0)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
+                    {formatCOP(f.reservasVigAnterior ?? 0)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
+                    {formatCOP(f.cxpVigAnterior ?? 0)}
+                  </td>
                   <td
                     className={`py-2 text-right font-medium ${
                       (f.saldoEnLibros ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
@@ -360,6 +379,15 @@ export default function EquilibrioPanel({
                   }`}
                 >
                   {formatCOP(data.superavit)}
+                </td>
+                <td className={`px-3 py-2 text-right text-sm tabular-nums ${(data.totalValidador ?? 0) !== 0 ? 'text-red-400 font-bold' : 'text-[var(--gray-400)]'}`}>
+                  {formatCOP(data.totalValidador ?? 0)}
+                </td>
+                <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
+                  {formatCOP(data.totalReservasVigAnterior ?? 0)}
+                </td>
+                <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
+                  {formatCOP(data.totalCxpVigAnterior ?? 0)}
                 </td>
                 <td
                   className={`py-2 text-right ${
