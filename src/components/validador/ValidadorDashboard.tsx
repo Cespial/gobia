@@ -357,7 +357,8 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         },
       }));
     }
-  }, [periodo, municipio, runValidation, futCierre, cgnSaldos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodo, municipio, runValidation]);
 
   useEffect(() => {
     if (periodo) runAll();
@@ -385,9 +386,16 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     }
   }, [futCierre, equilibrioData]);
 
-  // Re-evaluate CGA client-side when FUT data or equilibrio data becomes available
+  // Re-evaluate CGA client-side when FUT data or equilibrio data becomes available.
+  // Only fires when at least one FUT file is loaded — the server-side CGA from
+  // runAll handles the baseline case, so we skip the redundant call on initial load.
   useEffect(() => {
+    // Only re-evaluate client-side when FUT data is available
+    // (server-side CGA from runAll handles the baseline case)
+    if (!futCierre && !futCierre2024) return;
     if (!periodo || !municipio.chipCode) return;
+
+    let cancelled = false;
 
     const rerunCGA = async () => {
       try {
@@ -407,6 +415,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
             superavit: equilibrioData.superavit ?? 0,
           } : null,
         );
+        if (cancelled) return;
         setCgaData(result);
 
         const failCount = result.checks.filter(c => c.status === "no_cumple").length;
@@ -424,11 +433,12 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
           },
         }));
       } catch (err) {
-        console.error("CGA re-evaluation failed:", err);
+        if (!cancelled) console.error("CGA re-evaluation failed:", err);
       }
     };
 
     rerunCGA();
+    return () => { cancelled = true; };
   }, [futCierre, futCierre2024, equilibrioData, periodo, municipio.chipCode]);
 
   // -----------------------------------------------------------------------
