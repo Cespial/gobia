@@ -2,51 +2,131 @@
  * Eficiencia Fiscal — Refrendacion CGN
  *
  * Compares income reported in CUIPO (budget execution) vs income in CGN accounting
- * (contable) for each tax type. If the variance exceeds 50%, the tax is NOT endorsed.
+ * (contable) for each tax type using the correct CGN accounting formula:
  *
- * The mapping between CUIPO and CGN accounts:
- * - Predial: CUIPO 1.1.01.01.200 -> CGN 4.1.05.07 (income) + 1.3.05.07 (CxC)
- * - ICA: CUIPO 1.1.01.02.200 -> CGN 4.1.05.08 + 1.3.05.08
- * - Avisos y Tableros: CUIPO 1.1.01.02.201 -> CGN 4.1.05.21 + 1.3.05.21
- * - Sobretasa Ambiental: CUIPO 1.1.01.01.014 -> (no direct CGN mapping)
- * - Alumbrado Publico: CUIPO 1.1.01.01.203 -> CGN 4.1.05.22
- * - Vehiculos: CUIPO 1.1.02.06.003.01.02 -> CGN 4.1.05.33 + 1.3.05.33
- * - Delineacion: CUIPO 1.1.01.02.204 -> CGN 4.1.05.19 + 1.3.05.19
- * - Sobretasa Bomberil: CUIPO 1.1.01.02.202 (approx) -> varies
+ *   CGN_total = CxC_saldo_final_I + Income_IV - Adjustments_IV - CxC_saldo_final_IV
+ *
+ * Where:
+ * - CxC_saldo_final_I  = Cuentas por Cobrar saldo final from Trimestre I (start-of-year proxy)
+ * - Income_IV           = Income account saldo final from Trimestre IV
+ * - Adjustments_IV      = Adjustment account saldo final from Trimestre IV (only if positive)
+ * - CxC_saldo_final_IV  = Cuentas por Cobrar saldo final from Trimestre IV (end of year)
+ *
+ * This represents: "CxC at start of year + income recognized - adjustments - CxC at end = net collected"
+ *
+ * Refrendation threshold: 25% variance. If |CUIPO/CGN - 1| < 25%, the tax is endorsed
+ * with valor refrendado = min(|CGN|, CUIPO). Otherwise valor refrendado = 0.
  *
  * Since CGN Saldos data requires file upload (not available via API),
  * this validation operates in two modes:
- * 1. WITH CGN data: full cross-reference with variance calculation
- * 2. WITHOUT CGN data: shows CUIPO totals only, marks as "pendiente"
+ * 1. WITH CGN data (both trimesters): full cross-reference with correct formula
+ * 2. WITH only CGN IV: degraded mode using Income_IV only
+ * 3. WITHOUT CGN data: shows CUIPO totals only, marks as "pendiente"
  */
 
 import { sodaCuipoQuery, CUIPO_DATASETS } from "@/lib/datos-gov-cuipo";
-import type { CGNSaldosData } from "@/lib/chip-parser";
+import type { CGNSaldosData, CGNSaldoRow } from "@/lib/chip-parser";
 
-// Tax type mapping: CUIPO account -> CGN income accounts + CGN CxC accounts
+// Tax type mapping: CUIPO account -> CGN accounts (CxC, Income, Adjustment)
 export const TAX_MAPPING = [
-  { name: "Impuesto Predial Unificado", cuipo: "1.1.01.01.200", cgnIncome: ["4.1.05.07"], cgnCxC: ["1.3.05.07"] },
-  { name: "Impuesto de Industria y Comercio", cuipo: "1.1.01.02.200", cgnIncome: ["4.1.05.08"], cgnCxC: ["1.3.05.08"] },
-  { name: "Avisos y Tableros", cuipo: "1.1.01.02.201", cgnIncome: ["4.1.05.21"], cgnCxC: ["1.3.05.21"] },
-  { name: "Sobretasa Ambiental", cuipo: "1.1.01.01.014", cgnIncome: [], cgnCxC: [] },
-  { name: "Alumbrado Publico", cuipo: "1.1.01.01.203", cgnIncome: ["4.1.05.22"], cgnCxC: ["1.3.05.22"] },
-  { name: "Vehiculos Automotores", cuipo: "1.1.02.06.003.01.02", cgnIncome: ["4.1.05.33"], cgnCxC: ["1.3.05.33"] },
-  { name: "Delineacion Urbana", cuipo: "1.1.01.02.204", cgnIncome: ["4.1.05.19"], cgnCxC: ["1.3.05.19"] },
-  { name: "Sobretasa Bomberil", cuipo: "1.1.01.02.202", cgnIncome: [], cgnCxC: [] },
-  { name: "Publicidad Exterior Visual", cuipo: "1.1.01.02.203", cgnIncome: ["4.1.05.58"], cgnCxC: ["1.3.05.58"] },
-  { name: "Espectaculos Publicos", cuipo: "1.1.01.02.205", cgnIncome: [], cgnCxC: [] },
-  { name: "Sobretasa a la Gasolina", cuipo: "1.1.01.02.300", cgnIncome: ["4.1.05.24"], cgnCxC: ["1.3.05.24"] },
-  { name: "Estampillas", cuipo: "1.1.01.02.109", cgnIncome: [], cgnCxC: [] },
+  {
+    name: "Impuesto Predial Unificado",
+    cuipo: "1.1.01.01.200",
+    cgnCxC: "1.3.05.07",
+    cgnIncome: "4.1.05.07",
+    cgnAdjustment: "4.1.95.10",
+  },
+  {
+    name: "Impuesto de Industria y Comercio",
+    cuipo: "1.1.01.02.200",
+    cgnCxC: "1.3.05.08",
+    cgnIncome: "4.1.05.08",
+    cgnAdjustment: "4.1.95.11",
+  },
+  {
+    name: "Avisos y Tableros",
+    cuipo: "1.1.01.02.201",
+    cgnCxC: "1.3.05.21",
+    cgnIncome: "4.1.05.21",
+    cgnAdjustment: "4.1.95.18",
+  },
+  {
+    name: "Sobretasa Ambiental",
+    cuipo: "1.1.01.01.014",
+    cgnCxC: null,
+    cgnIncome: null,
+    cgnAdjustment: null,
+  },
+  {
+    name: "Alumbrado Publico",
+    cuipo: "1.1.01.01.203",
+    cgnCxC: "1.3.05.22",
+    cgnIncome: "4.1.05.22",
+    cgnAdjustment: null,
+  },
+  {
+    name: "Vehiculos Automotores",
+    cuipo: "1.1.02.06.003.01.02",
+    cgnCxC: "1.3.05.33",
+    cgnIncome: "4.1.05.33",
+    cgnAdjustment: "4.1.95.25",
+  },
+  {
+    name: "Delineacion Urbana",
+    cuipo: "1.1.01.02.204",
+    cgnCxC: "1.3.05.19",
+    cgnIncome: "4.1.05.19",
+    cgnAdjustment: null,
+  },
+  {
+    name: "Sobretasa Bomberil",
+    cuipo: "1.1.01.02.202",
+    cgnCxC: null,
+    cgnIncome: null,
+    cgnAdjustment: null,
+  },
+  {
+    name: "Publicidad Exterior Visual",
+    cuipo: "1.1.01.02.202",
+    cgnCxC: "1.3.05.58",
+    cgnIncome: "4.1.05.58",
+    cgnAdjustment: "4.1.95.44",
+  },
+  {
+    name: "Espectaculos Publicos",
+    cuipo: "1.1.01.02.205",
+    cgnCxC: null,
+    cgnIncome: null,
+    cgnAdjustment: null,
+  },
+  {
+    name: "Sobretasa a la Gasolina",
+    cuipo: "1.1.01.02.109",
+    cgnCxC: "1.3.05.24",
+    cgnIncome: "4.1.05.24",
+    cgnAdjustment: null,
+  },
+  {
+    name: "Circulacion y Transito",
+    cuipo: "1.1.01.02.203",
+    cgnCxC: "1.3.05.59",
+    cgnIncome: "4.1.05.59",
+    cgnAdjustment: "4.1.95.45",
+  },
 ];
+
+type TaxMapping = (typeof TAX_MAPPING)[number];
 
 export interface TaxValidationRow {
   name: string;
   cuipoAccount: string;
-  cuipoTotal: number;      // CUIPO budget execution total
-  cgnTotal: number | null;  // CGN accounting total (null if no CGN data)
+  cuipoTotal: number;
+  cgnTotal: number | null;
+  cgnFormula: string | null;       // human-readable formula breakdown
   difference: number | null;
   variancePct: number | null;
-  refrenda: boolean | null; // true if variance <= 50%, null if no CGN data
+  valorRefrendado: number | null;  // min(|CGN|, CUIPO) if within threshold, else 0
+  refrenda: boolean | null;
 }
 
 export interface EficienciaFiscalResult {
@@ -60,10 +140,50 @@ export interface EficienciaFiscalResult {
   status: 'cumple' | 'no_cumple' | 'pendiente';
 }
 
+/**
+ * Calculate CGN total for a single tax using the accounting formula:
+ *   CGN = CxC_saldo_final_I + Income_IV - Adjustments_IV - CxC_saldo_final_IV
+ *
+ * When only CGN_IV is available (no CGN_I), falls back to: Income_IV * 1000
+ *
+ * Returns { total, formula } or null if no CGN mapping exists.
+ */
+function calcularCGNTotal(
+  tax: TaxMapping,
+  cgnMapI: Map<string, CGNSaldoRow> | null,
+  cgnMapIV: Map<string, CGNSaldoRow>,
+): { total: number; formula: string } | null {
+  if (!tax.cgnIncome) return null; // no CGN mapping for this tax
+
+  // Income from Trimestre IV
+  const incomeIV = cgnMapIV.get(tax.cgnIncome)?.saldoFinal ?? 0;
+
+  // Adjustments from Trimestre IV (subtract only if positive)
+  const adjIV = tax.cgnAdjustment
+    ? Math.max(0, cgnMapIV.get(tax.cgnAdjustment)?.saldoFinal ?? 0)
+    : 0;
+
+  if (cgnMapI) {
+    // Full formula with both trimesters
+    const cxcI = tax.cgnCxC ? (cgnMapI.get(tax.cgnCxC)?.saldoFinal ?? 0) : 0;
+    const cxcIV = tax.cgnCxC ? (cgnMapIV.get(tax.cgnCxC)?.saldoFinal ?? 0) : 0;
+
+    const total = (cxcI + incomeIV - adjIV - cxcIV) * 1000;
+    const formula = `CxC_I(${cxcI}) + Income_IV(${incomeIV}) - Adj_IV(${adjIV}) - CxC_IV(${cxcIV}) = ${cxcI + incomeIV - adjIV - cxcIV} (x1000)`;
+    return { total, formula };
+  } else {
+    // Degraded mode: only CGN_IV available, use income only
+    const total = (incomeIV - adjIV) * 1000;
+    const formula = `Income_IV(${incomeIV}) - Adj_IV(${adjIV}) = ${incomeIV - adjIV} (x1000, sin CGN_I)`;
+    return { total, formula };
+  }
+}
+
 export async function evaluateEficienciaFiscal(
   chipCode: string,
   periodo: string,
-  cgnData?: CGNSaldosData | null
+  cgnDataIV?: CGNSaldosData | null,
+  cgnDataI?: CGNSaldosData | null,
 ): Promise<EficienciaFiscalResult> {
   // Fetch CUIPO income execution for all tax-related accounts
   const cuipoRows = await sodaCuipoQuery<{cuenta: string; total_recaudo: string}>({
@@ -81,15 +201,18 @@ export async function evaluateEficienciaFiscal(
     cuipoMap.set(row.cuenta, parseFloat(row.total_recaudo || "0"));
   }
 
-  // Build CGN lookup if data is available
-  const cgnMap = new Map<string, number>();
-  if (cgnData) {
-    for (const row of cgnData.rows) {
-      cgnMap.set(row.codigo, row.saldoFinal * 1000); // CGN is in thousands
-    }
-  }
+  // Build CGN lookup maps
+  const hasCGNDataIV = !!cgnDataIV && cgnDataIV.rows.length > 0;
+  const hasCGNDataI = !!cgnDataI && cgnDataI.rows.length > 0;
+  const hasCGNData = hasCGNDataIV; // At minimum we need CGN IV
 
-  const hasCGNData = !!cgnData && cgnData.rows.length > 0;
+  const cgnMapIV = hasCGNDataIV
+    ? new Map<string, CGNSaldoRow>(cgnDataIV!.rows.map(r => [r.codigo.trim(), r]))
+    : new Map<string, CGNSaldoRow>();
+
+  const cgnMapI = hasCGNDataI
+    ? new Map<string, CGNSaldoRow>(cgnDataI!.rows.map(r => [r.codigo.trim(), r]))
+    : null;
 
   // Calculate per-tax results
   const tributos: TaxValidationRow[] = TAX_MAPPING.map(tax => {
@@ -104,35 +227,50 @@ export async function evaluateEficienciaFiscal(
       }
     }
 
-    // CGN total: sum income accounts + delta CxC
+    // CGN total using correct accounting formula
     let cgnTotal: number | null = null;
-    if (hasCGNData && tax.cgnIncome.length > 0) {
-      cgnTotal = 0;
-      for (const acct of tax.cgnIncome) {
-        cgnTotal += cgnMap.get(acct) || 0;
-      }
-      // Add change in CxC (saldo final - saldo inicial) if available
-      for (const acct of tax.cgnCxC) {
-        const cxcRow = cgnData!.rows.find(r => r.codigo === acct);
-        if (cxcRow) {
-          cgnTotal += (cxcRow.saldoFinal - cxcRow.saldoInicial) * 1000;
-        }
+    let cgnFormula: string | null = null;
+
+    if (hasCGNData) {
+      const result = calcularCGNTotal(tax, cgnMapI, cgnMapIV);
+      if (result) {
+        cgnTotal = result.total;
+        cgnFormula = result.formula;
       }
     }
 
     const difference = cgnTotal !== null ? Math.abs(cgnTotal - cuipoTotal) : null;
+
+    // Variance = |CUIPO/CGN - 1|
     const variancePct = cgnTotal !== null && cgnTotal !== 0
-      ? (difference! / Math.abs(cgnTotal)) * 100
+      ? Math.abs(cuipoTotal / cgnTotal - 1) * 100
       : null;
-    const refrenda = variancePct !== null ? variancePct <= 50 : null;
+
+    // Refrendation value
+    let valorRefrendado: number | null = null;
+    if (variancePct !== null && cgnTotal !== null) {
+      if (variancePct < 25) {
+        // Within threshold: refrendar the lesser of |CGN| and CUIPO
+        valorRefrendado = Math.min(Math.abs(cgnTotal), cuipoTotal);
+      } else {
+        valorRefrendado = 0; // Over threshold: no refrendation
+      }
+    }
+
+    // Refrenda: if refrendado/cuipo > 50% -> SI
+    const refrenda = valorRefrendado !== null && cuipoTotal > 0
+      ? valorRefrendado / cuipoTotal > 0.5
+      : null;
 
     return {
       name: tax.name,
       cuipoAccount: tax.cuipo,
       cuipoTotal,
       cgnTotal,
+      cgnFormula,
       difference,
       variancePct,
+      valorRefrendado,
       refrenda,
     };
   });
