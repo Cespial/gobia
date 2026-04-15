@@ -325,40 +325,19 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       }));
     }
 
-    // 6. CGA (automatic)
+    // 6. CGA (baseline via API — FUT-dependent checks upgraded by useEffect below)
     const cgaResult = await runValidation("cga", "cga");
     if (cgaResult?.cga) {
-      // Enrich CGA checks 1-2 with presupuesto ingresos from equilibrio
+      setCgaData(cgaResult.cga);
       const checks = cgaResult.cga.checks;
-      const eqIngresos = eqData?.equilibrio;
-      if (eqIngresos) {
-        // Check 0: Equilibrio Presupuestal Inicial
-        if (checks[0] && eqIngresos.pptoInicialIngresos) {
-          checks[0].value1 = eqIngresos.pptoInicialIngresos;
-          checks[0].difference = eqIngresos.pptoInicialIngresos - checks[0].value2;
-          checks[0].status = Math.abs(checks[0].difference) <= 1_000_000 ? 'cumple' : 'no_cumple';
-        }
-        // Check 1: Equilibrio Presupuestal Definitivo
-        if (checks[1] && eqIngresos.pptoDefinitivoIngresos) {
-          checks[1].value1 = eqIngresos.pptoDefinitivoIngresos;
-          checks[1].difference = eqIngresos.pptoDefinitivoIngresos - checks[1].value2;
-          checks[1].status = Math.abs(checks[1].difference) <= 1_000_000 ? 'cumple' : 'no_cumple';
-        }
-      }
-      // Recompute overall status after enrichment
       const noCumple = checks.filter((c: { status: string }) => c.status === "no_cumple").length;
       const pendiente = checks.filter((c: { status: string }) => c.status === "pendiente").length;
-      cgaResult.cga.status = noCumple > 0 ? "no_cumple" : pendiente > 0 ? "pendiente" : "cumple";
-      setCgaData(cgaResult.cga);
-      const detailParts: string[] = [];
-      if (noCumple > 0) detailParts.push(`${noCumple} no cumple`);
-      if (pendiente > 0) detailParts.push(`${pendiente} pendiente`);
       setResults((prev) => ({
         ...prev,
         cga: {
           status: cgaResult.cga.status,
           label: "Equilibrio CGA",
-          detail: `${checks.length} verificaciones — ${detailParts.length > 0 ? detailParts.join(", ") : "Todas cumplen"}`,
+          detail: `${checks.length} verificaciones — ${noCumple > 0 ? `${noCumple} no cumple` : pendiente > 0 ? `${checks.length - pendiente}/${checks.length} verificados` : "Todas cumplen"}`,
         },
       }));
     }
@@ -405,6 +384,52 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       }));
     }
   }, [futCierre, equilibrioData]);
+
+  // Re-evaluate CGA client-side when FUT data or equilibrio data becomes available
+  useEffect(() => {
+    if (!periodo || !municipio.chipCode) return;
+
+    const rerunCGA = async () => {
+      try {
+        const { evaluateCGA } = await import("@/lib/validaciones/cga");
+        const result = await evaluateCGA(
+          municipio.chipCode,
+          periodo,
+          futCierre,       // FUT 2025
+          futCierre2024,   // FUT 2024
+          equilibrioData ? {
+            pptoInicialIngresos: equilibrioData.pptoInicialIngresos ?? 0,
+            pptoInicialGastos: equilibrioData.pptoInicialGastos ?? 0,
+            pptoDefinitivoIngresos: equilibrioData.pptoDefinitivoIngresos ?? 0,
+            pptoDefinitivoGastos: equilibrioData.pptoDefinitivoGastos ?? 0,
+            totalReservas: equilibrioData.totalReservas ?? 0,
+            totalCxP: equilibrioData.totalCxP ?? 0,
+            superavit: equilibrioData.superavit ?? 0,
+          } : null,
+        );
+        setCgaData(result);
+
+        const failCount = result.checks.filter(c => c.status === "no_cumple").length;
+        const pendingCount = result.checks.filter(c => c.status === "pendiente").length;
+        setResults((prev) => ({
+          ...prev,
+          cga: {
+            status: result.status,
+            label: "Equilibrio CGA",
+            detail: failCount > 0
+              ? `${failCount} chequeo(s) NO CUMPLE`
+              : pendingCount > 0
+              ? `${result.checks.length - pendingCount}/${result.checks.length} verificados`
+              : `${result.checks.length} chequeos CUMPLE`,
+          },
+        }));
+      } catch (err) {
+        console.error("CGA re-evaluation failed:", err);
+      }
+    };
+
+    rerunCGA();
+  }, [futCierre, futCierre2024, equilibrioData, periodo, municipio.chipCode]);
 
   // -----------------------------------------------------------------------
   // Count summary
