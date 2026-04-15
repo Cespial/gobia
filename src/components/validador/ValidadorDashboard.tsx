@@ -59,9 +59,13 @@ interface EquilibrioData {
   pptoDefinitivoGastos?: number;
   equilibrioInicial?: number;
   equilibrioDefinitivo?: number;
+  totalReservasVigAnterior?: number;
+  totalCxpVigAnterior?: number;
+  totalValidador?: number;
   porFuente: {
     codigo: string;
     nombre: string;
+    consolidacion: number | null;
     recaudo: number;
     compromisos: number;
     obligaciones: number;
@@ -69,6 +73,9 @@ interface EquilibrioData {
     reservas: number;
     cxp: number;
     superavit: number;
+    validador: number;
+    reservasVigAnterior: number;
+    cxpVigAnterior: number;
     saldoEnLibros?: number;
   }[];
 }
@@ -140,6 +147,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [ley617Data, setLey617Data] = useState<Ley617Result | null>(null);
   const [idfData, setIdfData] = useState<IDFResult | null>(null);
   const [futCierre, setFutCierre] = useState<FUTCierreData | null>(null);
+  const [futCierre2024, setFutCierre2024] = useState<FUTCierreData | null>(null);
   const [cgnSaldos, setCgnSaldos] = useState<CGNSaldosData | null>(null);
   const [ley617Certifications, setLey617Certifications] = useState<Ley617Certification[]>([]);
   const [eficienciaData, setEficienciaData] = useState<EficienciaFiscalResult | null>(null);
@@ -425,8 +433,10 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         <div className="mb-6">
           <FileUploadPanel
             onFUTCierreLoaded={setFutCierre}
+            onFUTCierre2024Loaded={setFutCierre2024}
             onCGNSaldosLoaded={setCgnSaldos}
             futCierre={futCierre}
+            futCierre2024={futCierre2024}
             cgnSaldos={cgnSaldos}
           />
         </div>
