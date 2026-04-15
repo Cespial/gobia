@@ -12,6 +12,7 @@ import { evaluateLey617 } from "@/lib/validaciones/ley617";
 import { calculateIDF } from "@/lib/validaciones/idf";
 import { evaluateEficienciaFiscal } from "@/lib/validaciones/eficiencia-fiscal";
 import { evaluateCGA } from "@/lib/validaciones/cga";
+import { getConsolidacion } from "@/data/fuentes-consolidacion";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -43,13 +44,20 @@ export async function GET(request: NextRequest) {
         // are in ambito_codigo, not cuenta, and monetary fields contain non-numeric data.
         // We use PROG_GASTOS for expense programming and derive income programming from
         // the top-level CUIPO EJEC_ING row (cuenta='1') which has initial/definitive.
-        const [ingresos, gastos, progGasTotals] = await Promise.all([
+        const [ingresos, gastos, progGasTotals, progIngTotals] = await Promise.all([
           fetchIngresosPorFuente(chipCode, periodo),
           fetchGastosPorFuente(chipCode, periodo),
           sodaCuipoQuery<{ apropiacion_inicial: string; apropiacion_definitiva: string }>({
             dataset: CUIPO_DATASETS.PROG_GASTOS,
             select: "sum(apropiacion_inicial) as apropiacion_inicial, sum(apropiacion_definitiva) as apropiacion_definitiva",
             where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='2' AND cod_vigencia_del_gasto='1'`,
+            limit: 1,
+          }),
+          // Income programming from EJEC_ING top-level row (cuenta='1')
+          sodaCuipoQuery<{ presupuesto_inicial: string; presupuesto_definitivo: string }>({
+            dataset: CUIPO_DATASETS.EJEC_INGRESOS,
+            select: "presupuesto_inicial, presupuesto_definitivo",
+            where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='1'`,
             limit: 1,
           }),
         ]);
@@ -122,13 +130,15 @@ export async function GET(request: NextRequest) {
           const reservas_va = Math.max(0, f.compromisos_va - f.obligaciones_va);
           const cxp_va = Math.max(0, f.obligaciones_va - f.pagos_va);
           const superavit = f.recaudo - f.compromisos_va;
-          const reservas_ant = f.compromisos_res - f.pagos_res;
-          const cxp_ant = f.compromisos_cxp - f.pagos_cxp;
-          const saldoEnLibros = Math.max(0, superavit) + reservas_va + cxp_va + reservas_ant + cxp_ant;
+          const reservasVigAnterior = f.compromisos_res - f.pagos_res;
+          const cxpVigAnterior = f.compromisos_cxp - f.pagos_cxp;
+          const saldoEnLibros = Math.max(0, superavit) + reservas_va + cxp_va + reservasVigAnterior + cxpVigAnterior;
+          const validador = f.compromisos_va - f.pagos_va - reservas_va - cxp_va;
 
           return {
             codigo: f.codigo,
             nombre: f.nombre,
+            consolidacion: getConsolidacion(f.codigo),
             recaudo: f.recaudo,
             compromisos: f.compromisos_va,
             obligaciones: f.obligaciones_va,
@@ -136,6 +146,9 @@ export async function GET(request: NextRequest) {
             reservas: reservas_va,
             cxp: cxp_va,
             superavit,
+            validador,
+            reservasVigAnterior,
+            cxpVigAnterior,
             saldoEnLibros,
           };
         });
@@ -149,16 +162,17 @@ export async function GET(request: NextRequest) {
         const superavit = totalIngresos - totalCompromisos;
         const saldoEnLibros = porFuente.reduce((s, f) => s + f.saldoEnLibros, 0);
         const pctEjecucion = totalIngresos > 0 ? (totalCompromisos / totalIngresos) * 100 : 0;
+        const totalReservasVigAnterior = porFuente.reduce((s, f) => s + f.reservasVigAnterior, 0);
+        const totalCxpVigAnterior = porFuente.reduce((s, f) => s + f.cxpVigAnterior, 0);
+        const totalValidador = porFuente.reduce((s, f) => s + f.validador, 0);
 
-        // Programming totals (only expense programming available reliably via API)
+        // Programming totals
         const pptoInicialGastos = parseFloat(progGasTotals[0]?.apropiacion_inicial || "0");
         const pptoDefinitivoGastos = parseFloat(progGasTotals[0]?.apropiacion_definitiva || "0");
-        // Income programming not available via Socrata (PROG_INGRESOS has non-standard schema)
-        // Use expense programming as reference for equilibrium check
-        const pptoInicialIngresos = 0;
-        const pptoDefinitivoIngresos = 0;
-        const equilibrioInicial = 0;
-        const equilibrioDefinitivo = 0;
+        const pptoInicialIngresos = parseFloat(progIngTotals[0]?.presupuesto_inicial || "0");
+        const pptoDefinitivoIngresos = parseFloat(progIngTotals[0]?.presupuesto_definitivo || "0");
+        const equilibrioInicial = pptoInicialIngresos - pptoInicialGastos;
+        const equilibrioDefinitivo = pptoDefinitivoIngresos - pptoDefinitivoGastos;
 
         return NextResponse.json({
           ok: true,
@@ -173,6 +187,9 @@ export async function GET(request: NextRequest) {
             superavit,
             saldoEnLibros,
             pctEjecucion,
+            totalReservasVigAnterior,
+            totalCxpVigAnterior,
+            totalValidador,
             pptoInicialIngresos,
             pptoInicialGastos,
             pptoDefinitivoIngresos,
