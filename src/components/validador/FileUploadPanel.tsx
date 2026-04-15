@@ -2,18 +2,20 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Upload, FileSpreadsheet, Check, X, AlertTriangle } from "lucide-react";
-import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
-import type { FUTCierreData, CGNSaldosData } from "@/lib/chip-parser";
+import { parseFUTCierre, parseCGNSaldos, parseMapaInversiones } from "@/lib/chip-parser";
+import type { FUTCierreData, CGNSaldosData, MapaInversionesData } from "@/lib/chip-parser";
 
 interface FileUploadPanelProps {
   onFUTCierreLoaded: (data: FUTCierreData | null) => void;
   onFUTCierre2024Loaded: (data: FUTCierreData | null) => void;
   onCGNSaldosLoaded: (data: CGNSaldosData | null) => void;
   onCGNSaldosILoaded: (data: CGNSaldosData | null) => void;
+  onMapaInversionesLoaded: (data: MapaInversionesData | null) => void;
   futCierre: FUTCierreData | null;
   futCierre2024: FUTCierreData | null;
   cgnSaldos: CGNSaldosData | null;
   cgnSaldosI: CGNSaldosData | null;
+  mapaInversiones: MapaInversionesData | null;
 }
 
 function formatCOP(value: number): string {
@@ -30,28 +32,34 @@ export default function FileUploadPanel({
   onFUTCierre2024Loaded,
   onCGNSaldosLoaded,
   onCGNSaldosILoaded,
+  onMapaInversionesLoaded,
   futCierre,
   futCierre2024,
   cgnSaldos,
   cgnSaldosI,
+  mapaInversiones,
 }: FileUploadPanelProps) {
   const [futFileName, setFutFileName] = useState<string | null>(null);
   const [fut2024FileName, setFut2024FileName] = useState<string | null>(null);
   const [cgnFileName, setCgnFileName] = useState<string | null>(null);
   const [cgnIFileName, setCgnIFileName] = useState<string | null>(null);
+  const [mapaFileName, setMapaFileName] = useState<string | null>(null);
   const [futError, setFutError] = useState<string | null>(null);
   const [fut2024Error, setFut2024Error] = useState<string | null>(null);
   const [cgnError, setCgnError] = useState<string | null>(null);
   const [cgnIError, setCgnIError] = useState<string | null>(null);
+  const [mapaError, setMapaError] = useState<string | null>(null);
   const [futLoading, setFutLoading] = useState(false);
   const [fut2024Loading, setFut2024Loading] = useState(false);
   const [cgnLoading, setCgnLoading] = useState(false);
   const [cgnILoading, setCgnILoading] = useState(false);
+  const [mapaLoading, setMapaLoading] = useState(false);
 
   const futInputRef = useRef<HTMLInputElement>(null);
   const fut2024InputRef = useRef<HTMLInputElement>(null);
   const cgnInputRef = useRef<HTMLInputElement>(null);
   const cgnIInputRef = useRef<HTMLInputElement>(null);
+  const mapaInputRef = useRef<HTMLInputElement>(null);
 
   const handleFUTFile = useCallback(
     async (file: File) => {
@@ -169,8 +177,37 @@ export default function FileUploadPanel({
     [onCGNSaldosILoaded]
   );
 
+  const handleMapaFile = useCallback(
+    async (file: File) => {
+      setMapaError(null);
+      if (file.size > 15 * 1024 * 1024) {
+        setMapaError("El archivo supera 15MB. Verifica que sea el correcto.");
+        return;
+      }
+      setMapaLoading(true);
+      try {
+        const buffer = await file.arrayBuffer();
+        const data = parseMapaInversiones(buffer);
+        if (data.rows.length === 0) {
+          setMapaError("No se encontraron filas de datos en el archivo.");
+          setMapaLoading(false);
+          return;
+        }
+        setMapaFileName(file.name);
+        onMapaInversionesLoaded(data);
+      } catch (err) {
+        setMapaError(
+          err instanceof Error ? err.message : "Error al procesar el archivo"
+        );
+      } finally {
+        setMapaLoading(false);
+      }
+    },
+    [onMapaInversionesLoaded]
+  );
+
   const handleDrop = useCallback(
-    (type: "fut" | "fut2024" | "cgn" | "cgni") => (e: React.DragEvent<HTMLDivElement>) => {
+    (type: "fut" | "fut2024" | "cgn" | "cgni" | "mapa") => (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
       const file = e.dataTransfer.files[0];
@@ -181,11 +218,13 @@ export default function FileUploadPanel({
         handleFUT2024File(file);
       } else if (type === "cgni") {
         handleCGNIFile(file);
+      } else if (type === "mapa") {
+        handleMapaFile(file);
       } else {
         handleCGNFile(file);
       }
     },
-    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile]
+    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile, handleMapaFile]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -194,7 +233,7 @@ export default function FileUploadPanel({
   }, []);
 
   const handleInputChange = useCallback(
-    (type: "fut" | "fut2024" | "cgn" | "cgni") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    (type: "fut" | "fut2024" | "cgn" | "cgni" | "mapa") => (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       if (type === "fut") {
@@ -203,11 +242,13 @@ export default function FileUploadPanel({
         handleFUT2024File(file);
       } else if (type === "cgni") {
         handleCGNIFile(file);
+      } else if (type === "mapa") {
+        handleMapaFile(file);
       } else {
         handleCGNFile(file);
       }
     },
-    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile]
+    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile, handleMapaFile]
   );
 
   const removeFUT = useCallback(() => {
@@ -238,6 +279,13 @@ export default function FileUploadPanel({
     onCGNSaldosILoaded(null);
   }, [onCGNSaldosILoaded]);
 
+  const removeMapa = useCallback(() => {
+    setMapaFileName(null);
+    setMapaError(null);
+    if (mapaInputRef.current) mapaInputRef.current.value = "";
+    onMapaInversionesLoaded(null);
+  }, [onMapaInversionesLoaded]);
+
   return (
     <div className="rounded-2xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-6">
       <div className="mb-6">
@@ -253,7 +301,7 @@ export default function FileUploadPanel({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         {/* FUT Cierre Fiscal upload zone */}
         <div>
           <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[var(--gray-500)]">
@@ -680,6 +728,99 @@ export default function FileUploadPanel({
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-red-400">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   {cgnIError}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Mapa de Inversiones (DNP) upload zone */}
+        <div>
+          <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[var(--gray-500)]">
+            Mapa de Inversiones (DNP)
+          </label>
+          {mapaInversiones && mapaFileName ? (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+                  <Check className="h-4 w-4 text-emerald-400" />
+                </div>
+                <button
+                  onClick={removeMapa}
+                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--gray-400)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+                >
+                  <X className="h-3 w-3" />
+                  Quitar
+                </button>
+              </div>
+              <div className="mb-2 truncate text-sm font-medium text-white">
+                {mapaFileName}
+              </div>
+              <div className="space-y-1 text-xs text-[var(--gray-400)]">
+                <div>
+                  Vigencia: <span className="text-white">{mapaInversiones.year}</span>
+                </div>
+                <div>
+                  Filas: <span className="text-white">{mapaInversiones.rows.length}</span>
+                </div>
+                <div>
+                  BPIN unicos:{" "}
+                  <span className="text-white">
+                    {new Set(mapaInversiones.rows.map(r => r.bepin).filter(Boolean)).size}
+                  </span>
+                </div>
+                <div>
+                  Valor total:{" "}
+                  <span className="text-white">
+                    {formatCOP(mapaInversiones.rows.reduce((s, r) => s + r.valorEjecutado, 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              onDrop={handleDrop("mapa")}
+              onDragOver={handleDragOver}
+              onClick={() => mapaInputRef.current?.click()}
+              className={`group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors ${
+                mapaError
+                  ? "border-red-500/50 bg-red-500/5"
+                  : "border-[var(--gray-700)] bg-transparent hover:border-[var(--ochre)] hover:bg-[var(--ochre)]/5"
+              } ${mapaLoading ? "pointer-events-none opacity-50" : ""}`}
+            >
+              <input
+                ref={mapaInputRef}
+                type="file"
+                accept={ACCEPTED_EXTENSIONS}
+                onChange={handleInputChange("mapa")}
+                className="hidden"
+              />
+              <Upload
+                className={`mb-3 h-8 w-8 ${
+                  mapaError
+                    ? "text-red-400"
+                    : "text-[var(--gray-600)] group-hover:text-[var(--ochre)]"
+                }`}
+              />
+              {mapaLoading ? (
+                <span className="text-sm text-[var(--gray-400)]">
+                  Procesando...
+                </span>
+              ) : (
+                <>
+                  <span className="text-sm text-[var(--gray-400)]">
+                    Arrastra o selecciona archivo
+                  </span>
+                  <span className="mt-1 text-xs text-[var(--gray-600)]">
+                    .xlsx / .xlsm
+                  </span>
+                </>
+              )}
+              {mapaError && (
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-red-400">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {mapaError}
                 </div>
               )}
             </div>

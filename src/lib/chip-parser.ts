@@ -196,3 +196,142 @@ function toNum(val: unknown): number {
   const n = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
   return isNaN(n) ? 0 : n;
 }
+
+// ---------------------------------------------------------------------------
+// Mapa de Inversiones (DNP) parser
+// ---------------------------------------------------------------------------
+
+export interface MapaInversionesRow {
+  bepin: string;
+  productoMGA: string;
+  nombreProducto: string;
+  sector: string;
+  valorEjecutado: number;
+}
+
+export interface MapaInversionesData {
+  rows: MapaInversionesRow[];
+  year: string;
+}
+
+/**
+ * Parse Mapa de Inversiones Excel file (DNP template).
+ *
+ * Flexible column detection — searches headers by keyword:
+ *   BPIN / BEPIN  |  PRODUCTO  |  SECTOR  |  EJECUTADO / VALOR
+ */
+export function parseMapaInversiones(buffer: ArrayBuffer): MapaInversionesData {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheetName = workbook.SheetNames.find(n =>
+    n.toUpperCase().includes('MAPA') ||
+    n.toUpperCase().includes('INVERSION')
+  ) || workbook.SheetNames[0];
+
+  const sheet = workbook.Sheets[sheetName];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+
+  // Find header row by scanning first 10 rows for BPIN/BEPIN keyword
+  let headerIdx = -1;
+  let colBepin = -1;
+  let colProducto = -1;
+  let colNombre = -1;
+  let colSector = -1;
+  let colValor = -1;
+
+  for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toUpperCase().trim();
+
+      if (cell.includes('BPIN') || cell.includes('BEPIN')) {
+        colBepin = j;
+        headerIdx = i;
+      }
+      if ((cell.includes('COD') && cell.includes('PRODUCTO')) || cell === 'PRODUCTO MGA' || cell === 'COD_PRODUCTO_MGA') {
+        colProducto = j;
+      }
+      if ((cell.includes('NOMBRE') && cell.includes('PRODUCTO')) || cell === 'NOM_PRODUCTO_MGA' || cell === 'NOMBRE PRODUCTO') {
+        colNombre = j;
+      }
+      if (cell.includes('SECTOR')) {
+        colSector = j;
+      }
+      if (cell.includes('EJECUTADO') || cell.includes('VALOR EJECUTADO') || (cell.includes('VALOR') && cell.includes('EJEC'))) {
+        colValor = j;
+      }
+    }
+    if (headerIdx >= 0) break;
+  }
+
+  // Fallback: if no BEPIN column found, try product-based headers
+  if (headerIdx < 0) {
+    for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+      const row = jsonData[i];
+      if (!row || !Array.isArray(row)) continue;
+      for (let j = 0; j < row.length; j++) {
+        const cell = String(row[j] || '').toUpperCase().trim();
+        if (cell.includes('PRODUCTO')) {
+          headerIdx = i;
+          if (colProducto < 0) colProducto = j;
+          break;
+        }
+      }
+      if (headerIdx >= 0) break;
+    }
+  }
+
+  if (headerIdx < 0) {
+    // Could not find headers — return empty
+    return { rows: [], year: 'unknown' };
+  }
+
+  // If producto column found but nombre not, try to find a "NOMBRE" column near it
+  if (colNombre < 0 && headerIdx >= 0) {
+    const headerRow = jsonData[headerIdx] as unknown[];
+    for (let j = 0; j < headerRow.length; j++) {
+      const cell = String(headerRow[j] || '').toUpperCase().trim();
+      if (cell.includes('NOMBRE') && j !== colBepin && j !== colSector && j !== colValor) {
+        colNombre = j;
+        break;
+      }
+    }
+  }
+
+  // If valor column not found, try any column with "COMPROMISO" or "OBLIGACION"
+  if (colValor < 0 && headerIdx >= 0) {
+    const headerRow = jsonData[headerIdx] as unknown[];
+    for (let j = 0; j < headerRow.length; j++) {
+      const cell = String(headerRow[j] || '').toUpperCase().trim();
+      if (cell.includes('COMPROMISO') || cell.includes('OBLIGACION')) {
+        colValor = j;
+        break;
+      }
+    }
+  }
+
+  const rows: MapaInversionesRow[] = [];
+
+  for (let i = headerIdx + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    const bepin = colBepin >= 0 ? String(row[colBepin] || '').trim() : '';
+    const productoMGA = colProducto >= 0 ? String(row[colProducto] || '').trim() : '';
+    const nombreProducto = colNombre >= 0 ? String(row[colNombre] || '').trim() : '';
+    const sector = colSector >= 0 ? String(row[colSector] || '').trim() : '';
+    const valorEjecutado = colValor >= 0 ? toNum(row[colValor]) : 0;
+
+    // Skip empty rows
+    if (!bepin && !productoMGA && !nombreProducto) continue;
+
+    rows.push({ bepin, productoMGA, nombreProducto, sector, valorEjecutado });
+  }
+
+  // Detect year from sheet name or file content
+  const yearMatch = sheetName.match(/(\d{4})/);
+  const year = yearMatch ? yearMatch[1] : 'unknown';
+
+  return { rows, year };
+}

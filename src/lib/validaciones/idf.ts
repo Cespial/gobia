@@ -129,13 +129,6 @@ function interpretEjecucion(ratio: number): string {
   return "Muy baja ejecucion de compromisos presupuestales";
 }
 
-function interpretLey617(ratio: number): string {
-  if (ratio <= 0.5) return "Gastos de funcionamiento muy por debajo del limite legal";
-  if (ratio <= 0.7) return "Gastos de funcionamiento dentro de parametros legales";
-  if (ratio <= 0.8) return "Gastos de funcionamiento cercanos al limite legal";
-  return "Gastos de funcionamiento exceden el limite de Ley 617";
-}
-
 // ---------------------------------------------------------------------------
 // Account classification helpers
 // ---------------------------------------------------------------------------
@@ -194,7 +187,8 @@ function isFormacionBrutaCapital(cuenta: string): boolean {
 
 export async function calculateIDF(
   chipCode: string,
-  periodo: string
+  periodo: string,
+  cgnSaldos?: { activos: number; pasivos: number } | null,
 ): Promise<IDFResult> {
   // Fetch all required CUIPO data in parallel
   const [ejecIngresos, ejecGastos, progIngresos, progGastos, ley617Result] =
@@ -354,10 +348,10 @@ export async function calculateIDF(
   const fbkRatio = safeDivide(formacionBrutaCapital, gastosInversion);
   const fbkScore = normalizeDirect(fbkRatio);
 
-  // 3. Endeudamiento LP — requires CGN Saldos (balance sheet) data
-  //    Set to null; excluded from score average when not available
-  const deudaRatio = 0;
-  const deudaScore: number | null = null;
+  // 3. Endeudamiento LP — from CGN Saldos (balance sheet): Pasivos / Activos
+  const hasDeuda = !!cgnSaldos && cgnSaldos.activos > 0;
+  const deudaRatio = hasDeuda ? cgnSaldos!.pasivos / cgnSaldos!.activos : 0;
+  const deudaScore: number | null = hasDeuda ? normalizeInverse(deudaRatio) : null;
 
   // 4. Ahorro corriente
   const ahorroCorrienteRatio = safeDivide(
@@ -405,8 +399,11 @@ export async function calculateIDF(
       name: "Capacidad de endeudamiento",
       value: Math.round(deudaRatio * 10000) / 100,
       score: deudaScore,
-      interpretation:
-        "No disponible \u2014 requiere CGN Saldos",
+      interpretation: hasDeuda
+        ? (deudaRatio > 0.5 ? "Alto endeudamiento relativo a activos"
+           : deudaRatio > 0.3 ? "Endeudamiento moderado"
+           : "Bajo endeudamiento, buena capacidad")
+        : "No disponible \u2014 requiere CGN Saldos",
     },
     {
       name: "Ahorro corriente",
@@ -443,10 +440,12 @@ export async function calculateIDF(
   );
   const ejecCompScore = normalizeDirect(ejecCompRatio);
 
-  // 3. Cumplimiento Ley 617
+  // 3. Nivel de holgura Ley 617 — holgura = limite - ratio (higher is better)
+  const ley617Limite = ley617Result ? ley617Result.limiteGlobal : 0.8;
   const ley617Ratio = ley617Result ? ley617Result.ratioGlobal : 0.8;
-  // For Ley 617 compliance, lower ratio is better (inverse)
-  const ley617Score = normalizeInverse(ley617Ratio);
+  const holgura = Math.max(0, ley617Limite - ley617Ratio);
+  // Score: higher holgura = better. Normalized over the full limit range.
+  const ley617Score = ley617Limite > 0 ? normalizeDirect(holgura / ley617Limite) : 0;
 
   const gestionFinanciera: IDFIndicator[] = [
     {
@@ -462,10 +461,14 @@ export async function calculateIDF(
       interpretation: interpretEjecucion(ejecCompRatio),
     },
     {
-      name: "Cumplimiento Ley 617",
-      value: Math.round(ley617Ratio * 10000) / 100,
+      name: "Nivel de holgura Ley 617",
+      value: Math.round(holgura * 10000) / 100,
       score: ley617Score,
-      interpretation: interpretLey617(ley617Ratio),
+      interpretation:
+        holgura > 0.3 ? "Amplia holgura respecto al limite de Ley 617"
+        : holgura > 0.1 ? "Holgura moderada respecto al limite de Ley 617"
+        : holgura > 0 ? "Holgura reducida — cerca del limite legal"
+        : "Sin holgura — gastos de funcionamiento igualan o superan el limite",
     },
   ];
 
