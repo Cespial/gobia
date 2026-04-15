@@ -36,6 +36,8 @@ import {
   LIMITES_PERSONERIA_SMLMV,
   SMLMV_2025,
   calcularLimiteConcejoAnual,
+  CONCEJALES_POR_CATEGORIA,
+  SESIONES_ORDINARIAS_DEFECTO,
 } from "@/data/icld-rubros-validos";
 
 // ---------------------------------------------------------------------------
@@ -227,9 +229,9 @@ export async function evaluateLey617(
     if (isConcejo(seccionName)) {
       // Art. 10: Use calcularLimiteConcejoAnual formula
       // TODO: Accept numConcejales and numSesiones as user input.
-      // For now, using defaults for Cat 6 municipalities: 9 concejales, 120 sessions.
-      const numConcejales = 9;
-      const numSesiones = 120;
+      // Fallback: use category-based defaults from Ley 136/1994.
+      const numConcejales = CONCEJALES_POR_CATEGORIA[categoria] ?? CONCEJALES_POR_CATEGORIA[6];
+      const numSesiones = SESIONES_ORDINARIAS_DEFECTO;
       const concejoLimite = calcularLimiteConcejoAnual(
         icldNeto,
         numConcejales,
@@ -291,10 +293,16 @@ export async function evaluateLey617(
   });
 
   // -------------------------------------------------------------------------
-  // 4. Global ratio (Art. 6 — using net expenses / icldNeto)
+  // 4. Global ratio (Art. 6 — Admin Central net expenses / icldNeto only)
+  //    Concejo and Personería have their own absolute limits (Art. 10, 11)
+  //    and must NOT inflate the Art. 6 percentage ratio.
   // -------------------------------------------------------------------------
-  const gastosFuncionamientoNeto =
-    gastosFuncionamientoTotal - gastosDeducidosTotal;
+  const adminSection = secciones.find(
+    (s) => !isConcejo(s.seccion) && !isPersoneria(s.seccion)
+  );
+  const gastosFuncionamientoNeto = adminSection
+    ? adminSection.gastosFuncionamiento
+    : gastosFuncionamientoTotal - gastosDeducidosTotal;
   const ratioGlobal =
     icldNeto > 0 ? gastosFuncionamientoNeto / icldNeto : 0;
   const ratioGlobalRounded = Math.round(ratioGlobal * 10000) / 10000;

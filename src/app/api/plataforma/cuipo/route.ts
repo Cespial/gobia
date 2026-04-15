@@ -166,8 +166,8 @@ export async function GET(request: NextRequest) {
         // These will be enriched client-side when user uploads CUIPO PROG_ING file
         const pptoInicialIngresos = 0;
         const pptoDefinitivoIngresos = 0;
-        const equilibrioInicial = pptoInicialIngresos - pptoInicialGastos;
-        const equilibrioDefinitivo = pptoDefinitivoIngresos - pptoDefinitivoGastos;
+        const equilibrioInicial = pptoInicialIngresos > 0 ? pptoInicialIngresos - pptoInicialGastos : 0;
+        const equilibrioDefinitivo = pptoDefinitivoIngresos > 0 ? pptoDefinitivoIngresos - pptoDefinitivoGastos : 0;
 
         return NextResponse.json({
           ok: true,

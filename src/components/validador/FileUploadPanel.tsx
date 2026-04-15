@@ -173,21 +173,21 @@ export default function FileUploadPanel({
     setFutFileName(null);
     setFutError(null);
     if (futInputRef.current) futInputRef.current.value = "";
-    onFUTCierreLoaded(null as unknown as FUTCierreData);
+    onFUTCierreLoaded(null);
   }, [onFUTCierreLoaded]);
 
   const removeFUT2024 = useCallback(() => {
     setFut2024FileName(null);
     setFut2024Error(null);
     if (fut2024InputRef.current) fut2024InputRef.current.value = "";
-    onFUTCierre2024Loaded(null as unknown as FUTCierreData);
+    onFUTCierre2024Loaded(null);
   }, [onFUTCierre2024Loaded]);
 
   const removeCGN = useCallback(() => {
     setCgnFileName(null);
     setCgnError(null);
     if (cgnInputRef.current) cgnInputRef.current.value = "";
-    onCGNSaldosLoaded(null as unknown as CGNSaldosData);
+    onCGNSaldosLoaded(null);
   }, [onCGNSaldosLoaded]);
 
   return (

@@ -82,21 +82,15 @@ export const ICLD_CUENTAS_VALIDAS: { codigo: string; nombre: string }[] = [
   { codigo: "1.1.02.06.004.03", nombre: "Compensación predial resguardos indígenas" },
 ];
 
-/** Set for O(1) lookup — also matches prefix (e.g., "1.1.01.02.200" matches "1.1.01.02.200.01") */
+/** Set for O(1) lookup — exact match only */
 const iclCuentasSet = new Set(ICLD_CUENTAS_VALIDAS.map((c) => c.codigo));
 
 /**
  * Check if a CUIPO account code is a valid ICLD source.
- * Matches exact code or checks if any valid code starts with the given code.
+ * Uses exact match only — parent codes like "1.1" do NOT match.
  */
 export function isICLDCuenta(cuenta: string): boolean {
-  const trimmed = cuenta.trim();
-  if (iclCuentasSet.has(trimmed)) return true;
-  // Check if any valid code starts with this cuenta (parent account)
-  for (const valid of iclCuentasSet) {
-    if (valid.startsWith(trimmed + ".") || valid === trimmed) return true;
-  }
-  return false;
+  return iclCuentasSet.has(cuenta.trim());
 }
 
 // ---------------------------------------------------------------------------
@@ -221,3 +215,15 @@ export const LIMITES_PERSONERIA_SMLMV: Record<number, number> = {
 export const LIMITES_ADMIN_CENTRAL: Record<number, number> = {
   0: 0.50, 1: 0.65, 2: 0.70, 3: 0.70, 4: 0.80, 5: 0.80, 6: 0.80,
 };
+
+// ---------------------------------------------------------------------------
+// Concejales por categoría (Ley 136/1994 Art. 22, Acto Legislativo 02/2002)
+// Used as default when numConcejales is not provided by user.
+// ---------------------------------------------------------------------------
+
+export const CONCEJALES_POR_CATEGORIA: Record<number, number> = {
+  0: 21, 1: 19, 2: 15, 3: 13, 4: 11, 5: 9, 6: 7,
+};
+
+/** Default number of ordinary sessions per year (Ley 136 Art. 23) */
+export const SESIONES_ORDINARIAS_DEFECTO = 120;
