@@ -15,7 +15,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Upload,
+  Download,
 } from "lucide-react";
+import { exportValidacionesToExcel } from "@/lib/excel-exporter";
 import type { Municipio } from "@/data/municipios";
 import type { FUTCierreData, CGNSaldosData, MapaInversionesData } from "@/lib/chip-parser";
 import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
@@ -380,6 +382,27 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     if (periodo) runAll();
   }, [periodo, runAll]);
 
+  // Export all validation results to Excel
+  const handleExportExcel = useCallback(() => {
+    exportValidacionesToExcel({
+      municipio: {
+        name: municipio.name,
+        code: municipio.code,
+        chipCode: municipio.chipCode,
+      },
+      periodo,
+      equilibrio: equilibrioData,
+      cierreVsCuipo: cierreVsCuipoData,
+      ley617: ley617Data,
+      cga: cgaData,
+      agua: aguaData,
+      sgp: sgpData,
+      eficiencia: eficienciaData,
+      idf: idfData,
+      mapaInversiones: mapaInversionesData,
+    });
+  }, [municipio, periodo, equilibrioData, cierreVsCuipoData, ley617Data, cgaData, aguaData, sgpData, eficienciaData, idfData, mapaInversionesData]);
+
   // Re-run cierre validation when FUT is uploaded after initial load
   useEffect(() => {
     if (futCierre && equilibrioData) {
@@ -593,6 +616,14 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
                 }`}
               >
                 <Upload className="h-3.5 w-3.5" /> Cargar archivos CHIP
+              </button>
+              <button
+                onClick={handleExportExcel}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-colors text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={!equilibrioData}
+              >
+                <Download className="h-4 w-4" />
+                Descargar Excel
               </button>
             </div>
           )}
