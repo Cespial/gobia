@@ -327,15 +327,34 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
 
     // 6. CGA (automatic)
     const cgaResult = await runValidation("cga", "cga");
-    if (cgaResult) {
+    if (cgaResult?.cga) {
+      // Enrich CGA checks 1-2 with presupuesto ingresos from equilibrio
+      const checks = cgaResult.cga.checks;
+      const eqIngresos = eqData?.equilibrio;
+      if (eqIngresos) {
+        // Check 0: Equilibrio Presupuestal Inicial
+        if (checks[0] && eqIngresos.pptoInicialIngresos) {
+          checks[0].value1 = eqIngresos.pptoInicialIngresos;
+          checks[0].difference = eqIngresos.pptoInicialIngresos - checks[0].value2;
+          checks[0].status = Math.abs(checks[0].difference) <= 1_000_000 ? 'cumple' : 'no_cumple';
+        }
+        // Check 1: Equilibrio Presupuestal Definitivo
+        if (checks[1] && eqIngresos.pptoDefinitivoIngresos) {
+          checks[1].value1 = eqIngresos.pptoDefinitivoIngresos;
+          checks[1].difference = eqIngresos.pptoDefinitivoIngresos - checks[1].value2;
+          checks[1].status = Math.abs(checks[1].difference) <= 1_000_000 ? 'cumple' : 'no_cumple';
+        }
+      }
+      // Recompute overall status after enrichment
+      const noCumple = checks.filter((c: { status: string }) => c.status === "no_cumple").length;
+      cgaResult.cga.status = noCumple === 0 ? "cumple" : "no_cumple";
       setCgaData(cgaResult.cga);
-      const noCumple = cgaResult.cga.checks.filter((c: { status: string }) => c.status === "no_cumple").length;
       setResults((prev) => ({
         ...prev,
         cga: {
           status: cgaResult.cga.status,
           label: "Equilibrio CGA",
-          detail: `${cgaResult.cga.checks.length} verificaciones — ${noCumple > 0 ? `${noCumple} no cumple` : "Todas cumplen"}`,
+          detail: `${checks.length} verificaciones — ${noCumple > 0 ? `${noCumple} no cumple` : "Todas cumplen"}`,
         },
       }));
     }
