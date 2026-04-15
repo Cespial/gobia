@@ -450,6 +450,35 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     return () => { cancelled = true; };
   }, [futCierre, futCierre2024, equilibrioData, periodo, municipio.chipCode]);
 
+  // Re-run IDF when CGN Saldos data becomes available (endeudamiento indicator)
+  useEffect(() => {
+    if (!cgnSaldos || !periodo || !municipio.chipCode) return;
+    let cancelled = false;
+    const rerunIDF = async () => {
+      try {
+        const { calculateIDF } = await import("@/lib/validaciones/idf");
+        const result = await calculateIDF(
+          municipio.chipCode, periodo,
+          { activos: cgnSaldos.activos, pasivos: cgnSaldos.pasivos }
+        );
+        if (cancelled) return;
+        setIdfData(result);
+        setResults(prev => ({
+          ...prev,
+          idf: {
+            status: result.status,
+            label: "Desempeño Fiscal (IDF)",
+            detail: `IDF: ${result.idfTotal.toFixed(1)} — ${result.ranking}`,
+          },
+        }));
+      } catch (err) {
+        if (!cancelled) console.error("IDF re-evaluation failed:", err);
+      }
+    };
+    rerunIDF();
+    return () => { cancelled = true; };
+  }, [cgnSaldos, periodo, municipio.chipCode]);
+
   // -----------------------------------------------------------------------
   // Count summary
   // -----------------------------------------------------------------------
