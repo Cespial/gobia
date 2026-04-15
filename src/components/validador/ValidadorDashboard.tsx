@@ -150,6 +150,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [futCierre, setFutCierre] = useState<FUTCierreData | null>(null);
   const [futCierre2024, setFutCierre2024] = useState<FUTCierreData | null>(null);
   const [cgnSaldos, setCgnSaldos] = useState<CGNSaldosData | null>(null);
+  const [cgnSaldosI, setCgnSaldosI] = useState<CGNSaldosData | null>(null);
   const [ley617Certifications, setLey617Certifications] = useState<Ley617Certification[]>([]);
   const [eficienciaData, setEficienciaData] = useState<EficienciaFiscalResult | null>(null);
   const [cgaData, setCgaData] = useState<CGAResult | null>(null);
@@ -537,9 +538,11 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
             onFUTCierreLoaded={setFutCierre}
             onFUTCierre2024Loaded={setFutCierre2024}
             onCGNSaldosLoaded={setCgnSaldos}
+            onCGNSaldosILoaded={setCgnSaldosI}
             futCierre={futCierre}
             futCierre2024={futCierre2024}
             cgnSaldos={cgnSaldos}
+            cgnSaldosI={cgnSaldosI}
           />
         </div>
       )}
