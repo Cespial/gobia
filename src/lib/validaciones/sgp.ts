@@ -37,8 +37,6 @@ export interface SGPComponentResult {
   pctRecaudo: number;
   pctEjecucion: number;
   status: "cumple" | "alerta" | "critico";
-  /** If true, the ejecutado is a global estimate, not per-component */
-  ejecutadoEstimado?: boolean;
 }
 
 export interface SGPEvaluationResult {
@@ -52,7 +50,7 @@ export interface SGPEvaluationResult {
 }
 
 // ---------------------------------------------------------------------------
-// SGP Account Mapping
+// SGP Account Mapping + Expense Keywords
 // ---------------------------------------------------------------------------
 
 /**
@@ -85,6 +83,22 @@ const SGP_ACCOUNT_MAP: Record<string, { cuipoPrefix: string; label: string }> =
       label: "Agua Potable",
     },
   };
+
+/**
+ * Maps SGP concept IDs to keywords in nom_fuentes_financiacion from CUIPO EJEC_GASTOS.
+ * Each expense row is matched to the first concept whose keywords appear in the funding
+ * source name (case-insensitive). Order matters for unambiguous matching.
+ */
+const SGP_EXPENSE_KEYWORDS: Record<string, string[]> = {
+  [SGP_CONCEPTOS.EDUCACION]: ["EDUCACION"],
+  [SGP_CONCEPTOS.SALUD]: ["SALUD"],
+  [SGP_CONCEPTOS.AGUA_POTABLE]: ["AGUA POTABLE"],
+  [SGP_CONCEPTOS.PROPOSITO_GENERAL]: ["PROPOSITO GENERAL"],
+  [SGP_CONCEPTOS.ALIMENTACION_ESCOLAR]: [
+    "ALIMENTACION ESCOLAR",
+    "ASIGNACION ESPECIAL",
+  ],
+};
 
 /**
  * Additional Primera Infancia sub-component.
@@ -226,28 +240,20 @@ export async function evaluateSGP(
     }
   }
 
-  // 6. Aggregate CUIPO expenses (compromisos) — global SGP execution total
-  //    Per-component breakdown of expenses is unreliable with fuzzy name matching.
-  //    Instead, compute a single global SGP execution figure and distribute
-  //    proportionally based on income recaudo shares.
-  let totalSGPExpenses = 0;
-  for (const row of cuipoGastos) {
-    totalSGPExpenses += parseFloat(row.compromisos || "0");
-  }
-
-  // Calculate total SGP income for proportional distribution
-  let totalSGPIncome = 0;
-  for (const val of incomeByComponent.values()) {
-    totalSGPIncome += val;
-  }
-
-  // Distribute expenses proportionally based on income share
+  // 6. Aggregate CUIPO expenses (compromisos) — match each row to its SGP component
+  //    using the nom_fuentes_financiacion field, which contains the specific funding
+  //    source name (e.g. "SGP-EDUCACION-CALIDAD POR MATRICULA OFICIAL").
   const expenseByComponent = new Map<string, number>();
-  if (totalSGPIncome > 0 && totalSGPExpenses > 0) {
-    for (const [conceptoId] of Object.entries(SGP_ACCOUNT_MAP)) {
-      const componentIncome = incomeByComponent.get(conceptoId) || 0;
-      const share = componentIncome / totalSGPIncome;
-      expenseByComponent.set(conceptoId, totalSGPExpenses * share);
+  for (const row of cuipoGastos) {
+    const fuenteUpper = (row.nom_fuentes_financiacion || "").toUpperCase();
+    const compromisos = parseFloat(row.compromisos || "0");
+
+    for (const [conceptoId, keywords] of Object.entries(SGP_EXPENSE_KEYWORDS)) {
+      if (keywords.some((kw) => fuenteUpper.includes(kw))) {
+        const current = expenseByComponent.get(conceptoId) || 0;
+        expenseByComponent.set(conceptoId, current + compromisos);
+        break; // matched — don't double-count
+      }
     }
   }
 
@@ -285,7 +291,6 @@ export async function evaluateSGP(
       pctRecaudo,
       pctEjecucion,
       status: componentStatus(pctEjecucion),
-      ejecutadoEstimado: totalSGPExpenses > 0,
     });
   }
 
@@ -301,7 +306,6 @@ export async function evaluateSGP(
       pctRecaudo: 0,
       pctEjecucion: 0,
       status: "alerta",
-      ejecutadoEstimado: true,
     });
   }
 
@@ -318,7 +322,7 @@ export async function evaluateSGP(
     0
   );
   const totalRecaudado = mainComponents.reduce((s, c) => s + c.recaudado, 0);
-  const totalEjecutado = Math.round(totalSGPExpenses);
+  const totalEjecutado = mainComponents.reduce((s, c) => s + c.ejecutado, 0);
   const pctEjecucionGlobal = safePct(totalEjecutado, totalDistribuido);
 
   // 9. Determine global status

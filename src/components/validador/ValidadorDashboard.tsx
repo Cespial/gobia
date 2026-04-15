@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 import type { Municipio } from "@/data/municipios";
 import type { FUTCierreData, CGNSaldosData } from "@/lib/chip-parser";
-import type { SGPEvaluationResult, SGPComponentResult } from "@/lib/validaciones/sgp";
+import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
 import type { IDFResult } from "@/lib/validaciones/idf";
 import type { Ley617Certification } from "@/lib/datos-gov-cuipo";
 import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fiscal";
 import type { CGAResult } from "@/lib/validaciones/cga";
 import { evaluateCierreVsCuipo, type CierreVsCuipoResult } from "@/lib/validaciones/cierre-vs-cuipo";
+import { evaluateAguaPotable, type AguaPotableResult } from "@/lib/validaciones/agua-potable";
 import EquilibrioPanel from "./EquilibrioPanel";
 import SGPPanel from "./SGPPanel";
 import Ley617Panel from "./Ley617Panel";
@@ -32,6 +33,7 @@ import FileUploadPanel from "./FileUploadPanel";
 import CierreVsCuipoPanel from "./CierreVsCuipoPanel";
 import EficienciaFiscalPanel from "./EficienciaFiscalPanel";
 import CGAPanel from "./CGAPanel";
+import AguaPotablePanel from "./AguaPotablePanel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -150,10 +152,12 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [futCierre, setFutCierre] = useState<FUTCierreData | null>(null);
   const [futCierre2024, setFutCierre2024] = useState<FUTCierreData | null>(null);
   const [cgnSaldos, setCgnSaldos] = useState<CGNSaldosData | null>(null);
+  const [cgnSaldosI, setCgnSaldosI] = useState<CGNSaldosData | null>(null);
   const [ley617Certifications, setLey617Certifications] = useState<Ley617Certification[]>([]);
   const [eficienciaData, setEficienciaData] = useState<EficienciaFiscalResult | null>(null);
   const [cgaData, setCgaData] = useState<CGAResult | null>(null);
   const [cierreVsCuipoData, setCierreVsCuipoData] = useState<CierreVsCuipoResult | null>(null);
+  const [aguaData, setAguaData] = useState<AguaPotableResult | null>(null);
 
   // -----------------------------------------------------------------------
   // Fetch periods
@@ -308,20 +312,25 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       }));
     }
 
-    // 5. Agua Potable (derived from SGP water component)
-    if (sgpResult) {
-      const aguaComp = sgpResult.sgp.componentes.find(
-        (c: SGPComponentResult) => c.concepto.toLowerCase().includes("agua")
+    // 5. Agua Potable (standalone)
+    setResults((prev) => ({ ...prev, agua: { status: "loading", label: "Calculando..." } }));
+    try {
+      const aguaResult = await evaluateAguaPotable(
+        municipio.chipCode, municipio.code, municipio.deptCode, periodo, municipio.sgpTotal
       );
+      setAguaData(aguaResult);
       setResults((prev) => ({
         ...prev,
-        agua: aguaComp
-          ? {
-              status: aguaComp.pctEjecucion >= 80 ? "cumple" : aguaComp.pctEjecucion >= 50 ? "parcial" : "no_cumple",
-              label: "Agua Potable",
-              detail: `Ejecutado ${aguaComp.pctEjecucion.toFixed(1)}% del SGP-APSB (${formatCOP(aguaComp.ejecutado)} de ${formatCOP(aguaComp.distribucionDNP)})`,
-            }
-          : { status: "error", label: "Sin datos de agua potable en SGP" },
+        agua: {
+          status: aguaResult.status,
+          label: "Evaluacion Agua Potable",
+          detail: `${aguaResult.subValidaciones.filter(s => s.status === "cumple").length}/${aguaResult.subValidaciones.length} sub-validaciones cumplen`,
+        },
+      }));
+    } catch {
+      setResults((prev) => ({
+        ...prev,
+        agua: { status: "error", label: "Error evaluando Agua Potable" },
       }));
     }
 
@@ -537,9 +546,11 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
             onFUTCierreLoaded={setFutCierre}
             onFUTCierre2024Loaded={setFutCierre2024}
             onCGNSaldosLoaded={setCgnSaldos}
+            onCGNSaldosILoaded={setCgnSaldosI}
             futCierre={futCierre}
             futCierre2024={futCierre2024}
             cgnSaldos={cgnSaldos}
+            cgnSaldosI={cgnSaldosI}
           />
         </div>
       )}
@@ -603,6 +614,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       {activePanel === "eficiencia" && eficienciaData && (
         <EficienciaFiscalPanel data={eficienciaData} periodo={periodo} municipio={municipio} />
       )}
+      {activePanel === "agua" && <AguaPotablePanel data={aguaData} />}
     </div>
   );
 }
