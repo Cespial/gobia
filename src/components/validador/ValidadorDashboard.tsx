@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { exportValidacionesToExcel } from "@/lib/excel-exporter";
 import type { Municipio } from "@/data/municipios";
+import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
 import type { FUTCierreData, CGNSaldosData, MapaInversionesData } from "@/lib/chip-parser";
 import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
@@ -174,6 +175,33 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   useEffect(() => { futCierreRef.current = futCierre; }, [futCierre]);
   useEffect(() => { cgnSaldosRef.current = cgnSaldos; }, [cgnSaldos]);
   useEffect(() => { mapaDataRef.current = mapaData; }, [mapaData]);
+
+  // Auto-load fixtures if available for this municipality
+  useEffect(() => {
+    let cancelled = false;
+    async function loadFixture(path: string): Promise<ArrayBuffer | null> {
+      try {
+        const res = await fetch(path);
+        if (!res.ok) return null;
+        return res.arrayBuffer();
+      } catch { return null; }
+    }
+    (async () => {
+      const code = municipio.code;
+      const [buf1, buf2, buf3, buf4] = await Promise.all([
+        loadFixture(`/fixtures/${code}/fut_cierre_2025.xlsx`),
+        loadFixture(`/fixtures/${code}/fut_cierre_2024.xlsx`),
+        loadFixture(`/fixtures/${code}/cgn_saldos_IV.xlsx`),
+        loadFixture(`/fixtures/${code}/cgn_saldos_I.xlsx`),
+      ]);
+      if (cancelled) return;
+      if (buf1) { const d = parseFUTCierre(buf1); if (d.rows.length > 0) setFutCierre(d); }
+      if (buf2) { const d = parseFUTCierre(buf2); if (d.rows.length > 0) setFutCierre2024(d); }
+      if (buf3) { const d = parseCGNSaldos(buf3); if (d.rows.length > 0) setCgnSaldos(d); }
+      if (buf4) { const d = parseCGNSaldos(buf4); if (d.rows.length > 0) setCgnSaldosI(d); }
+    })();
+    return () => { cancelled = true; };
+  }, [municipio.code]);
 
   // -----------------------------------------------------------------------
   // Fetch periods
