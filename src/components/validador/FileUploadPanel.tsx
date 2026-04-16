@@ -25,7 +25,7 @@ function formatCOP(value: number): string {
   return `$${Math.round(value).toLocaleString("es-CO")}`;
 }
 
-const ACCEPTED_EXTENSIONS = ".xlsx,.xlsm";
+const ACCEPTED_EXTENSIONS = ".xlsx,.xlsm,.xls";
 
 export default function FileUploadPanel({
   onFUTCierreLoaded,
