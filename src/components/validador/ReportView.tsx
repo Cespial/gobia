@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { FileDown, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import type { Municipio } from "@/data/municipios";
+import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
+import { evaluateCierreVsCuipo } from "@/lib/validaciones/cierre-vs-cuipo";
+import { evaluateEficienciaFiscal } from "@/lib/validaciones/eficiencia-fiscal";
+import { evaluateAguaPotable } from "@/lib/validaciones/agua-potable";
 
 function formatCOP(value: number): string {
   if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
@@ -133,12 +137,106 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
           });
         }
 
-        // Upload-dependent validations
-        results.push(
-          { name: "Cierre FUT vs CUIPO", status: "parcial", detail: "Requiere carga de archivo FUT Cierre", metrics: [] },
-          { name: "Equilibrio CGA", status: "parcial", detail: "Requiere carga de archivo FUT Cierre", metrics: [] },
-          { name: "Eficiencia Fiscal", status: "parcial", detail: "Requiere carga de CGN Saldos", metrics: [] },
-        );
+        // Load fixtures for file-dependent validations
+        async function loadFixture(path: string): Promise<ArrayBuffer | null> {
+          try { const r = await fetch(path); return r.ok ? r.arrayBuffer() : null; } catch { return null; }
+        }
+        const code = municipio.code;
+        const [futBuf25, futBuf24, cgnBuf4, cgnBuf1] = await Promise.all([
+          loadFixture(`/fixtures/${code}/fut_cierre_2025.xlsx`),
+          loadFixture(`/fixtures/${code}/fut_cierre_2024.xlsx`),
+          loadFixture(`/fixtures/${code}/cgn_saldos_IV.xlsx`),
+          loadFixture(`/fixtures/${code}/cgn_saldos_I.xlsx`),
+        ]);
+
+        const futData25 = futBuf25 ? parseFUTCierre(futBuf25) : null;
+        const futData24 = futBuf24 ? parseFUTCierre(futBuf24) : null;
+        const cgnData4 = cgnBuf4 ? parseCGNSaldos(cgnBuf4) : null;
+        const cgnData1 = cgnBuf1 ? parseCGNSaldos(cgnBuf1) : null;
+
+        // Cierre FUT vs CUIPO
+        if (futData25 && futData25.rows.length > 0 && eq?.ok) {
+          const cierreResult = evaluateCierreVsCuipo(futData25, eq.equilibrio.porFuente);
+          const diffCount = cierreResult.cruces.filter(
+            (c: any) => c.consolidacion !== null && (Math.abs(c.diffSaldoLibros) > 1 || Math.abs(c.diffReservas) > 1 || Math.abs(c.diffCxP) > 1)
+          ).length;
+          results.push({
+            name: "Cierre FUT vs CUIPO",
+            status: cierreResult.status === "cumple" ? "cumple" : "no_cumple",
+            detail: diffCount === 0 ? "Todos los cruces coinciden" : `${diffCount} diferencia(s) encontrada(s)`,
+            metrics: [
+              { label: "Diff Saldo Libros", value: formatCOP(cierreResult.totalDiffSaldoLibros) },
+              { label: "Diff Reservas", value: formatCOP(cierreResult.totalDiffReservas) },
+              { label: "Diff CxP", value: formatCOP(cierreResult.totalDiffCxP) },
+            ],
+          });
+        } else {
+          results.push({ name: "Cierre FUT vs CUIPO", status: "parcial", detail: "Requiere carga de archivo FUT Cierre", metrics: [] });
+        }
+
+        // CGA
+        if (futData25 && futData25.rows.length > 0 && eq?.ok) {
+          try {
+            const { evaluateCGA } = await import("@/lib/validaciones/cga");
+            const cgaResult = await evaluateCGA(chip, p, futData25, futData24, {
+              pptoInicialIngresos: eq.equilibrio.pptoInicialIngresos ?? 0,
+              pptoInicialGastos: eq.equilibrio.pptoInicialGastos ?? 0,
+              pptoDefinitivoIngresos: eq.equilibrio.pptoDefinitivoIngresos ?? 0,
+              pptoDefinitivoGastos: eq.equilibrio.pptoDefinitivoGastos ?? 0,
+              totalReservas: eq.equilibrio.totalReservas ?? 0,
+              totalCxP: eq.equilibrio.totalCxP ?? 0,
+              superavit: eq.equilibrio.superavit ?? 0,
+            });
+            const failCount = cgaResult.checks.filter((c: any) => c.status === "no_cumple").length;
+            results.push({
+              name: "Equilibrio CGA",
+              status: cgaResult.status === "cumple" ? "cumple" : cgaResult.status === "pendiente" ? "parcial" : "no_cumple",
+              detail: `${cgaResult.checks.length} chequeos — ${failCount} no cumple`,
+              metrics: cgaResult.checks.map((c: any) => ({
+                label: c.name,
+                value: c.status === "pendiente" ? "Pendiente" : c.status === "cumple" ? "Cumple" : `No cumple (diff: ${formatCOP(Math.abs(c.difference))})`,
+              })),
+            });
+          } catch {
+            results.push({ name: "Equilibrio CGA", status: "parcial", detail: "Error al calcular", metrics: [] });
+          }
+        } else {
+          results.push({ name: "Equilibrio CGA", status: "parcial", detail: "Requiere carga de archivo FUT Cierre", metrics: [] });
+        }
+
+        // Eficiencia Fiscal
+        if (cgnData4 && cgnData4.rows.length > 0) {
+          try {
+            const efResult = await evaluateEficienciaFiscal(chip, p, cgnData4, cgnData1);
+            results.push({
+              name: "Eficiencia Fiscal",
+              status: efResult.status === "cumple" ? "cumple" : efResult.status === "pendiente" ? "parcial" : "no_cumple",
+              detail: `${efResult.refrendaCount} impuestos refrendados de ${efResult.tributos.length}`,
+              metrics: efResult.tributos.filter((t: any) => t.cuipoTotal > 0).map((t: any) => ({
+                label: t.name,
+                value: t.refrenda === null ? "Sin CGN" : t.refrenda ? `SI (var ${t.variancePct?.toFixed(1)}%)` : `NO (var ${t.variancePct?.toFixed(1)}%)`,
+              })),
+            });
+          } catch {
+            results.push({ name: "Eficiencia Fiscal", status: "parcial", detail: "Error al calcular", metrics: [] });
+          }
+        } else {
+          results.push({ name: "Eficiencia Fiscal", status: "parcial", detail: "Requiere carga de CGN Saldos", metrics: [] });
+        }
+
+        // Agua Potable
+        try {
+          const aguaResult = await evaluateAguaPotable(chip, municipio.code, municipio.deptCode, p, municipio.sgpTotal);
+          results.push({
+            name: "Evaluación Agua Potable",
+            status: aguaResult.status,
+            detail: `${aguaResult.subValidaciones.filter((s: any) => s.status === "cumple").length}/${aguaResult.subValidaciones.length} sub-validaciones cumplen`,
+            metrics: aguaResult.subValidaciones.map((s: any) => ({
+              label: s.nombre,
+              value: s.porcentaje !== null ? `${s.porcentaje.toFixed(1)}% (${s.status})` : s.status,
+            })),
+          });
+        } catch { /* skip agua if fails */ }
 
         setValidations(results);
       } catch (err) {
