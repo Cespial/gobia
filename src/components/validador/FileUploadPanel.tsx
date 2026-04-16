@@ -2,8 +2,14 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Upload, FileSpreadsheet, Check, X, AlertTriangle } from "lucide-react";
-import { parseFUTCierre, parseCGNSaldos, parseMapaInversiones } from "@/lib/chip-parser";
-import type { FUTCierreData, CGNSaldosData, MapaInversionesData } from "@/lib/chip-parser";
+import { parseFUTCierre, parseCGNSaldos, parseMapaInversiones, parseCuipoFiles, detectCuipoFileType } from "@/lib/chip-parser";
+import type { FUTCierreData, CGNSaldosData, MapaInversionesData, CuipoData, CuipoFileType } from "@/lib/chip-parser";
+
+interface CuipoFileInfo {
+  name: string;
+  type: CuipoFileType;
+  rows: number;
+}
 
 interface FileUploadPanelProps {
   onFUTCierreLoaded: (data: FUTCierreData | null) => void;
@@ -11,11 +17,13 @@ interface FileUploadPanelProps {
   onCGNSaldosLoaded: (data: CGNSaldosData | null) => void;
   onCGNSaldosILoaded: (data: CGNSaldosData | null) => void;
   onMapaInversionesLoaded: (data: MapaInversionesData | null) => void;
+  onCuipoDataLoaded: (data: CuipoData | null) => void;
   futCierre: FUTCierreData | null;
   futCierre2024: FUTCierreData | null;
   cgnSaldos: CGNSaldosData | null;
   cgnSaldosI: CGNSaldosData | null;
   mapaInversiones: MapaInversionesData | null;
+  cuipoData: CuipoData | null;
 }
 
 function formatCOP(value: number): string {
@@ -27,17 +35,27 @@ function formatCOP(value: number): string {
 
 const ACCEPTED_EXTENSIONS = ".xlsx,.xlsm,.xls";
 
+const CUIPO_FILE_TYPE_LABELS: Record<CuipoFileType, string> = {
+  ejec_ing: 'Ejec. Ingresos',
+  ejec_gas: 'Ejec. Gastos',
+  prog_ing: 'Prog. Ingresos',
+  prog_gas: 'Prog. Gastos',
+  unknown: 'No reconocido',
+};
+
 export default function FileUploadPanel({
   onFUTCierreLoaded,
   onFUTCierre2024Loaded,
   onCGNSaldosLoaded,
   onCGNSaldosILoaded,
   onMapaInversionesLoaded,
+  onCuipoDataLoaded,
   futCierre,
   futCierre2024,
   cgnSaldos,
   cgnSaldosI,
   mapaInversiones,
+  cuipoData,
 }: FileUploadPanelProps) {
   const [futFileName, setFutFileName] = useState<string | null>(null);
   const [fut2024FileName, setFut2024FileName] = useState<string | null>(null);
@@ -55,11 +73,18 @@ export default function FileUploadPanel({
   const [cgnILoading, setCgnILoading] = useState(false);
   const [mapaLoading, setMapaLoading] = useState(false);
 
+  // CUIPO state
+  const [cuipoFiles, setCuipoFiles] = useState<CuipoFileInfo[]>([]);
+  const [cuipoError, setCuipoError] = useState<string | null>(null);
+  const [cuipoLoading, setCuipoLoading] = useState(false);
+  const [cuipoBuffers, setCuipoBuffers] = useState<{ name: string; buffer: ArrayBuffer }[]>([]);
+
   const futInputRef = useRef<HTMLInputElement>(null);
   const fut2024InputRef = useRef<HTMLInputElement>(null);
   const cgnInputRef = useRef<HTMLInputElement>(null);
   const cgnIInputRef = useRef<HTMLInputElement>(null);
   const mapaInputRef = useRef<HTMLInputElement>(null);
+  const cuipoInputRef = useRef<HTMLInputElement>(null);
 
   const handleFUTFile = useCallback(
     async (file: File) => {
@@ -206,10 +231,96 @@ export default function FileUploadPanel({
     [onMapaInversionesLoaded]
   );
 
+  const handleCuipoFiles = useCallback(
+    async (files: FileList | File[]) => {
+      setCuipoError(null);
+      setCuipoLoading(true);
+
+      try {
+        const newBuffers: { name: string; buffer: ArrayBuffer }[] = [...cuipoBuffers];
+        const newFileInfos: CuipoFileInfo[] = [...cuipoFiles];
+
+        for (const file of Array.from(files)) {
+          if (file.size > 20 * 1024 * 1024) {
+            setCuipoError(`${file.name} supera 20MB. Verifica que sea el correcto.`);
+            continue;
+          }
+
+          const buffer = await file.arrayBuffer();
+          const fileType = detectCuipoFileType(buffer);
+
+          if (fileType === 'unknown') {
+            setCuipoError(`${file.name}: tipo de archivo CUIPO no reconocido.`);
+            continue;
+          }
+
+          // For ejec_ing and prog_ing, replace existing (only 1 allowed)
+          if (fileType === 'ejec_ing' || fileType === 'prog_ing' || fileType === 'prog_gas') {
+            const existingIdx = newFileInfos.findIndex(f => f.type === fileType);
+            if (existingIdx >= 0) {
+              newFileInfos.splice(existingIdx, 1);
+              newBuffers.splice(existingIdx, 1);
+            }
+          }
+
+          // Count rows based on type
+          let rows = 0;
+          if (fileType === 'ejec_ing') {
+            const parsed = parseCuipoFiles([{ name: file.name, buffer }]);
+            rows = parsed.ejecIngresos.length;
+          } else if (fileType === 'ejec_gas') {
+            const parsed = parseCuipoFiles([{ name: file.name, buffer }]);
+            rows = parsed.ejecGastos.length;
+          } else if (fileType === 'prog_ing') {
+            const parsed = parseCuipoFiles([{ name: file.name, buffer }]);
+            rows = parsed.progIngresos.length;
+          } else if (fileType === 'prog_gas') {
+            const parsed = parseCuipoFiles([{ name: file.name, buffer }]);
+            rows = parsed.progGastos.length;
+          }
+
+          newBuffers.push({ name: file.name, buffer });
+          newFileInfos.push({ name: file.name, type: fileType, rows });
+        }
+
+        setCuipoBuffers(newBuffers);
+        setCuipoFiles(newFileInfos);
+
+        // Parse all files together
+        if (newBuffers.length > 0) {
+          const data = parseCuipoFiles(newBuffers);
+          if (data.ejecIngresos.length === 0 && data.ejecGastos.length === 0) {
+            setCuipoError("No se encontraron filas de datos en los archivos CUIPO.");
+          }
+          onCuipoDataLoaded(data);
+        }
+      } catch (err) {
+        setCuipoError(
+          err instanceof Error ? err.message : "Error al procesar archivos CUIPO"
+        );
+      } finally {
+        setCuipoLoading(false);
+      }
+    },
+    [cuipoBuffers, cuipoFiles, onCuipoDataLoaded]
+  );
+
+  const removeCuipo = useCallback(() => {
+    setCuipoFiles([]);
+    setCuipoBuffers([]);
+    setCuipoError(null);
+    if (cuipoInputRef.current) cuipoInputRef.current.value = "";
+    onCuipoDataLoaded(null);
+  }, [onCuipoDataLoaded]);
+
   const handleDrop = useCallback(
-    (type: "fut" | "fut2024" | "cgn" | "cgni" | "mapa") => (e: React.DragEvent<HTMLDivElement>) => {
+    (type: "fut" | "fut2024" | "cgn" | "cgni" | "mapa" | "cuipo") => (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
+      if (type === "cuipo") {
+        handleCuipoFiles(e.dataTransfer.files);
+        return;
+      }
       const file = e.dataTransfer.files[0];
       if (!file) return;
       if (type === "fut") {
@@ -224,7 +335,7 @@ export default function FileUploadPanel({
         handleCGNFile(file);
       }
     },
-    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile, handleMapaFile]
+    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile, handleMapaFile, handleCuipoFiles]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -233,7 +344,12 @@ export default function FileUploadPanel({
   }, []);
 
   const handleInputChange = useCallback(
-    (type: "fut" | "fut2024" | "cgn" | "cgni" | "mapa") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    (type: "fut" | "fut2024" | "cgn" | "cgni" | "mapa" | "cuipo") => (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (type === "cuipo") {
+        const files = e.target.files;
+        if (files && files.length > 0) handleCuipoFiles(files);
+        return;
+      }
       const file = e.target.files?.[0];
       if (!file) return;
       if (type === "fut") {
@@ -248,7 +364,7 @@ export default function FileUploadPanel({
         handleCGNFile(file);
       }
     },
-    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile, handleMapaFile]
+    [handleFUTFile, handleFUT2024File, handleCGNFile, handleCGNIFile, handleMapaFile, handleCuipoFiles]
   );
 
   const removeFUT = useCallback(() => {
@@ -299,6 +415,140 @@ export default function FileUploadPanel({
           Sube los archivos Excel exportados del CHIP para cruzar con los datos
           CUIPO.
         </p>
+      </div>
+
+      {/* CUIPO Files Upload Section */}
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h3
+              className="text-sm font-bold uppercase tracking-wider text-[var(--ochre)]"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Archivos CUIPO (CHIP)
+            </h3>
+            <p className="mt-0.5 text-xs text-[var(--gray-500)]">
+              Sube los archivos de ejecucion presupuestal exportados del CHIP para validar con datos del cierre anual (T4).
+            </p>
+          </div>
+          {cuipoData && cuipoFiles.length > 0 && (
+            <button
+              onClick={removeCuipo}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--gray-400)] transition-colors hover:bg-red-500/10 hover:text-red-400"
+            >
+              <X className="h-3 w-3" />
+              Quitar todos
+            </button>
+          )}
+        </div>
+
+        {cuipoData && cuipoFiles.length > 0 ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+              <Check className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm font-medium text-white">
+                {cuipoFiles.length} archivo{cuipoFiles.length > 1 ? 's' : ''} CUIPO cargado{cuipoFiles.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {cuipoFiles.map((f, idx) => (
+                <div key={idx} className="rounded-lg bg-[var(--gray-900)] p-3">
+                  <div className="mb-1 truncate text-xs font-medium text-white">{f.name}</div>
+                  <div className="flex items-center gap-2 text-xs text-[var(--gray-400)]">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      f.type === 'ejec_ing' ? 'bg-blue-500/15 text-blue-400' :
+                      f.type === 'ejec_gas' ? 'bg-purple-500/15 text-purple-400' :
+                      f.type === 'prog_ing' ? 'bg-cyan-500/15 text-cyan-400' :
+                      f.type === 'prog_gas' ? 'bg-teal-500/15 text-teal-400' :
+                      'bg-red-500/15 text-red-400'
+                    }`}>
+                      {CUIPO_FILE_TYPE_LABELS[f.type]}
+                    </span>
+                    <span>{f.rows} filas</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 space-y-1 text-xs text-[var(--gray-400)]">
+              <div>
+                Ingresos (hojas): <span className="text-white">{cuipoData.ejecIngresos.length}</span>
+                {' '} | Gastos (hojas): <span className="text-white">{cuipoData.ejecGastos.length}</span>
+              </div>
+              {cuipoData.progIngresos.length > 0 && (
+                <div>
+                  Prog. Ingresos: <span className="text-white">{cuipoData.progIngresos.length} cuentas</span>
+                </div>
+              )}
+              <div className="text-[var(--ochre)]">
+                {cuipoData.periodo || 'Periodo detectado del archivo'}
+              </div>
+            </div>
+            {/* Allow adding more files */}
+            <button
+              onClick={() => cuipoInputRef.current?.click()}
+              className="mt-3 flex items-center gap-1.5 rounded-lg border border-[var(--gray-700)] px-3 py-1.5 text-xs text-[var(--gray-400)] transition-colors hover:border-[var(--ochre)] hover:text-white"
+            >
+              <Upload className="h-3 w-3" />
+              Agregar mas archivos
+            </button>
+            <input
+              ref={cuipoInputRef}
+              type="file"
+              accept={ACCEPTED_EXTENSIONS}
+              multiple
+              onChange={handleInputChange("cuipo")}
+              className="hidden"
+            />
+          </div>
+        ) : (
+          <div
+            onDrop={handleDrop("cuipo")}
+            onDragOver={handleDragOver}
+            onClick={() => cuipoInputRef.current?.click()}
+            className={`group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors ${
+              cuipoError
+                ? "border-red-500/50 bg-red-500/5"
+                : "border-[var(--gray-700)] bg-transparent hover:border-[var(--ochre)] hover:bg-[var(--ochre)]/5"
+            } ${cuipoLoading ? "pointer-events-none opacity-50" : ""}`}
+          >
+            <input
+              ref={cuipoInputRef}
+              type="file"
+              accept={ACCEPTED_EXTENSIONS}
+              multiple
+              onChange={handleInputChange("cuipo")}
+              className="hidden"
+            />
+            <Upload
+              className={`mb-3 h-8 w-8 ${
+                cuipoError
+                  ? "text-red-400"
+                  : "text-[var(--gray-600)] group-hover:text-[var(--ochre)]"
+              }`}
+            />
+            {cuipoLoading ? (
+              <span className="text-sm text-[var(--gray-400)]">
+                Procesando archivos CUIPO...
+              </span>
+            ) : (
+              <>
+                <span className="text-sm text-[var(--gray-400)]">
+                  Arrastra o selecciona archivos CUIPO
+                </span>
+                <span className="mt-1 text-xs text-[var(--gray-600)]">
+                  Ejec. Ingresos + Ejec. Gastos + Prog. Ingresos (.xls / .xlsx) - multiples archivos permitidos
+                </span>
+              </>
+            )}
+            {cuipoError && (
+              <div className="mt-3 flex items-center gap-1.5 text-xs text-red-400">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {cuipoError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">

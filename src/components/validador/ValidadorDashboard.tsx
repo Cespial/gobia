@@ -20,7 +20,8 @@ import {
 import { exportValidacionesToExcel } from "@/lib/excel-exporter";
 import type { Municipio } from "@/data/municipios";
 import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
-import type { FUTCierreData, CGNSaldosData, MapaInversionesData } from "@/lib/chip-parser";
+import type { FUTCierreData, CGNSaldosData, MapaInversionesData, CuipoData } from "@/lib/chip-parser";
+import { buildEquilibrioFromCuipo } from "@/lib/cuipo-processor";
 import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
 import type { IDFResult } from "@/lib/validaciones/idf";
@@ -167,6 +168,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
   const [aguaData, setAguaData] = useState<AguaPotableResult | null>(null);
   const [mapaData, setMapaData] = useState<MapaInversionesData | null>(null);
   const [mapaInversionesData, setMapaInversionesData] = useState<MapaInversionesResult | null>(null);
+  const [cuipoData, setCuipoData] = useState<CuipoData | null>(null);
 
   // Refs to avoid stale closures in runAll
   const futCierreRef = useRef(futCierre);
@@ -601,6 +603,28 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     return () => { cancelled = true; };
   }, [mapaData, periodo, municipio.chipCode]);
 
+  // Re-compute equilibrio when CUIPO files are uploaded (client-side processing)
+  useEffect(() => {
+    if (!cuipoData) return;
+    if (cuipoData.ejecIngresos.length === 0 && cuipoData.ejecGastos.length === 0) return;
+
+    const equilibrio = buildEquilibrioFromCuipo(cuipoData);
+    setEquilibrioData(equilibrio);
+
+    const totalGastos = equilibrio.totalCompromisos;
+    const diff = Math.abs(equilibrio.totalIngresos - totalGastos);
+    const tol = equilibrio.totalIngresos * 0.01;
+
+    setResults((prev) => ({
+      ...prev,
+      equilibrio: {
+        status: diff <= tol ? "cumple" : "no_cumple",
+        label: "Equilibrio Presupuestal (CUIPO archivo)",
+        detail: `Ingresos ${formatCOP(equilibrio.totalIngresos)} vs Gastos ${formatCOP(totalGastos)} — ${equilibrio.pctEjecucion.toFixed(1)}%`,
+      },
+    }));
+  }, [cuipoData]);
+
   // -----------------------------------------------------------------------
   // Count summary
   // -----------------------------------------------------------------------
@@ -707,11 +731,13 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
             onCGNSaldosLoaded={setCgnSaldos}
             onCGNSaldosILoaded={setCgnSaldosI}
             onMapaInversionesLoaded={setMapaData}
+            onCuipoDataLoaded={setCuipoData}
             futCierre={futCierre}
             futCierre2024={futCierre2024}
             cgnSaldos={cgnSaldos}
             cgnSaldosI={cgnSaldosI}
             mapaInversiones={mapaData}
+            cuipoData={cuipoData}
           />
         </div>
       )}

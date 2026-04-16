@@ -344,3 +344,365 @@ export function parseMapaInversiones(buffer: ArrayBuffer): MapaInversionesData {
 
   return { rows, year };
 }
+
+// ---------------------------------------------------------------------------
+// CUIPO file parsers (CHIP Excel exports)
+// ---------------------------------------------------------------------------
+
+export interface CuipoIngresosRow {
+  cuenta: string;
+  nombre: string;
+  fuente: string;
+  codigoFuente: string;
+  recaudoVACSS: number;
+  recaudoVACCS: number;
+  recaudoVANSS: number;
+  recaudoVANCS: number;
+  totalRecaudo: number;
+  isLeaf: boolean;
+}
+
+export interface CuipoGastosRow {
+  vigencia: string;
+  seccion: string;
+  cuenta: string;
+  nombre: string;
+  fuente: string;
+  bpin: string;
+  compromisos: number;
+  obligaciones: number;
+  pagos: number;
+  isLeaf: boolean;
+}
+
+export interface CuipoProgIngresosRow {
+  cuenta: string;
+  nombre: string;
+  presupuestoInicial: number;
+  presupuestoDefinitivo: number;
+}
+
+export type CuipoFileType = 'ejec_ing' | 'ejec_gas' | 'prog_ing' | 'prog_gas' | 'unknown';
+
+export interface CuipoData {
+  ejecIngresos: CuipoIngresosRow[];
+  ejecGastos: CuipoGastosRow[];
+  progIngresos: CuipoProgIngresosRow[];
+  progGastos: CuipoProgIngresosRow[];
+  periodo: string;
+  entidad: string;
+}
+
+/**
+ * Parse a CUIPO number value that may be formatted as:
+ * - Numeric cell: 1234567.89
+ * - Text cell: "1234567,00 " (comma decimal, trailing space)
+ * - Text cell: "NO APLICA" → 0
+ */
+function toCuipoNum(val: unknown): number {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return val;
+  const s = String(val).trim();
+  if (!s || s.toUpperCase() === 'NO APLICA') return 0;
+  // Handle "1.234.567,00" format (dots as thousands, comma decimal)
+  const cleaned = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Detect the type of a CUIPO file by scanning header row keywords.
+ */
+export function detectCuipoFileType(buffer: ArrayBuffer): CuipoFileType {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+    const text = row.map(c => String(c || '').toUpperCase()).join(' ');
+
+    if (text.includes('TOTAL RECAUDO') || text.includes('TOTAL INGRESOS') ||
+        (text.includes('RECAUDO') && text.includes('VIGEN'))) {
+      return 'ejec_ing';
+    }
+    if (text.includes('COMPROMISOS') && text.includes('OBLIGACIONES')) {
+      return 'ejec_gas';
+    }
+    if (text.includes('PRESUPUESTO INICIAL') && text.includes('PRESUPUESTO DEFINITIVO')) {
+      // Distinguish prog_ing vs prog_gas by looking for gastos-specific columns
+      if (text.includes('VIGENCIA') || text.includes('SECCION') || text.includes('BPIN')) {
+        return 'prog_gas';
+      }
+      return 'prog_ing';
+    }
+  }
+  return 'unknown';
+}
+
+/**
+ * Parse CUIPO Ejecución de Ingresos file.
+ * Returns ONLY leaf rows (fuente is filled).
+ */
+export function parseCuipoEjecIngresos(buffer: ArrayBuffer): CuipoIngresosRow[] {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+
+  // Find header row by scanning for "CODIGO"
+  let headerIdx = -1;
+  let colCuenta = -1;
+  let colNombre = -1;
+  let colFuente = -1;
+  let colCodFuente = -1;
+  let colVACSS = -1;
+  let colVACCS = -1;
+  let colVANSS = -1;
+  let colVANCS = -1;
+  let colTotal = -1;
+
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toUpperCase().trim();
+
+      if (cell === 'CODIGO' || cell === 'CÓDIGO') {
+        colCuenta = j;
+        headerIdx = i;
+      }
+      if (cell === 'NOMBRE' || cell === 'CONCEPTO') colNombre = j;
+      if (cell.includes('FUENTES DE FINANC') || cell === 'FUENTE' || cell === 'FUENTES') colFuente = j;
+      if (cell.includes('CODIGO DE LA FUENTE') || cell.includes('COD_FUENTE') || cell.includes('CÓDIGO FUENTE')) colCodFuente = j;
+      if (cell.includes('RECAUDO') && cell.includes('ACTUAL') && cell.includes('SIN')) colVACSS = j;
+      if (cell.includes('RECAUDO') && cell.includes('ACTUAL') && cell.includes('CON')) colVACCS = j;
+      if (cell.includes('RECAUDO') && cell.includes('ANTERIOR') && cell.includes('SIN')) colVANSS = j;
+      if (cell.includes('RECAUDO') && cell.includes('ANTERIOR') && cell.includes('CON')) colVANCS = j;
+      if (cell.includes('TOTAL RECAUDO') || cell.includes('TOTAL INGRESOS')) colTotal = j;
+    }
+    if (headerIdx >= 0) break;
+  }
+
+  if (headerIdx < 0) return [];
+
+  const rows: CuipoIngresosRow[] = [];
+
+  for (let i = headerIdx + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    const cuenta = colCuenta >= 0 ? String(row[colCuenta] || '').trim() : '';
+    if (!cuenta) continue;
+
+    const fuente = colFuente >= 0 ? String(row[colFuente] || '').trim() : '';
+    const isLeaf = fuente.length > 0;
+
+    if (!isLeaf) continue; // Only return leaf rows
+
+    const parsed: CuipoIngresosRow = {
+      cuenta,
+      nombre: colNombre >= 0 ? String(row[colNombre] || '').trim() : '',
+      fuente,
+      codigoFuente: colCodFuente >= 0 ? String(row[colCodFuente] || '').trim() : '',
+      recaudoVACSS: colVACSS >= 0 ? toCuipoNum(row[colVACSS]) : 0,
+      recaudoVACCS: colVACCS >= 0 ? toCuipoNum(row[colVACCS]) : 0,
+      recaudoVANSS: colVANSS >= 0 ? toCuipoNum(row[colVANSS]) : 0,
+      recaudoVANCS: colVANCS >= 0 ? toCuipoNum(row[colVANCS]) : 0,
+      totalRecaudo: colTotal >= 0 ? toCuipoNum(row[colTotal]) : 0,
+      isLeaf,
+    };
+
+    // If no total column, compute from sub-columns
+    if (colTotal < 0) {
+      parsed.totalRecaudo = parsed.recaudoVACSS + parsed.recaudoVACCS + parsed.recaudoVANSS + parsed.recaudoVANCS;
+    }
+
+    rows.push(parsed);
+  }
+
+  return rows;
+}
+
+/**
+ * Parse CUIPO Ejecución de Gastos file.
+ * Returns ONLY leaf rows (fuente is filled).
+ * Vigencia and Seccion are fill-down from last non-empty value.
+ */
+export function parseCuipoEjecGastos(buffer: ArrayBuffer): CuipoGastosRow[] {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+
+  // Find header row
+  let headerIdx = -1;
+  let colVigencia = -1;
+  let colSeccion = -1;
+  let colCuenta = -1;
+  let colNombre = -1;
+  let colFuente = -1;
+  let colBpin = -1;
+  let colCompromisos = -1;
+  let colObligaciones = -1;
+  let colPagos = -1;
+
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toUpperCase().trim();
+
+      if ((cell === 'CODIGO' || cell === 'CÓDIGO') && colCuenta < 0) {
+        colCuenta = j;
+        headerIdx = i;
+      }
+      if (cell.includes('VIGENCIA') && cell.includes('GASTO')) colVigencia = j;
+      if (cell.includes('SECCION') || cell.includes('SECCIÓN')) colSeccion = j;
+      if (cell === 'NOMBRE' || cell === 'CONCEPTO') colNombre = j;
+      if (cell.includes('FUENTES DE FINANC') || cell === 'FUENTE' || cell === 'FUENTES') colFuente = j;
+      if (cell === 'BPIN' || cell.includes('CODIGO BPIN')) colBpin = j;
+      if (cell.includes('COMPROMISOS')) colCompromisos = j;
+      if (cell.includes('OBLIGACIONES')) colObligaciones = j;
+      if (cell.includes('PAGOS')) colPagos = j;
+    }
+    if (headerIdx >= 0) break;
+  }
+
+  if (headerIdx < 0) return [];
+
+  const rows: CuipoGastosRow[] = [];
+  let lastVigencia = '';
+  let lastSeccion = '';
+
+  for (let i = headerIdx + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    const cuenta = colCuenta >= 0 ? String(row[colCuenta] || '').trim() : '';
+    if (!cuenta) continue;
+
+    // Fill-down vigencia and seccion
+    const rawVigencia = colVigencia >= 0 ? String(row[colVigencia] || '').trim() : '';
+    const rawSeccion = colSeccion >= 0 ? String(row[colSeccion] || '').trim() : '';
+    if (rawVigencia) lastVigencia = rawVigencia;
+    if (rawSeccion) lastSeccion = rawSeccion;
+
+    const fuente = colFuente >= 0 ? String(row[colFuente] || '').trim() : '';
+    const isLeaf = fuente.length > 0;
+
+    if (!isLeaf) continue; // Only return leaf rows
+
+    rows.push({
+      vigencia: lastVigencia,
+      seccion: lastSeccion,
+      cuenta,
+      nombre: colNombre >= 0 ? String(row[colNombre] || '').trim() : '',
+      fuente,
+      bpin: colBpin >= 0 ? String(row[colBpin] || '').trim() : '',
+      compromisos: colCompromisos >= 0 ? toCuipoNum(row[colCompromisos]) : 0,
+      obligaciones: colObligaciones >= 0 ? toCuipoNum(row[colObligaciones]) : 0,
+      pagos: colPagos >= 0 ? toCuipoNum(row[colPagos]) : 0,
+      isLeaf,
+    });
+  }
+
+  return rows;
+}
+
+/**
+ * Parse CUIPO Programación de Ingresos file.
+ * Returns ALL rows (both parent and leaf) since we need totals.
+ */
+export function parseCuipoProgIngresos(buffer: ArrayBuffer): CuipoProgIngresosRow[] {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+
+  let headerIdx = -1;
+  let colCuenta = -1;
+  let colNombre = -1;
+  let colInicial = -1;
+  let colDefinitivo = -1;
+
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toUpperCase().trim();
+
+      if (cell === 'CODIGO' || cell === 'CÓDIGO') {
+        colCuenta = j;
+        headerIdx = i;
+      }
+      if (cell === 'NOMBRE' || cell === 'CONCEPTO') colNombre = j;
+      if (cell.includes('PRESUPUESTO INICIAL') || cell.includes('APROPIACION INICIAL') || cell.includes('PPTO INICIAL')) colInicial = j;
+      if (cell.includes('PRESUPUESTO DEFINITIVO') || cell.includes('APROPIACION DEFINITIVA') || cell.includes('PPTO DEFINITIVO')) colDefinitivo = j;
+    }
+    if (headerIdx >= 0) break;
+  }
+
+  if (headerIdx < 0) return [];
+
+  const rows: CuipoProgIngresosRow[] = [];
+
+  for (let i = headerIdx + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    const cuenta = colCuenta >= 0 ? String(row[colCuenta] || '').trim() : '';
+    if (!cuenta) continue;
+
+    rows.push({
+      cuenta,
+      nombre: colNombre >= 0 ? String(row[colNombre] || '').trim() : '',
+      presupuestoInicial: colInicial >= 0 ? toCuipoNum(row[colInicial]) : 0,
+      presupuestoDefinitivo: colDefinitivo >= 0 ? toCuipoNum(row[colDefinitivo]) : 0,
+    });
+  }
+
+  return rows;
+}
+
+/**
+ * Parse multiple CUIPO files, auto-detecting types and combining results.
+ */
+export function parseCuipoFiles(buffers: { name: string; buffer: ArrayBuffer }[]): CuipoData {
+  const result: CuipoData = {
+    ejecIngresos: [],
+    ejecGastos: [],
+    progIngresos: [],
+    progGastos: [],
+    periodo: '',
+    entidad: '',
+  };
+
+  for (const { buffer } of buffers) {
+    const fileType = detectCuipoFileType(buffer);
+
+    switch (fileType) {
+      case 'ejec_ing':
+        result.ejecIngresos = parseCuipoEjecIngresos(buffer);
+        break;
+      case 'ejec_gas':
+        // Multiple gastos files are combined
+        result.ejecGastos.push(...parseCuipoEjecGastos(buffer));
+        break;
+      case 'prog_ing':
+        result.progIngresos = parseCuipoProgIngresos(buffer);
+        break;
+      case 'prog_gas':
+        result.progGastos = parseCuipoProgIngresos(buffer); // Same structure
+        break;
+    }
+  }
+
+  // Try to detect periodo from file content (scan first rows for date/period info)
+  if (result.ejecIngresos.length > 0 || result.ejecGastos.length > 0) {
+    result.periodo = 'T4 (Cierre Anual)';
+  }
+
+  return result;
+}

@@ -1,0 +1,376 @@
+\documentclass[aspectratio=169,12pt]{beamer}
+
+% ── Theme & Colors ──────────────────────────────────────────────────
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+% Gobia brand palette
+\definecolor{ink}{HTML}{1A1A1A}
+\definecolor{ochre}{HTML}{B8956A}
+\definecolor{cream}{HTML}{F8F8F6}
+\definecolor{sepia}{HTML}{6B6B6B}
+\definecolor{verde}{HTML}{22C55E}
+\definecolor{rojo}{HTML}{EF4444}
+\definecolor{amber}{HTML}{F59E0B}
+
+\setbeamercolor{background canvas}{bg=cream}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamercolor{frametitle}{fg=ink}
+\setbeamercolor{title}{fg=ink}
+\setbeamercolor{subtitle}{fg=sepia}
+\setbeamercolor{item}{fg=ochre}
+\setbeamercolor{block title}{bg=ink,fg=cream}
+\setbeamercolor{block body}{bg=white}
+
+\setbeamerfont{title}{size=\LARGE,series=\bfseries}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\small,series=\mdseries}
+
+% ── Packages ────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc}
+\usepackage{fontawesome5}
+\usepackage{array}
+\usepackage{colortbl}
+
+\newcommand{\cmark}{\textcolor{verde}{\faCheck}}
+\newcommand{\xmark}{\textcolor{rojo}{\faTimes}}
+\newcommand{\wmark}{\textcolor{amber}{\faExclamationTriangle}}
+
+% ════════════════════════════════════════════════════════════════════
+\title{Validador Fiscal Municipal}
+\subtitle{Phase 1: Equilibrio + Cierre FUT vs CUIPO\\[4pt]
+\small\textcolor{sepia}{Avance de desarrollo --- Abril 2026}}
+\author{}
+\date{}
+\institute{\textcolor{ochre}{gobia.co}}
+
+\begin{document}
+
+% ── 1. PORTADA ──────────────────────────────────────────────────────
+\begin{frame}
+\titlepage
+\end{frame}
+
+% ── 2. EL PROBLEMA ─────────────────────────────────────────────────
+\begin{frame}{El problema que resolvemos}
+
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\textbf{Hoy, la validaci\'on fiscal es manual:}
+\begin{itemize}
+    \item Descargar 8+ archivos de CHIP, SICODIS, CGN
+    \item Copiar/pegar en Excel, convertir formatos
+    \item Cruzar datos entre 6 fuentes oficiales
+    \item Calcular 8 evaluaciones normativas
+    \item Un municipio toma \textbf{2--3 d\'ias} de trabajo
+\end{itemize}
+
+\vspace{10pt}
+\textbf{Consecuencias de errores:}
+\begin{itemize}
+    \item Indicadores SI.17 empeorados
+    \item Recursos SGP no refrendados
+    \item Mala evaluaci\'on del Plan de Desarrollo
+\end{itemize}
+\end{column}
+
+\begin{column}{0.4\textwidth}
+\begin{tikzpicture}[
+    box/.style={draw=sepia, rounded corners=4pt, minimum width=2.8cm, minimum height=0.7cm, font=\scriptsize, align=center, fill=white},
+    arr/.style={-{Stealth[length=4pt]}, sepia, thick}
+]
+\node[box] (cuipo) at (0,4) {CUIPO\\4 archivos};
+\node[box] (fut) at (0,3) {FUT Cierre\\2 a\~nos};
+\node[box] (cgn) at (0,2) {CGN Saldos\\2 trimestres};
+\node[box] (rp) at (0,1) {FUT RP Agua};
+\node[box] (mapa) at (0,0) {Mapa Inversiones};
+
+\node[box, fill=amber!15, minimum width=3cm, minimum height=1.5cm] (excel) at (4,2) {\textbf{Excel Manual}\\Copiar/Pegar\\Formular\\Cruzar};
+
+\foreach \n in {cuipo,fut,cgn,rp,mapa}
+    \draw[arr] (\n.east) -- (excel.west|-\n.east);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 3. LA SOLUCION ─────────────────────────────────────────────────
+\begin{frame}{La soluci\'on: gobia.co/plataforma/validador}
+
+\begin{center}
+\begin{tikzpicture}[
+    src/.style={draw=sepia, rounded corners=3pt, minimum width=2.2cm, minimum height=0.6cm, font=\scriptsize, align=center, fill=white},
+    engine/.style={draw=ochre, rounded corners=6pt, minimum width=3.5cm, minimum height=2cm, font=\small, align=center, fill=ochre!10, line width=1.2pt},
+    outbox/.style={draw=verde!70!black, rounded corners=3pt, minimum width=2.2cm, minimum height=0.6cm, font=\scriptsize, align=center, fill=verde!8},
+    arr/.style={-{Stealth[length=4pt]}, sepia}
+]
+% Sources
+\node[src] (s1) at (-4.5, 1.5) {CUIPO API};
+\node[src] (s2) at (-4.5, 0.5) {SICODIS API};
+\node[src] (s3) at (-4.5,-0.5) {FUT Upload};
+\node[src] (s4) at (-4.5,-1.5) {CGN Upload};
+
+% Engine
+\node[engine] (eng) at (0,0) {\textbf{Motor de}\\\textbf{Validaci\'on}\\8 m\'odulos};
+
+% Outputs
+\node[outbox] (o1) at (4.5, 1) {Dashboard\\Sem\'aforos};
+\node[outbox] (o2) at (4.5, 0) {Exportar\\Excel};
+\node[outbox] (o3) at (4.5,-1) {Trazabilidad\\Auditable};
+
+\foreach \s in {s1,s2,s3,s4}
+    \draw[arr] (\s.east) -- (eng.west|-\s.east);
+\foreach \o in {o1,o2,o3}
+    \draw[arr] (eng.east|-\o.west) -- (\o.west);
+\end{tikzpicture}
+\end{center}
+
+\vspace{6pt}
+\centering
+\textcolor{sepia}{\small Automatiza en \textbf{segundos} lo que hoy toma d\'ias. Mismos n\'umeros que el Excel.}
+\end{frame}
+
+% ── 4. QUE CONSTRUIMOS (Phase 1) ──────────────────────────────────
+\begin{frame}{Phase 1: Lo que construimos}
+\framesubtitle{Sprint 0 --- Equilibrio Presupuestal + Sprint 1 --- Cierre FUT vs CUIPO}
+
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{ochre}{Sprint 0: Equilibrio}}
+\begin{itemize}
+    \item Tabla est\'atica de \textbf{148 fuentes CUIPO} con c\'odigo de consolidaci\'on
+    \item API enriquecida: consolidaci\'on, validador, saldo en libros, reservas vig.~anterior
+    \item 3 columnas nuevas en el panel con sem\'aforo rojo si validador $\neq$ 0
+\end{itemize}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{ochre}{Sprint 1: Cierre vs CUIPO}}
+\begin{itemize}
+    \item Tabla de \textbf{45 c\'odigos FUT} mapeados a consolidaci\'on
+    \item Motor de cruce: \textbf{3 comparaciones $\times$ 45 filas}
+    \item Panel reescrito con diferencias en rojo/verde
+    \item Upload de FUT 2024 + 2025 (cross-vigencia)
+\end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{6pt}
+\begin{center}
+\begin{tikzpicture}
+\node[draw=verde!70!black, rounded corners=4pt, fill=verde!8, font=\scriptsize, inner sep=6pt] {
+    \textbf{9 commits} \quad\textcolor{sepia}{|}\quad
+    \textbf{3 archivos nuevos} \quad\textcolor{sepia}{|}\quad
+    \textbf{5 modificados} \quad\textcolor{sepia}{|}\quad
+    \textbf{+834 l\'ineas}
+};
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+% ── 5. DETALLE TECNICO EQUILIBRIO ─────────────────────────────────
+\begin{frame}{Equilibrio: Nuevos campos por fuente}
+
+\small
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}l l l}
+\toprule
+\textbf{Campo} & \textbf{F\'ormula} & \textbf{Prop\'osito} \\
+\midrule
+Consolidaci\'on & Tabla est\'atica (1--55) & Mapeo a FUT Cierre \\
+Validador & Compromisos $-$ Pagos $-$ Reservas $-$ CxP & Debe ser 0 \\
+Reservas Vig.~Ant. & MAX(0, Comp.Res $-$ Pagos.Res) & Reservas no canceladas \\
+CxP Vig.~Ant. & MAX(0, Comp.CxP $-$ Pagos.CxP) & CxP no canceladas \\
+Saldo en Libros & MAX(0, Sup) + Res + CxP + Ant & Base del cruce con FUT \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{10pt}
+\textcolor{sepia}{\small Estos campos replican exactamente las columnas H--N de la hoja ``0. Equilibrio'' del Excel.}
+\end{frame}
+
+% ── 6. DETALLE TECNICO CIERRE ─────────────────────────────────────
+\begin{frame}{Cierre FUT vs CUIPO: C\'omo funciona el cruce}
+
+\begin{center}
+\begin{tikzpicture}[
+    box/.style={draw=sepia, rounded corners=3pt, minimum width=3cm, minimum height=0.8cm, font=\small, align=center, fill=white},
+    bigbox/.style={draw=ochre, rounded corners=6pt, minimum width=3cm, minimum height=1.2cm, font=\small, align=center, fill=ochre!8, line width=1pt},
+    arr/.style={-{Stealth[length=5pt]}, ochre, thick}
+]
+\node[box] (fut) at (-3.5,0) {\textbf{FUT Cierre}\\C.1.2 $\to$ consol=1};
+\node[bigbox] (cruce) at (0,0) {\textbf{SUMIF}\\consolidaci\'on = 1};
+\node[box] (eq) at (3.5,0) {\textbf{Equilibrio}\\fuentes con consol=1};
+
+\draw[arr] (fut) -- (cruce);
+\draw[arr] (eq) -- (cruce);
+
+\node[font=\scriptsize, text=sepia] at (0,-1.2) {3 comparaciones: Saldo en Libros, Reservas, CxP};
+\node[font=\scriptsize, text=sepia] at (0,-1.7) {Diferencia $\leq$ \$1 $\to$ \textcolor{verde}{CUMPLE} \quad Diferencia $>$ \$1 $\to$ \textcolor{rojo}{NO CUMPLE}};
+\end{tikzpicture}
+\end{center}
+
+\vspace{8pt}
+
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{center}
+\begin{tabular}{l c r r r}
+\toprule
+\textbf{C\'odigo FUT} & \textbf{Consol} & \textbf{Saldo FUT} & \textbf{Saldo CUIPO} & \textbf{Diff} \\
+\midrule
+C.1.1 (SGP LD Cat 4--6) & 55 & 676,042,035 & 713,461,908 & \textcolor{rojo}{37,419,873} \\
+C.1.2 (ICLD) & 1 & 926,459,097 & 934,159,225 & \textcolor{rojo}{7,700,128} \\
+C.2.4.10 (SGP Agua) & 43 & --- & --- & \textcolor{verde}{0} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textcolor{sepia}{\scriptsize Ejemplo con datos de Betania (DANE 05091). Las diferencias detectan inconsistencias entre el reporte de cierre y la ejecuci\'on.}
+\end{frame}
+
+% ── 7. ROADMAP COMPLETO ───────────────────────────────────────────
+\begin{frame}{Roadmap: 10 sprints hacia paridad total con el Excel}
+
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{center}
+\begin{tabular}{c l l c}
+\toprule
+\textbf{\#} & \textbf{M\'odulo} & \textbf{Entidad evaluadora} & \textbf{Estado} \\
+\midrule
+S0 & Equilibrio por fuentes & (Motor central) & \cmark \\
+S1 & Cierre FUT vs CUIPO & (Cruce interno) & \cmark \\
+\rowcolor{amber!12}
+S2 & \textbf{SI.17 / Ley 617} & \textbf{Contralor\'ia Rep\'ublica} & \wmark \\
+\rowcolor{amber!12}
+S3 & \textbf{Equilibrio CGA} & \textbf{Contralor\'ia Antioquia} & \wmark \\
+S4 & Agua Potable & Min.~Vivienda & \xmark \\
+S5 & SGP Requisitos Legales & DNP & \xmark \\
+S6 & Eficiencia Fiscal & Contadur\'ia & \xmark \\
+S7 & Mapa de Inversiones & DNP & \xmark \\
+S8 & Desempe\~no Fiscal (IDF) & DNP & \xmark \\
+S9 & Exportaci\'on Excel + Trazabilidad & (Producto) & \xmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{4pt}
+\centering
+\cmark\ Completado \quad \wmark\ Siguiente (Phase 2) \quad \xmark\ Pendiente
+\end{frame}
+
+% ── 8. BRECHAS CRITICAS RESTANTES ─────────────────────────────────
+\begin{frame}{Brechas cr\'iticas por cerrar}
+\vspace{-4pt}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{rojo}{Sprint 2: Ley 617}}
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item ICLD con rubros espec\'ificos
+    \item Descuentos legales: Ley 99, FONPET
+    \item SGP Libre Dest.~Cat 4--6 en ICLD
+    \item Rubros de gasto que descuentan
+    \item \textbf{Acciones de mejora} (\$ mal clasificado)
+\end{itemize}
+
+\vspace{4pt}
+\textbf{\textcolor{amber}{Sprint 6: Eficiencia Fiscal}}
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item F\'ormula contable correcta
+    \item Umbral 25\% (no 50\%)
+    \item 2 CGN trimestres, 19 impuestos
+\end{itemize}
+\end{column}
+
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{rojo}{Sprint 3: CGA Antioquia}}
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item 8 chequeos (hoy solo 4)
+    \item Cross-vigencia 2024$\to$2025
+    \item Inputs manuales (decretos)
+    \item Tolerancias correctas
+    \item Super\'avit: FUT vs CUIPO
+\end{itemize}
+
+\vspace{4pt}
+\textbf{\textcolor{amber}{Sprint 7: Mapa Inversiones}}
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item Cruce BEPIN + Producto MGA
+    \item Ejecuci\'on sin cruce $\neq$ PDM
+    \item Nuevo parser + panel
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 9. HALLAZGO TECNICO ──────────────────────────────────────────
+\begin{frame}{Hallazgo t\'ecnico: PROG\_INGRESOS API rota}
+
+\begin{block}{Problema detectado durante validaci\'on}
+El dataset \texttt{PROG\_INGRESOS} (22ah-ddsj) de datos.gov.co tiene:
+\begin{itemize}
+    \item Campo \texttt{cuenta} contiene ``A439'' (c\'odigo de \'ambito), no c\'odigos de cuenta
+    \item Campos monetarios son tipo \textbf{TEXT} con valores ``NO APLICA''
+    \item No se puede hacer \texttt{SUM()} ni filtrar por cuenta
+\end{itemize}
+\end{block}
+
+\vspace{6pt}
+
+\textbf{Impacto:} Presupuesto de ingresos = 0 en la API. Los chequeos CGA 1--2 (equilibrio ppto inicial/definitivo) solo funcionan con upload del archivo Excel.
+
+\vspace{6pt}
+
+\textbf{Soluci\'on:} Agregar upload de CUIPO PROG\_ING como archivo adicional (Sprint futuro) o parsear directamente desde el CHIP.
+
+\vspace{6pt}
+
+\textcolor{sepia}{\small Todos los dem\'as datasets (EJEC\_ING, EJEC\_GAS, PROG\_GAS) funcionan correctamente v\'ia API.}
+\end{frame}
+
+% ── 10. PROXIMOS PASOS ────────────────────────────────────────────
+\begin{frame}{Pr\'oximos pasos}
+
+\begin{enumerate}
+    \item \textbf{Phase 2} (esta semana): Sprint 2 (Ley 617) + Sprint 3 (CGA Antioquia)
+    \begin{itemize}
+        \item Rubros ICLD espec\'ificos + descuentos legales
+        \item 8 chequeos CGA con cross-vigencia
+        \item Acciones de mejora cuantificadas (\$)
+    \end{itemize}
+
+    \vspace{6pt}
+    \item \textbf{Phase 3}: Sprint 4 (Agua Potable) + Sprint 5 (SGP) + Sprint 6 (Eficiencia)
+    \begin{itemize}
+        \item Evaluaciones sectoriales completas
+        \item F\'ormula contable de refrendaci\'on corregida
+    \end{itemize}
+
+    \vspace{6pt}
+    \item \textbf{Phase 4}: Sprint 7 (Mapa Inversiones) + Sprint 8 (IDF) + Sprint 9 (Export Excel)
+    \begin{itemize}
+        \item Cruce con Plan de Desarrollo
+        \item Exportaci\'on auditable
+    \end{itemize}
+
+    \vspace{6pt}
+    \item \textbf{Sesi\'on con Johan}: Validar que los n\'umeros den \textbf{id\'entico} al Excel
+\end{enumerate}
+
+\vspace{8pt}
+\centering
+\textcolor{ochre}{\large\textbf{gobia.co/plataforma/validador} --- En producci\'on ahora}
+\end{frame}
+
+\end{document}
