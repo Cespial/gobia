@@ -580,14 +580,14 @@ export function parseCuipoEjecGastos(buffer: ArrayBuffer): CuipoGastosRow[] {
     const row = jsonData[i];
     if (!row || !Array.isArray(row)) continue;
 
-    const cuenta = colCuenta >= 0 ? String(row[colCuenta] || '').trim() : '';
-    if (!cuenta) continue;
-
-    // Fill-down vigencia and seccion
+    // Fill-down vigencia and seccion BEFORE skipping empty cuenta rows
     const rawVigencia = colVigencia >= 0 ? String(row[colVigencia] || '').trim() : '';
     const rawSeccion = colSeccion >= 0 ? String(row[colSeccion] || '').trim() : '';
     if (rawVigencia) lastVigencia = rawVigencia;
     if (rawSeccion) lastSeccion = rawSeccion;
+
+    const cuenta = colCuenta >= 0 ? String(row[colCuenta] || '').trim() : '';
+    if (!cuenta) continue;
 
     const fuente = colFuente >= 0 ? String(row[colFuente] || '').trim() : '';
     const isLeaf = fuente.length > 0;

@@ -1,0 +1,315 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\definecolor{ink}{HTML}{1A1A1A}
+\definecolor{ochre}{HTML}{B8956A}
+\definecolor{cream}{HTML}{F8F8F6}
+\definecolor{sepia}{HTML}{6B6B6B}
+\definecolor{verde}{HTML}{22C55E}
+\definecolor{rojo}{HTML}{EF4444}
+\definecolor{amber}{HTML}{F59E0B}
+
+\setbeamercolor{background canvas}{bg=cream}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamercolor{frametitle}{fg=ink}
+\setbeamercolor{title}{fg=ink}
+\setbeamercolor{subtitle}{fg=sepia}
+\setbeamercolor{item}{fg=ochre}
+
+\setbeamerfont{title}{size=\LARGE,series=\bfseries}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{fontawesome5}
+
+\newcommand{\cmark}{\textcolor{verde}{\faCheck}}
+\newcommand{\xmark}{\textcolor{rojo}{\faTimes}}
+\newcommand{\wmark}{\textcolor{amber}{\faExclamationTriangle}}
+
+\title{Validador Fiscal Municipal}
+\subtitle{Reporte de Validaci\'on Final --- Betania (DANE 05091)\\[4pt]
+\small\textcolor{sepia}{gobia.co --- 16 de abril de 2026}}
+\author{}
+\date{}
+
+\begin{document}
+
+% ── 1. PORTADA ──
+\begin{frame}
+\titlepage
+\end{frame}
+
+% ── 2. RESUMEN EJECUTIVO ──
+\begin{frame}{Resumen ejecutivo}
+\footnotesize
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l c l}
+\toprule
+\textbf{M\'odulo} & \textbf{Estado} & \textbf{Detalle} \\
+\midrule
+Equilibrio f\'ormulas & \cmark & 4 f\'ormulas $\times$ 232 filas = 0 errores \\
+Equilibrio datos CUIPO & \cmark & 7/9 m\'etricas exactas al peso \\
+Ley 617 SI.17 & \cmark & Ratio 61.03\% exacto al cent\'esimo \\
+Ley 617 Concejo/Personer\'ia & \cmark & L\'imites y gastos coinciden \\
+CGA 8 chequeos & \cmark & Cross-vigencia 2024$\to$2025 correcto \\
+SGP distribuci\'on SICODIS & \cmark & Id\'entica (misma fuente API DNP) \\
+SGP ejecuci\'on & \wmark & Por keyword, no sub-componente exacto \\
+Eficiencia Fiscal f\'ormula & \cmark & CxC\_I + Income\_IV - Adj\_IV - CxC\_IV \\
+Eficiencia Fiscal umbral & \cmark & 25\% varianza (corregido de 50\%) \\
+Agua Potable & \cmark & 5 sub-validaciones, umbral 75\% \\
+IDF & \wmark & 8/10 indicadores implementados \\
+Mapa de Inversiones & \cmark & Cruce BEPIN (valor agregado) \\
+Exportaci\'on Excel & \cmark & 11 hojas + trazabilidad \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{6pt}
+\centering
+\textbf{11 de 13 m\'odulos CORRECTOS.} 2 parciales (SGP sub-componentes, IDF 2 indicadores).
+\end{frame}
+
+% ── 3. DATOS COMPARADOS ──
+\begin{frame}{Datos comparados: 3 fuentes}
+\footnotesize
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l r r r}
+\toprule
+\textbf{M\'etrica} & \textbf{Plantilla} & \textbf{CHIP} & \textbf{API (T3)} \\
+\midrule
+Total Ingresos & 26,712M & 26,434M & 19,664M \\
+Total Compromisos & 28,481M & \textcolor{verde}{28,481M} & 17,988M \\
+Total Obligaciones & 22,363M & \textcolor{verde}{22,363M} & 14,997M \\
+Total Pagos & 21,923M & \textcolor{verde}{21,923M} & 14,854M \\
+Total Reservas & 6,118M & \textcolor{verde}{6,118M} & --- \\
+Total CxP & 440M & \textcolor{verde}{440M} & --- \\
+Ppto Ini Ingresos & 21,276M & \textcolor{verde}{21,276M} & 0 \\
+Ppto Def Ingresos & 31,331M & \textcolor{verde}{31,331M} & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{4pt}
+\textcolor{sepia}{\scriptsize \textcolor{verde}{Verde} = coincide exacto con la plantilla de Ricardo. \\
+CHIP tiene envío m\'as reciente (marzo 2026); API solo tiene hasta Sep 2025.}
+\end{frame}
+
+% ── 4. EQUILIBRIO ──
+\begin{frame}{Equilibrio: Verificaci\'on de f\'ormulas}
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{l l c}
+\toprule
+\textbf{F\'ormula} & \textbf{Verificaci\'on} & \textbf{Resultado} \\
+\midrule
+Reservas = Compromisos $-$ Obligaciones & 232 filas comparadas & \cmark\ 0 errores \\
+CxP = Obligaciones $-$ Pagos & 232 filas & \cmark\ 0 errores \\
+Super\'avit = Recaudo $-$ Compromisos & 232 filas & \cmark\ 0 errores \\
+Saldo Libros = MAX(0,Sup)+Res+CxP+Ant & 232 filas & \cmark\ 0 errores \\
+Validador = Comp$-$Pagos$-$Res$-$CxP & Implementado & \cmark\ Debe ser 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{10pt}
+\textbf{Datos CUIPO (7/9 exactos):}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item \cmark\ Compromisos, Obligaciones, Pagos, Reservas, CxP, Ppto Ini, Ppto Def: \textbf{exactos al peso}
+    \item \wmark\ Total Ingresos: $-$1.04\% (env\'io CHIP m\'as reciente)
+    \item Super\'avit: derivado de Ingresos (misma diferencia propagada)
+\end{itemize}
+\end{frame}
+
+% ── 5. LEY 617 ──
+\begin{frame}{Ley 617: Verificaci\'on SI.17}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\textbf{ICLD}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 55 cuentas v\'alidas espec\'ificas \cmark
+    \item Descuento fondos legales 3\% \cmark
+    \item Acciones de mejora cuantificadas \cmark
+\end{itemize}
+
+\vspace{4pt}
+\textbf{Gastos de funcionamiento}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 15 gastos deducibles implementados \cmark
+    \item Deducci\'on total: \$697M \cmark
+\end{itemize}
+
+\vspace{4pt}
+\textbf{Indicador}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item GF\_neto / ICLD = \textbf{61.03\%} \cmark
+    \item L\'imite Cat 6: 80\% $\to$ \textbf{CUMPLE}
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{l r c}
+\toprule
+\textbf{Secci\'on} & \textbf{Valor} & \\
+\midrule
+Admin Central & 61.03\% & \cmark \\
+L\'imite & 80\% & \\
+\midrule
+Concejo & \$241M & \cmark \\
+L\'imite & \$383M & \\
+\midrule
+Personer\'ia & \$221M & \cmark \\
+L\'imite & \$227M & \\
+\bottomrule
+\end{tabular}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 6. CGA ──
+\begin{frame}{CGA Antioquia: 8 chequeos}
+\scriptsize
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l r r r c}
+\toprule
+\textbf{Check} & \textbf{Valor 1} & \textbf{Valor 2} & \textbf{Diff} & \textbf{Status} \\
+\midrule
+Ppto Inicial I vs G & 21,276M & 21,045M & 231M & \cmark \\
+Ppto Definitivo I vs G & 31,331M & 31,099M & 231M & \cmark \\
+Reservas 2025 FUT vs CUIPO & 842M & 6,118M & $-$5,275M & \xmark \\
+CxP 2025 FUT vs CUIPO & 409M & 440M & $-$31M & \xmark \\
+Super\'avit 2025 FUT vs CUIPO & 2,116M & $-$1,769M & 3,885M & \xmark \\
+Reservas 2024$\to$2025 & 2,294M & 2,325M & $-$30M & \xmark \\
+CxP 2024$\to$2025 & 88M & 88M & 0 & \cmark \\
+Super\'avit 2024 & 1,982M & --- & --- & info \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{4pt}
+\textcolor{sepia}{\scriptsize Los NO CUMPLE son hallazgos reales de inconsistencia en el reporte de Betania, no errores de la plataforma.}
+\end{frame}
+
+% ── 7. EFICIENCIA FISCAL ──
+\begin{frame}{Eficiencia Fiscal: Refrendaci\'on CGN}
+\scriptsize
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l r r r c}
+\toprule
+\textbf{Impuesto} & \textbf{CGN} & \textbf{CUIPO} & \textbf{Var \%} & \textbf{Ref} \\
+\midrule
+Veh\'iculos Automotores & 50.8M & 39.6M & 22.2\% & \cmark\ SI \\
+Predial Unificado & 2,369M & 1,114M & 53.0\% & \xmark\ NO \\
+Industria y Comercio & 8,122M & 453M & 94.4\% & \xmark\ NO \\
+Avisos y Tableros & 850M & 39M & 95.3\% & \xmark\ NO \\
+Delineaci\'on Urbana & 97.6M & 84.3M & 13.6\% & \cmark\ SI \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{4pt}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item F\'ormula: CxC\_I + Income\_IV $-$ Adj\_IV $-$ CxC\_IV \cmark
+    \item Umbral: 25\% varianza \cmark\ (corregido de 50\%)
+    \item Auto-detecci\'on Pesos/Miles \cmark
+\end{itemize}
+\end{frame}
+
+% ── 8. AGUA + SGP ──
+\begin{frame}{Agua Potable + SGP}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Agua Potable (Min.~Vivienda)}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item Distribuci\'on SICODIS: \$1,644M
+    \item Presupuesto = Distribuci\'on \cmark
+    \item Ejecuci\'on: 54.9\% \xmark\ ($<$75\%)
+    \item D\'eficit: \$754M \cmark\ (positivo)
+    \item Subsidios: \$373M \cmark
+    \item 5 sub-validaciones implementadas
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{SGP (DNP)}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item Distribuci\'on SICODIS: \textbf{exacta}
+    \item Educaci\'on: 91.7\% \cmark
+    \item Salud: 77.8\% \wmark
+    \item Prop.~General: 73.2\% \wmark
+    \item Agua Potable: 51.5\% \wmark
+    \item Asign.~Especiales: 0\% \xmark
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 9. ARQUITECTURA ──
+\begin{frame}{Arquitectura entregada}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{10 m\'odulos de validaci\'on}
+\begin{enumerate}\setlength{\itemsep}{0pt}
+    \item Equilibrio por fuentes (148 fuentes)
+    \item Cierre FUT vs CUIPO (45 cruces)
+    \item SI.17 Ley 617 (55 ICLD + 15 deducibles)
+    \item CGA Antioquia (8 chequeos)
+    \item Agua Potable (5 sub-validaciones)
+    \item SGP Requisitos Legales
+    \item Eficiencia Fiscal (f\'ormula CGN)
+    \item Mapa de Inversiones (BEPIN)
+    \item Desempe\~no Fiscal IDF
+    \item Exportaci\'on Excel (11 hojas)
+\end{enumerate}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Data Lake Antioquia}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 2,947 archivos xlsx
+    \item 125 municipios cubiertos
+    \item 213 MB de datos
+    \item 12 parquets consolidados
+    \item 7 fuentes de datos integradas
+\end{itemize}
+
+\vspace{6pt}
+\textbf{Entregables}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 35+ commits
+    \item 2 rondas de code review
+    \item 13 bugs cr\'iticos corregidos
+    \item Presentaci\'on ejecutiva PDF
+    \item Data lake descargable
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 10. PRÓXIMOS PASOS ──
+\begin{frame}{Pr\'oximos pasos}
+\begin{enumerate}
+    \item \textbf{Sesi\'on con Johan}: Validar n\'umeros exactos con el mismo env\'io CHIP
+    \item \textbf{SGP sub-componentes}: Mapeo exacto por cuenta CUIPO (no keyword)
+    \item \textbf{IDF 2 indicadores}: Crecimiento recursos propios + actualizaci\'on catastral
+    \item \textbf{Rollout comercial}: Identificar municipios medianos con indicadores bajos
+    \item \textbf{Refrendaci\'on hist\'orica}: Agregar 3 a\~nos de datos Contadur\'ia
+    \item \textbf{Simulador prospectivo}: ``Si quiere llegar a X\%, necesita Y en Z''
+\end{enumerate}
+
+\vspace{12pt}
+\centering
+\textcolor{ochre}{\large\textbf{gobia.co/plataforma/validador}}\\[4pt]
+\textcolor{sepia}{\small Password: gobia2025 $\to$ Betania (Antioquia) $\to$ Datos precargados}
+\end{frame}
+
+\end{document}
