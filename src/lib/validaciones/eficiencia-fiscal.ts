@@ -152,30 +152,32 @@ function calcularCGNTotal(
   tax: TaxMapping,
   cgnMapI: Map<string, CGNSaldoRow> | null,
   cgnMapIV: Map<string, CGNSaldoRow>,
+  multiplier: number = 1000,
 ): { total: number; formula: string } | null {
-  if (!tax.cgnIncome) return null; // no CGN mapping for this tax
+  if (!tax.cgnIncome) return null;
 
-  // Income from Trimestre IV
   const incomeIV = cgnMapIV.get(tax.cgnIncome)?.saldoFinal ?? 0;
-
-  // Adjustments from Trimestre IV (subtract only if positive)
   const adjIV = tax.cgnAdjustment
     ? Math.max(0, cgnMapIV.get(tax.cgnAdjustment)?.saldoFinal ?? 0)
     : 0;
 
+  const mult = multiplier;
+  const label = mult === 1 ? "(pesos)" : "(x1000)";
+
   if (cgnMapI) {
-    // Full formula with both trimesters
     const cxcI = tax.cgnCxC ? (cgnMapI.get(tax.cgnCxC)?.saldoFinal ?? 0) : 0;
     const cxcIV = tax.cgnCxC ? (cgnMapIV.get(tax.cgnCxC)?.saldoFinal ?? 0) : 0;
-
-    const total = (cxcI + incomeIV - adjIV - cxcIV) * 1000;
-    const formula = `CxC_I(${cxcI}) + Income_IV(${incomeIV}) - Adj_IV(${adjIV}) - CxC_IV(${cxcIV}) = ${cxcI + incomeIV - adjIV - cxcIV} (x1000)`;
-    return { total, formula };
+    const raw = cxcI + incomeIV - adjIV - cxcIV;
+    return {
+      total: raw * mult,
+      formula: `CxC_I(${cxcI}) + Income_IV(${incomeIV}) - Adj_IV(${adjIV}) - CxC_IV(${cxcIV}) = ${raw} ${label}`,
+    };
   } else {
-    // Degraded mode: only CGN_IV available, use income only
-    const total = (incomeIV - adjIV) * 1000;
-    const formula = `Income_IV(${incomeIV}) - Adj_IV(${adjIV}) = ${incomeIV - adjIV} (x1000, sin CGN_I)`;
-    return { total, formula };
+    const raw = incomeIV - adjIV;
+    return {
+      total: raw * mult,
+      formula: `Income_IV(${incomeIV}) - Adj_IV(${adjIV}) = ${raw} ${label}, sin CGN_I`,
+    };
   }
 }
 
@@ -232,7 +234,10 @@ export async function evaluateEficienciaFiscal(
     let cgnFormula: string | null = null;
 
     if (hasCGNData) {
-      const result = calcularCGNTotal(tax, cgnMapI, cgnMapIV);
+      // Detect unit: if CGN header says "(Pesos)" → multiplier=1, else ×1000 (miles)
+      const cgnUnit = cgnDataIV?.unidad ?? "miles";
+      const mult = cgnUnit === "pesos" ? 1 : 1000;
+      const result = calcularCGNTotal(tax, cgnMapI, cgnMapIV, mult);
       if (result) {
         cgnTotal = result.total;
         cgnFormula = result.formula;

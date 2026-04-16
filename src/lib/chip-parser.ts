@@ -131,6 +131,7 @@ export interface CGNSaldosData {
   ingresos: number;
   gastos: number;
   trimestre: string; // "I", "II", "III", "IV"
+  unidad: "miles" | "pesos"; // detected from header: "(Miles)" vs "(Pesos)"
 }
 
 export function parseCGNSaldos(buffer: ArrayBuffer): CGNSaldosData {
@@ -142,13 +143,21 @@ export function parseCGNSaldos(buffer: ArrayBuffer): CGNSaldosData {
   const sheet = workbook.Sheets[sheetName];
   const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
-  // Find header row
+  // Find header row and detect unit (Miles vs Pesos)
   let headerIdx = 0;
-  for (let i = 0; i < Math.min(jsonData.length, 5); i++) {
+  let unidad: "miles" | "pesos" = "miles"; // default assumption
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
     const row = jsonData[i];
-    if (row && Array.isArray(row) && row.some(cell => String(cell).toUpperCase().includes('CODIGO'))) {
-      headerIdx = i;
-      break;
+    if (row && Array.isArray(row)) {
+      const headerText = row.map(c => String(c).toUpperCase()).join(' ');
+      if (headerText.includes('CODIGO')) {
+        headerIdx = i;
+        // Detect: "(Pesos)" in header means values are in pesos, not miles
+        if (headerText.includes('(PESOS)')) {
+          unidad = "pesos";
+        }
+        break;
+      }
     }
   }
 
@@ -188,7 +197,7 @@ export function parseCGNSaldos(buffer: ArrayBuffer): CGNSaldosData {
   const trimMatch = sheetName.match(/(\d+|I{1,3}V?)\s*$/i);
   const trimestre = trimMatch ? (triMap[trimMatch[1].toUpperCase()] || 'IV') : 'IV';
 
-  return { rows, activos, pasivos, patrimonio, ingresos, gastos, trimestre };
+  return { rows, activos, pasivos, patrimonio, ingresos, gastos, trimestre, unidad };
 }
 
 function toNum(val: unknown): number {
