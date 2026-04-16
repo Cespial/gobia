@@ -203,13 +203,10 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       if (buf3) { const d = parseCGNSaldos(buf3); if (d.rows.length > 0) setCgnSaldos(d); }
       if (buf4) { const d = parseCGNSaldos(buf4); if (d.rows.length > 0) setCgnSaldosI(d); }
 
-      // Load CUIPO fixtures (multiple files)
+      // Load CUIPO fixtures (deduplicated — CHIP exports full dataset per file)
       const cuipoNames = [
         "cuipo_prog_ing", "cuipo_ejec_ing",
-        "cuipo_prog_gas_admin", "cuipo_prog_gas_concejo", "cuipo_prog_gas_personeria",
-        "cuipo_prog_gas_reservas", "cuipo_prog_gas_cxp",
-        "cuipo_ejec_gas_admin", "cuipo_ejec_gas_concejo", "cuipo_ejec_gas_personeria",
-        "cuipo_ejec_gas_cxp",
+        "cuipo_prog_gas", "cuipo_ejec_gas",
       ];
       const cuipoBufs = await Promise.all(
         cuipoNames.map(n => loadFixture(`/fixtures/${code}/${n}.xlsx`))
