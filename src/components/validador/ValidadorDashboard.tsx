@@ -190,6 +190,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     }
     (async () => {
       const code = municipio.code;
+      // Load FUT + CGN fixtures
       const [buf1, buf2, buf3, buf4] = await Promise.all([
         loadFixture(`/fixtures/${code}/fut_cierre_2025.xlsx`),
         loadFixture(`/fixtures/${code}/fut_cierre_2024.xlsx`),
@@ -201,6 +202,31 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       if (buf2) { const d = parseFUTCierre(buf2); if (d.rows.length > 0) setFutCierre2024(d); }
       if (buf3) { const d = parseCGNSaldos(buf3); if (d.rows.length > 0) setCgnSaldos(d); }
       if (buf4) { const d = parseCGNSaldos(buf4); if (d.rows.length > 0) setCgnSaldosI(d); }
+
+      // Load CUIPO fixtures (multiple files)
+      const cuipoNames = [
+        "cuipo_prog_ing", "cuipo_ejec_ing",
+        "cuipo_prog_gas_admin", "cuipo_prog_gas_concejo", "cuipo_prog_gas_personeria",
+        "cuipo_prog_gas_reservas", "cuipo_prog_gas_cxp",
+        "cuipo_ejec_gas_admin", "cuipo_ejec_gas_concejo", "cuipo_ejec_gas_personeria",
+        "cuipo_ejec_gas_cxp",
+      ];
+      const cuipoBufs = await Promise.all(
+        cuipoNames.map(n => loadFixture(`/fixtures/${code}/${n}.xlsx`))
+      );
+      if (cancelled) return;
+      const validCuipo = cuipoBufs
+        .map((buf, i) => buf ? { name: cuipoNames[i] + ".xlsx", buffer: buf } : null)
+        .filter((x): x is { name: string; buffer: ArrayBuffer } => x !== null);
+      if (validCuipo.length > 0) {
+        try {
+          const { parseCuipoFiles } = await import("@/lib/chip-parser");
+          const cuipo = parseCuipoFiles(validCuipo);
+          if (cuipo.ejecIngresos.length > 0 || cuipo.ejecGastos.length > 0) {
+            setCuipoData(cuipo);
+          }
+        } catch { /* CUIPO fixtures not available */ }
+      }
     })();
     return () => { cancelled = true; };
   }, [municipio.code]);
