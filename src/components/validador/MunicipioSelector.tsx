@@ -6,7 +6,7 @@ import { Search, MapPin, ChevronRight } from "lucide-react";
 import { MUNICIPIOS, DEPARTAMENTOS, type Municipio } from "@/data/municipios";
 
 function formatCOP(value: number): string {
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}MM`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
   return `$${value.toLocaleString("es-CO")}`;
 }
