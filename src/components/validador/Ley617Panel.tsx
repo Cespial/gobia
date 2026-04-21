@@ -1,5 +1,8 @@
 "use client";
 
+import { ACCIONES_MEJORA } from "@/data/acciones-mejora";
+import { DESTINACIONES_ESPECIFICAS_DEFAULT } from "@/data/alertas-icld";
+
 /* ---------- helpers ---------- */
 
 function formatCOP(value: number): string {
@@ -63,6 +66,7 @@ interface Ley617PanelProps {
     gastosDeducidos?: number;
     gastosFuncionamientoNeto?: number;
     gastosDeducidosDetalle?: GastoDeducidoDetalle[];
+    alertasICLD?: { cuenta: string; nombre: string; fuente: string; alerta: string; valor: number }[];
   };
   certifications?: Ley617Certification[];
   periodo: string;
@@ -501,20 +505,128 @@ export default function Ley617Panel({
         </div>
       )}
 
-      {/* Acciones de Mejora alert */}
+      {/* D1: Alertas ICLD — tipoNorma / fechaNorma issues */}
+      {data.alertasICLD && data.alertasICLD.length > 0 && (
+        <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 p-5">
+          <h3
+            className="mb-3 text-sm font-semibold text-red-400"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Alertas ICLD ({data.alertasICLD.length})
+          </h3>
+          <p className="mb-3 text-xs text-red-400/80">
+            Rubros con fuente ICLD que tienen tipoNorma o fechaNorma diferente a &quot;NO APLICA&quot;.
+            Estos rubros no seran sujetos de considerarlos dentro de los ICLD.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-red-400/20 text-left text-red-400/60">
+                  <th className="py-2 pr-3 font-medium">Cuenta</th>
+                  <th className="py-2 pr-3 font-medium">Nombre</th>
+                  <th className="py-2 pr-3 font-medium">Fuente</th>
+                  <th className="py-2 pr-3 font-medium">Alerta</th>
+                  <th className="py-2 text-right font-medium">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.alertasICLD.map((a, i) => (
+                  <tr key={`${a.cuenta}-${i}`} className="border-b border-red-400/10">
+                    <td className="py-2 pr-3 font-mono text-red-300/80">{a.cuenta}</td>
+                    <td className="py-2 pr-3 text-red-300/80">{a.nombre}</td>
+                    <td className="py-2 pr-3 text-red-300/60">{a.fuente.length > 40 ? a.fuente.slice(0, 40) + "..." : a.fuente}</td>
+                    <td className="py-2 pr-3 text-red-300/80">{a.alerta}</td>
+                    <td className="py-2 text-right text-red-300">{formatCOP(a.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* D2: Acciones de Mejora desagregadas */}
       {(data.accionesMejora ?? 0) > 0 && (
-        <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 text-amber-400">⚠</span>
+        <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <span className="mt-0.5 text-amber-400">!</span>
             <div>
               <p className="text-sm font-semibold text-amber-400">
                 Acciones de Mejora: {formatCOP(data.accionesMejora!)} en rubros que no cuentan como ICLD
               </p>
               <p className="mt-1 text-xs text-amber-400/80">
-                Este valor fue registrado en fuentes de libre destinación pero en cuentas que la
-                Contraloría no acepta. Reclasificar mejoraría el indicador.
+                Este valor fue registrado en fuentes de libre destinacion pero en cuentas que la
+                Contraloria no acepta. Reclasificar mejoraria el indicador.
               </p>
             </div>
+          </div>
+
+          {/* Categorized breakdown from Johan's typology */}
+          <div className="space-y-3">
+            {ACCIONES_MEJORA.map((cat, catIdx) => {
+              // Detect which items apply based on current data
+              const applicableItems = cat.items.map((item) => {
+                const lower = item.toLowerCase();
+                let applies = false;
+
+                // Category 1: Errores aritmeticos
+                if (lower.includes("compromisos mayores a presupuesto")) {
+                  // Would need presupuesto definitivo vs compromisos
+                  applies = false; // Cannot determine without full data
+                }
+                if (lower.includes("obligaciones mayores a los compromisos")) {
+                  applies = false; // Cannot determine here
+                }
+                if (lower.includes("pagos mayores a las obligaciones")) {
+                  applies = false; // Cannot determine here
+                }
+
+                // Category 2: Clasificadores
+                if (lower.includes("uso de fuentes en rubros no permitidos")) {
+                  applies = (data.accionesMejora ?? 0) > 0;
+                }
+
+                // Category 4: Ley 617
+                if (lower.includes("rubros que no suman para el indicador")) {
+                  applies = (data.accionesMejora ?? 0) > 0;
+                }
+                if (lower.includes("combinaciones que no suman para el indicador")) {
+                  applies = (data.accionesMejora ?? 0) > 0;
+                }
+
+                return { item, applies };
+              });
+
+              const hasApplicable = applicableItems.some((a) => a.applies);
+
+              return (
+                <div key={catIdx} className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-4 py-3">
+                  <h4 className="mb-2 text-xs font-semibold text-amber-300">
+                    {catIdx + 1}. {cat.categoria}
+                    {hasApplicable && (
+                      <span className="ml-2 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] text-amber-400">
+                        DETECTADO
+                      </span>
+                    )}
+                  </h4>
+                  <ul className="space-y-1 text-xs">
+                    {applicableItems.map(({ item, applies }, itemIdx) => (
+                      <li
+                        key={itemIdx}
+                        className={`flex items-start gap-2 ${
+                          applies ? "text-amber-300" : "text-amber-400/50"
+                        }`}
+                      >
+                        <span className="mt-0.5 flex-shrink-0">
+                          {applies ? "\u25CF" : "\u25CB"}
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -585,6 +697,55 @@ export default function Ley617Panel({
           return <PercentageSectionCard key={s.seccion} s={s} />;
         })}
       </div>
+
+      {/* D4: Destinaciones Específicas informational table */}
+      {data.icldNeto !== undefined && (
+        <div className="mb-6 rounded-xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-5">
+          <h3
+            className="mb-2 text-sm font-semibold text-white"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Destinaciones Especificas
+          </h3>
+          <p className="mb-4 text-xs text-[var(--gray-500)]">
+            Porcentajes del ICLD asignados por acto administrativo municipal. Estos valores son
+            configurables por cada entidad territorial (edicion en futuras versiones).
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[var(--gray-700)] text-left text-[var(--gray-500)]">
+                  <th className="py-2 pr-4 font-medium">Destinacion</th>
+                  <th className="py-2 pr-4 text-right font-medium">% ICLD</th>
+                  <th className="py-2 pr-4 text-right font-medium">Valor estimado</th>
+                  <th className="py-2 font-medium">Acto administrativo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DESTINACIONES_ESPECIFICAS_DEFAULT.map((d, i) => {
+                  const valorEstimado = (d.porcentajeICLD / 100) * (data.icldNeto ?? data.icldTotal);
+                  return (
+                    <tr key={i} className="border-b border-[var(--gray-800)]/50">
+                      <td className="py-2 pr-4 text-[var(--gray-300)]">{d.nombre}</td>
+                      <td className="py-2 pr-4 text-right text-[var(--gray-400)]">
+                        {d.porcentajeICLD > 0 ? `${d.porcentajeICLD}%` : "Por configurar"}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-[var(--gray-400)]">
+                        {d.porcentajeICLD > 0 ? formatCOP(valorEstimado) : "-"}
+                      </td>
+                      <td className="py-2 text-[var(--gray-500)]">{d.actoAdministrativo}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-[10px] text-[var(--gray-600)]">
+            Nota: Los porcentajes se configuran por municipio segun sus actos administrativos. Los
+            valores en 0% indican que el municipio aun no ha registrado su porcentaje.
+          </p>
+        </div>
+      )}
 
       {/* Historical CGR Certifications */}
       {certifications && certifications.length > 0 && (

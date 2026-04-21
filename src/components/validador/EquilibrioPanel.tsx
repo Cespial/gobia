@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown, Minus, CheckCircle2, XCircle } from "lucide-react";
 import type { Municipio } from "@/data/municipios";
+import { getConsolidada, FUENTES_HOMOLOGADAS } from "@/data/fuentes-consolidacion";
 
 interface EquilibrioData {
   totalIngresos: number;
@@ -141,6 +143,8 @@ export default function EquilibrioPanel({
   periodo: string;
   municipio: Municipio;
 }) {
+  const [vistaConsolidada, setVistaConsolidada] = useState(false);
+
   // Backwards compat: support both totalCompromisos and totalGastos
   const totalCompromisos = data.totalCompromisos ?? data.totalGastos ?? 0;
   const totalObligaciones = data.totalObligaciones ?? 0;
@@ -148,7 +152,71 @@ export default function EquilibrioPanel({
   const totalCxP = data.totalCxP ?? 0;
   const saldoEnLibros = data.saldoEnLibros ?? 0;
 
-  const topFuentes = data.porFuente
+  // D3: Build consolidated fuente view
+  const consolidatedFuentes = useMemo(() => {
+    const map = new Map<string, {
+      codigo: string;
+      nombre: string;
+      recaudo: number;
+      compromisos: number;
+      obligaciones: number;
+      pagos: number;
+      reservas: number;
+      cxp: number;
+      superavit: number;
+      validador: number;
+      reservasVigAnterior: number;
+      cxpVigAnterior: number;
+      saldoEnLibros: number;
+    }>();
+
+    for (const f of data.porFuente) {
+      const consolidadaCodigo = getConsolidada(f.codigo) ?? f.codigo;
+      const existing = map.get(consolidadaCodigo);
+
+      // Find the consolidated description
+      const homologada = FUENTES_HOMOLOGADAS.find(
+        (h) => h.consolidadaCodigo === consolidadaCodigo
+      );
+      const consolidadaNombre = homologada?.consolidadaDescripcion ?? f.nombre;
+
+      if (existing) {
+        existing.recaudo += f.recaudo;
+        existing.compromisos += f.compromisos;
+        existing.obligaciones += (f.obligaciones ?? 0);
+        existing.pagos += f.pagos;
+        existing.reservas += (f.reservas ?? 0);
+        existing.cxp += (f.cxp ?? 0);
+        existing.superavit += f.superavit;
+        existing.validador += (f.validador ?? 0);
+        existing.reservasVigAnterior += (f.reservasVigAnterior ?? 0);
+        existing.cxpVigAnterior += (f.cxpVigAnterior ?? 0);
+        existing.saldoEnLibros += (f.saldoEnLibros ?? 0);
+      } else {
+        map.set(consolidadaCodigo, {
+          codigo: consolidadaCodigo,
+          nombre: consolidadaNombre,
+          recaudo: f.recaudo,
+          compromisos: f.compromisos,
+          obligaciones: f.obligaciones ?? 0,
+          pagos: f.pagos,
+          reservas: f.reservas ?? 0,
+          cxp: f.cxp ?? 0,
+          superavit: f.superavit,
+          validador: f.validador ?? 0,
+          reservasVigAnterior: f.reservasVigAnterior ?? 0,
+          cxpVigAnterior: f.cxpVigAnterior ?? 0,
+          saldoEnLibros: f.saldoEnLibros ?? 0,
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  }, [data.porFuente]);
+
+  const activeFuentes = vistaConsolidada ? consolidatedFuentes : data.porFuente;
+
+  const topFuentes = activeFuentes
     .filter((f) => f.recaudo > 0 || f.compromisos > 0)
     .sort((a, b) => b.recaudo - a.recaudo)
     .slice(0, 15);
@@ -353,11 +421,40 @@ export default function EquilibrioPanel({
         </div>
       )}
 
+      {/* D3: Toggle vista detallada / consolidada */}
+      <div className="mb-4 flex items-center gap-3">
+        <button
+          onClick={() => setVistaConsolidada(false)}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            !vistaConsolidada
+              ? "border-[var(--ochre)] bg-[var(--ochre)]/10 text-[var(--ochre)]"
+              : "border-[var(--gray-700)] bg-[var(--gray-800)] text-[var(--gray-400)] hover:text-white"
+          }`}
+        >
+          Vista detallada
+        </button>
+        <button
+          onClick={() => setVistaConsolidada(true)}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+            vistaConsolidada
+              ? "border-[var(--ochre)] bg-[var(--ochre)]/10 text-[var(--ochre)]"
+              : "border-[var(--gray-700)] bg-[var(--gray-800)] text-[var(--gray-400)] hover:text-white"
+          }`}
+        >
+          Vista consolidada
+        </button>
+        {vistaConsolidada && (
+          <span className="text-[10px] text-[var(--gray-500)]">
+            RF + RB + Vigencia agrupadas por fuente consolidada ({consolidatedFuentes.length} fuentes)
+          </span>
+        )}
+      </div>
+
       {/* Chart */}
       {chartData.length > 0 && (
         <div className="mb-8">
           <h3 className="mb-4 text-sm font-medium text-[var(--gray-400)]">
-            Top fuentes de financiacion (millones COP)
+            Top fuentes de financiacion{vistaConsolidada ? " (consolidadas)" : ""} (millones COP)
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -391,7 +488,7 @@ export default function EquilibrioPanel({
       {/* Detail table */}
       <div>
         <h3 className="mb-3 text-sm font-medium text-[var(--gray-400)]">
-          Detalle por fuente de financiacion
+          {vistaConsolidada ? "Detalle por fuente consolidada" : "Detalle por fuente de financiacion"}
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
