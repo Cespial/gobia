@@ -156,8 +156,9 @@ function isGFFuenteValida(codigoFuente: string): boolean {
  * whose reported income should be deducted from ICLD to get ICLD Neto.
  */
 const FUENTES_DEDUCCION_ICLD = [
-  "1.2.3.4.02",  // ICLD LEY 99 - DESTINO AMBIENTAL
-  "1.2.2.0.00",  // INGRESOS CORRIENTES DE DESTINACION ESPECIFICA POR ACTO ADMINISTRATIVO
+  "1.2.3.4.02",  // ICLD LEY 99 - DESTINO AMBIENTAL (Ley 99/1993 Art. 44)
+  // NOTE: 1.2.2.0.00 (destinación específica por acto administrativo) was removed —
+  // it is too broad and would incorrectly deduct the entire category.
 ];
 
 // ---------------------------------------------------------------------------

@@ -386,7 +386,7 @@ export async function fetchGastosPorSeccion(
     dataset: CUIPO_DATASETS.EJEC_GASTOS,
     select:
       "cod_seccion_presupuestal, nom_seccion_presupuestal, cuenta, nombre_cuenta, cod_fuentes_financiacion, nom_fuentes_financiacion, sum(compromisos) as compromisos, sum(obligaciones) as obligaciones, sum(pagos) as pagos",
-    where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cod_vigencia_del_gasto in('1','4') AND cuenta like '2.1%'`,
+    where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND (cod_vigencia_del_gasto='1' OR cod_vigencia_del_gasto='4') AND cuenta like '2.1%'`,
     group:
       "cod_seccion_presupuestal, nom_seccion_presupuestal, cuenta, nombre_cuenta, cod_fuentes_financiacion, nom_fuentes_financiacion",
     order: "cuenta ASC",
