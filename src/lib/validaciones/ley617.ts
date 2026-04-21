@@ -71,6 +71,13 @@ export interface AlertaICLDRow {
   valor: number;
 }
 
+export interface ICLDDetalleRow {
+  cuenta: string;
+  nombre: string;
+  recaudo: number;
+  esValido: boolean;
+}
+
 export interface Ley617Result {
   /** Backward compat: alias for icldNeto (used by Ley617Panel) */
   icldTotal: number;
@@ -103,6 +110,8 @@ export interface Ley617Result {
   gastosDeducidosDetalle: { codigo: string; nombre: string; valor: number }[];
   /** ICLD rows flagged with tipoNorma / fechaNorma alerts (D1) */
   alertasICLD: AlertaICLDRow[];
+  /** Per-rubro breakdown of ICLD income (valid + invalid accounts) */
+  icldDetalle: ICLDDetalleRow[];
   status: "cumple" | "no_cumple";
 }
 
@@ -194,16 +203,34 @@ export async function evaluateLey617(
   ]);
 
   // -------------------------------------------------------------------------
+  // 0. Leaf-row detection: filter out parent/aggregation rows to prevent
+  //    double-counting (parent cuenta = sum of children cuentas).
+  //    A row is a "leaf" if no other row's cuenta starts with its cuenta + "."
+  // -------------------------------------------------------------------------
+  const allIngCuentas = new Set(ingresosRows.map(r => (r.cuenta || "").trim()));
+  function isLeafIngreso(cuenta: string): boolean {
+    const trimmed = cuenta.trim();
+    if (!trimmed) return true; // rows without cuenta pass through
+    const prefix = trimmed + ".";
+    for (const c of allIngCuentas) {
+      if (c.startsWith(prefix)) return false;
+    }
+    return true;
+  }
+  const ingresosLeaf = ingresosRows.filter(r => isLeafIngreso((r.cuenta || "").trim()));
+
+  // -------------------------------------------------------------------------
   // 1. Calculate ICLD: bruto, validado, acciones de mejora, neto
   // -------------------------------------------------------------------------
   let icldBruto = 0;
   let icldValidado = 0;
+  const icldDetalle: ICLDDetalleRow[] = [];
 
   // C2: Collect reported deductions from destinación específica fuentes
   let deduccionReportada = 0;
   const deduccionReportadaDetalle: { codigoFuente: string; nombreFuente: string; valor: number }[] = [];
 
-  for (const row of ingresosRows) {
+  for (const row of ingresosLeaf) {
     const fuenteNombre = row.nom_fuentes_financiacion || "";
     const fuenteCodigo = (row.cod_fuentes_financiacion || "").split(" ")[0].trim();
 
@@ -242,8 +269,19 @@ export async function evaluateLey617(
     icldBruto += recaudo;
 
     // Only count toward validated ICLD if account code is also valid
-    if (isICLDCuenta(row.cuenta)) {
+    const esValido = isICLDCuenta(row.cuenta);
+    if (esValido) {
       icldValidado += recaudo;
+    }
+
+    // Collect per-rubro ICLD detail for Excel export
+    if (recaudo > 0) {
+      icldDetalle.push({
+        cuenta: (row.cuenta || "").trim(),
+        nombre: row.nombre_cuenta || row.cuenta || "",
+        recaudo,
+        esValido,
+      });
     }
   }
 
@@ -255,7 +293,7 @@ export async function evaluateLey617(
   // only populate when CUIPO files are uploaded directly with those columns.
   // -------------------------------------------------------------------------
   const alertasICLD: AlertaICLDRow[] = [];
-  for (const row of ingresosRows) {
+  for (const row of ingresosLeaf) {
     const fuenteCodigo = (row.cod_fuentes_financiacion || "").split(" ")[0].trim();
     const fuenteNombre = row.nom_fuentes_financiacion || "";
     const fuenteIsICLD = isICLDFuente(fuenteNombre);
@@ -307,6 +345,19 @@ export async function evaluateLey617(
   //    cod_vigencia_del_gasto in ('1','4') (vigencia actual + vigencias futuras).
   //    It returns individual account rows (with `cuenta`) for deduction matching.
   // -------------------------------------------------------------------------
+  // Leaf-row detection for gastos (same logic as ingresos)
+  const allGasCuentas = new Set(gastosPorSeccion.map(r => (r.cuenta || "").trim()));
+  function isLeafGasto(cuenta: string): boolean {
+    const trimmed = cuenta.trim();
+    if (!trimmed) return true;
+    const prefix = trimmed + ".";
+    for (const c of allGasCuentas) {
+      if (c.startsWith(prefix)) return false;
+    }
+    return true;
+  }
+  const gastosPorSeccionLeaf = gastosPorSeccion.filter(r => isLeafGasto((r.cuenta || "").trim()));
+
   const seccionMap = new Map<
     string,
     {
@@ -317,7 +368,7 @@ export async function evaluateLey617(
     }
   >();
 
-  for (const row of gastosPorSeccion) {
+  for (const row of gastosPorSeccionLeaf) {
     // C3: Only count expenses funded by ICLD/SGP-LD — check fuente CODE, not just name
     const fuenteCodigo = row.cod_fuentes_financiacion || "";
     if (!isGFFuenteValida(fuenteCodigo)) continue;
@@ -483,6 +534,7 @@ export async function evaluateLey617(
     secciones,
     gastosDeducidosDetalle,
     alertasICLD,
+    icldDetalle: icldDetalle.sort((a, b) => a.cuenta.localeCompare(b.cuenta)),
     status: globalCumple && allSectionsCumple ? "cumple" : "no_cumple",
   };
 }

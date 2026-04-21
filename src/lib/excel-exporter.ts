@@ -848,10 +848,86 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
     }
   }
 
+  // ICLD detail (per-rubro breakdown)
+  if (data.icldDetalle && data.icldDetalle.length > 0) {
+    writeEmptyRow(ws, r++, detailCols);
+    writeSectionRow(ws, r++, "DETALLE RUBROS ICLD", detailCols);
+    writeHeaderRow(ws, r++, [
+      "Codigo",
+      "Nombre",
+      "Recaudo",
+      "Valido?",
+      "Observacion",
+      "",
+      "",
+      "",
+      "",
+    ]);
+
+    const greenRowStyle = {
+      font: { sz: 9, name: "Calibri" },
+      border: thinBorder,
+      fill: { fgColor: { rgb: GREEN_BG } },
+      alignment: { horizontal: "left" as const },
+    };
+    const greenRowNumStyle = {
+      ...greenRowStyle,
+      numFmt: "#,##0",
+      alignment: { horizontal: "right" as const },
+    };
+    const greenRowCenterStyle = {
+      ...greenRowStyle,
+      alignment: { horizontal: "center" as const },
+    };
+    const greenRowCodeStyle = {
+      font: { name: "Consolas", sz: 9 },
+      border: thinBorder,
+      fill: { fgColor: { rgb: GREEN_BG } },
+      alignment: { horizontal: "left" as const },
+    };
+    const amberRowStyle = {
+      font: { sz: 9, name: "Calibri" },
+      border: thinBorder,
+      fill: { fgColor: { rgb: AMBER_BG } },
+      alignment: { horizontal: "left" as const },
+    };
+    const amberRowNumStyle = {
+      ...amberRowStyle,
+      numFmt: "#,##0",
+      alignment: { horizontal: "right" as const },
+    };
+    const amberRowCenterStyle = {
+      ...amberRowStyle,
+      alignment: { horizontal: "center" as const },
+    };
+    const amberRowCodeStyle = {
+      font: { name: "Consolas", sz: 9 },
+      border: thinBorder,
+      fill: { fgColor: { rgb: AMBER_BG } },
+      alignment: { horizontal: "left" as const },
+    };
+
+    for (let i = 0; i < data.icldDetalle.length; i++) {
+      const d = data.icldDetalle[i];
+      const cs = d.esValido ? greenRowCodeStyle : amberRowCodeStyle;
+      const ds = d.esValido ? greenRowStyle : amberRowStyle;
+      const ns = d.esValido ? greenRowNumStyle : amberRowNumStyle;
+      const dc = d.esValido ? greenRowCenterStyle : amberRowCenterStyle;
+
+      writeText(ws, r, 0, d.cuenta, cs);
+      writeText(ws, r, 1, d.nombre, ds);
+      writeNum(ws, r, 2, d.recaudo, ns);
+      writeText(ws, r, 3, d.esValido ? "SI" : "NO", dc);
+      writeText(ws, r, 4, d.esValido ? "" : "ACCION DE MEJORA", ds);
+      for (let c = 5; c < detailCols; c++) writeText(ws, r, c, "", dataStyle);
+      r++;
+    }
+  }
+
   setRange(ws, r - 1, detailCols - 1);
   ws["!cols"] = [
-    { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 12 },
-    { wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+    { wch: 22 }, { wch: 30 }, { wch: 18 }, { wch: 12 },
+    { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
   ];
   freezeRows(ws, freezeRow);
   XLSX.utils.book_append_sheet(wb, ws, "2. Ley 617");
