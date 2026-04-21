@@ -597,7 +597,7 @@ function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
 
 function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
   const ws: XLSX.WorkSheet = {};
-  const detailCols = 12;
+  const detailCols = 11;
   let r = 0;
 
   writeTitle(ws, r++, "EQUILIBRIO PRESUPUESTAL POR FUENTE DE FINANCIACION", detailCols);
@@ -625,7 +625,6 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
   writeSectionRow(ws, r++, "DETALLE POR FUENTE", detailCols);
   const headers = [
     "Codigo",
-    "Consolidacion",
     "Nombre",
     "Recaudo",
     "Compromisos",
@@ -648,24 +647,22 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
     const ds = isAlt ? altRowStyle : dataStyle;
 
     writeText(ws, r, 0, f.codigo, cs);
-    writeCell(ws, r, 1, f.consolidacion ?? "", ds);
-    writeText(ws, r, 2, f.nombre, ds);
-    writeNum(ws, r, 3, f.recaudo, ns);
-    writeNum(ws, r, 4, f.compromisos, ns);
-    writeNum(ws, r, 5, f.obligaciones ?? 0, ns);
-    writeNum(ws, r, 6, f.pagos, ns);
-    writeNum(ws, r, 7, f.reservas ?? 0, ns);
-    writeNum(ws, r, 8, f.cxp ?? 0, ns);
-    writeNum(ws, r, 9, f.superavit, ns);
-    writeNum(ws, r, 10, f.validador ?? 0, ns);
-    writeNum(ws, r, 11, f.saldoEnLibros ?? 0, ns);
+    writeText(ws, r, 1, f.nombre, ds);
+    writeNum(ws, r, 2, f.recaudo, ns);
+    writeNum(ws, r, 3, f.compromisos, ns);
+    writeNum(ws, r, 4, f.obligaciones ?? 0, ns);
+    writeNum(ws, r, 5, f.pagos, ns);
+    writeNum(ws, r, 6, f.reservas ?? 0, ns);
+    writeNum(ws, r, 7, f.cxp ?? 0, ns);
+    writeNum(ws, r, 8, f.superavit, ns);
+    writeNum(ws, r, 9, f.validador ?? 0, ns);
+    writeNum(ws, r, 10, f.saldoEnLibros ?? 0, ns);
     r++;
   }
 
   setRange(ws, r - 1, detailCols - 1);
   ws["!cols"] = [
     { wch: 18 }, // Codigo
-    { wch: 14 }, // Consolidacion
     { wch: 35 }, // Nombre
     { wch: 16 }, // Recaudo
     { wch: 16 }, // Compromisos

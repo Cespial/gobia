@@ -188,7 +188,7 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
     const superavit = f.recaudo - f.compromisos_va;
     const reservasVigAnterior = f.compromisos_res - f.pagos_res;
     const cxpVigAnterior = f.compromisos_cxp - f.pagos_cxp;
-    const saldoEnLibros = Math.max(0, superavit) + reservas_va + cxp_va + reservasVigAnterior + cxpVigAnterior;
+    const saldoEnLibros = superavit + reservas_va + cxp_va + reservasVigAnterior + cxpVigAnterior;
     const validador = f.compromisos_va - f.pagos_va - reservas_va - cxp_va;
 
     return {
