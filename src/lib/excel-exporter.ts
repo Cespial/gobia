@@ -424,9 +424,9 @@ function writeKVPct(
   colSpan: number = 2,
 ): void {
   writeText(ws, row, 0, label, labelStyle);
-  // Excel % format auto-multiplies by 100, so divide first.
-  // Our values come as 91.47 (already ×100), need to pass 0.9147
-  writeNum(ws, row, 1, value / 100, { ...valueNumStyle, numFmt: "0.00%" });
+  // Excel % format auto-multiplies by 100.
+  // Caller must pass value in 0-1 format (e.g., 0.9147 for 91.47%)
+  writeNum(ws, row, 1, value, { ...valueNumStyle, numFmt: "0.00%" });
   for (let c = 2; c < colSpan; c++) {
     writeText(ws, row, c, "", dataStyle);
   }
@@ -614,7 +614,7 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
   writeKV(ws, r++, "Total CxP:", data.totalCxP ?? 0, detailCols);
   writeKV(ws, r++, "Superavit/Deficit:", data.superavit, detailCols);
   writeKV(ws, r++, "Saldo en Libros:", data.saldoEnLibros ?? 0, detailCols);
-  writeKVPct(ws, r++, "% Ejecucion:", data.pctEjecucion, detailCols);
+  writeKVPct(ws, r++, "% Ejecucion:", data.pctEjecucion / 100, detailCols);
   writeEmptyRow(ws, r++, detailCols);
 
   writeKV(ws, r++, "Ppto Inicial Ingresos:", data.pptoInicialIngresos ?? 0, detailCols);
@@ -1103,7 +1103,7 @@ function addSGPSheet(wb: XLSX.WorkBook, data: SGPEvaluationResult): void {
   writeKV(ws, r++, "Total Presupuestado:", data.totalPresupuestado, detailCols);
   writeKV(ws, r++, "Total Recaudado:", data.totalRecaudado, detailCols);
   writeKV(ws, r++, "Total Ejecutado:", data.totalEjecutado, detailCols);
-  writeKVPct(ws, r++, "% Ejecucion Global:", data.pctEjecucionGlobal, detailCols);
+  writeKVPct(ws, r++, "% Ejecucion Global:", data.pctEjecucionGlobal / 100, detailCols);
   writeEmptyRow(ws, r++, detailCols);
 
   // Componentes table
