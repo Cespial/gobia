@@ -1,0 +1,338 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme{default}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\definecolor{ink}{HTML}{1A1A1A}
+\definecolor{ochre}{HTML}{B8956A}
+\definecolor{cream}{HTML}{F8F8F6}
+\definecolor{sepia}{HTML}{6B6B6B}
+\definecolor{verde}{HTML}{22C55E}
+\definecolor{rojo}{HTML}{EF4444}
+\definecolor{amber}{HTML}{F59E0B}
+
+\setbeamercolor{background canvas}{bg=cream}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamercolor{frametitle}{fg=ink}
+\setbeamercolor{title}{fg=ink}
+\setbeamercolor{subtitle}{fg=sepia}
+\setbeamercolor{item}{fg=ochre}
+
+\setbeamerfont{title}{size=\LARGE,series=\bfseries}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{fontawesome5}
+
+\newcommand{\cmark}{\textcolor{verde}{\faCheck}}
+\newcommand{\xmark}{\textcolor{rojo}{\faTimes}}
+\newcommand{\wmark}{\textcolor{amber}{\faExclamationTriangle}}
+\newcommand{\nmark}{\textcolor{ochre}{\faStar}}
+
+\title{Validador Fiscal Municipal}
+\subtitle{Actualizaci\'on post-revisi\'on con Johan\\[4pt]
+\small\textcolor{sepia}{4 sprints $\times$ 21 tareas $\times$ 9 bugs corregidos --- Abril 2026}}
+\author{}
+\date{}
+
+\begin{document}
+
+% ── 1. PORTADA ──
+\begin{frame}
+\titlepage
+\end{frame}
+
+% ── 2. QUÉ SE HIZO ──
+\begin{frame}{Qu\'e se actualiz\'o}
+\vspace{-4pt}
+\footnotesize
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{c l c l}
+\toprule
+\textbf{Sprint} & \textbf{Foco} & \textbf{Tasks} & \textbf{Cambios clave} \\
+\midrule
+\textbf{A} & Datos de referencia (Johan) & 5 & 231 fuentes + 55 ICLD + 8 deducibles \\
+\textbf{B} & Equilibrio corregido & 6 & Saldo en Libros + filtro leaf + ppto box \\
+\textbf{C} & Ley 617 milim\'etrica & 6 & Deducciones reales + GF por c\'odigo \\
+\textbf{D} & Alertas + UX & 4 & Alertas ICLD + vista consolidada \\
+\midrule
+& \textbf{Total} & \textbf{21} & \textbf{9 bugs detectados y corregidos} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+% ── 3. SPRINT A: DATOS JOHAN ──
+\begin{frame}{Sprint A: Datos de referencia de Johan}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{ochre}{Tablas actualizadas}}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item \textbf{231 fuentes homologadas}\\
+    CUIPO $\to$ Consolidada (reemplaza mapeo manual de 148)
+    \item \textbf{55 cuentas ICLD con condiciones}\\
+    C\'odigo + fuente + tipo norma + fecha norma
+    \item Nueva cuenta: \texttt{1.1.02.02.015}\\
+    (Certificados y constancias)
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{ochre}{Archivos nuevos}}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item \textbf{8 gastos deducibles} con reglas\\
+    Condicionales por secci\'on y fuente
+    \item \textbf{4 tipolog\'ias acciones de mejora}\\
+    13 sub-items (errores, clasificadores, rubros, 617)
+    \item \textbf{7 alertas ICLD}\\
+    Tipo norma, fecha norma, destinaciones
+    \item \textbf{6 destinaciones espec\'ificas}\\
+    Fondo Riesgo, Ley 99, Contingencias, etc.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 4. SPRINT B: EQUILIBRIO ──
+\begin{frame}{Sprint B: Equilibrio corregido}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\textbf{\textcolor{rojo}{Bugs corregidos}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+    \item \textbf{Saldo en Libros: quitado MAX(0)}\\
+    Antes: MAX(0, sup) + res + cxp + ant\\
+    Ahora: sup + res + cxp + ant\\
+    \textcolor{sepia}{\scriptsize Johan: ``Si es negativo, te quita el valor''}
+    \item \textbf{Filtro rubros de agregaci\'on}\\
+    Excluir filas sin fuente (SIN\_FUENTE)\\
+    \textcolor{sepia}{\scriptsize Causa de los ``billones'' en la plataforma}
+    \item \textbf{ICLD sin RF ni RB}\\
+    Rendimientos financieros y recursos de balance no cuentan como ICLD bruto
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\textbf{\textcolor{verde}{Nuevas funcionalidades}}
+\begin{itemize}\setlength{\itemsep}{2pt}
+    \item \nmark\ \textbf{Cuadro resumen presupuestal}\\
+    Ppto Inicial/Definitivo\\
+    Ingresos vs Gastos\\
+    \% ejecuci\'on + saldo disponible
+    \item \nmark\ Columna consolidaci\'on removida del Excel export
+    \item \cmark\ Reservas/CxP vig. anterior verificadas
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 5. SPRINT C: LEY 617 ──
+\begin{frame}{Sprint C: Ley 617 milim\'etrica}
+\vspace{-4pt}
+\scriptsize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{rojo}{Antes (incorrecto)}}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item ICLD filtraba por \textbf{nombre} de fuente
+    \item Deducci\'on: 3\% autom\'atico fijo
+    \item GF: cualquier fuente contaba
+    \item Deducibles: sin condiciones
+    \item Concejo: umbral \$1B fijo
+    \item Vigencia: solo ``actual''
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{verde}{Ahora (correcto)}}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item ICLD filtra por \textbf{c\'odigo} de fuente\\
+    (1.2.1.0.00 y 1.2.4.3.04)
+    \item Deducci\'on: \textbf{dato reportado real}\\
+    + comparaci\'on vs calculado
+    \item GF: \textbf{solo} fuente ICLD/SGP-LD
+    \item Deducibles: condicionales\\
+    (2.1.2.02.02.007 solo si fuente $\neq$ ICLD)
+    \item Concejo: umbral 1000$\times$SMLMV\\
+    (\$1.42B, indexado al salario m\'inimo)
+    \item Vigencia: actual \textbf{+ futuras} (cod 1+4)
+\end{itemize}
+\end{column}
+\end{columns}
+\vspace{6pt}
+\centering
+\textcolor{sepia}{\scriptsize Resultado: indicador SI.17 ahora se calcula igual que la Contralor\'ia}
+\end{frame}
+
+% ── 6. SPRINT D: ALERTAS ──
+\begin{frame}{Sprint D: Alertas + Acciones de mejora + UX}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{ochre}{Alertas ICLD}}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item Detecta rubros con \textbf{tipo de norma} incorrecto
+    \item Detecta rubros con \textbf{fecha/n\'umero norma} incorrecto
+    \item Johan: ``No van a ser sujetos de considerarlos dentro de los ICLD''
+    \item Solo con upload CUIPO (API no tiene estos campos)
+\end{itemize}
+
+\vspace{4pt}
+\textbf{\textcolor{ochre}{Destinaciones espec\'ificas}}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item Tabla configurable por municipio
+    \item Fondo Contingencias, Riesgo, Ley 99\ldots
+    \item Valida \% reportado vs calculado
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{\textcolor{ochre}{Acciones de mejora desagregadas}}
+
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{l c}
+\toprule
+\textbf{Categor\'ia} & \textbf{Items} \\
+\midrule
+Errores aritm\'eticos & 5 \\
+Clasificadores presupuestales & 3 \\
+Rubros presupuestales & 2 \\
+Indicador Ley 617 & 3 \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\textbf{\textcolor{ochre}{Vista consolidada}}
+\begin{itemize}\setlength{\itemsep}{1pt}
+    \item Toggle: detallada / consolidada
+    \item Agrupa RF + RB + Vigencia
+    \item Informe m\'as ejecutivo
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 7. CODE REVIEW ──
+\begin{frame}{Code review: 9 bugs detectados y corregidos}
+\vspace{-2pt}
+\scriptsize
+\begin{center}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{c l l c}
+\toprule
+\textbf{\#} & \textbf{Bug} & \textbf{Sprint} & \textbf{Sev.} \\
+\midrule
+1 & \texttt{split(" - ")} no parsea fuentes SGP-LD (5 call sites) & A & \textcolor{rojo}{CRIT} \\
+2 & Fuente VBS SGP incorrecta (10 cuentas) & A & \textcolor{rojo}{CRIT} \\
+3 & \texttt{1.2.2.0.00} en deducciones (demasiado amplio) & C & \textcolor{rojo}{CRIT} \\
+4 & SODA \texttt{IN()} sintaxis no est\'andar & C & \textcolor{amber}{HIGH} \\
+5 & Alertas duplicadas (tipo + fecha en misma fila) & D & \textcolor{amber}{MED} \\
+6 & Footer totals no recalculan en vista consolidada & D & \textcolor{amber}{MED} \\
+7--9 & 3 bugs menores (SIN\_FUENTE asimetr\'ia, RF pattern, silent no-op) & B/D & \textcolor{sepia}{LOW} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{4pt}
+\centering
+\textbf{Todos corregidos.} Code review despu\'es de cada sprint.
+\end{frame}
+
+% ── 8. DATOS COMPARADOS ──
+\begin{frame}{Estado actual: comparaci\'on con plantilla}
+\footnotesize
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{l c l}
+\toprule
+\textbf{M\'odulo} & \textbf{Status} & \textbf{Cambio post-Johan} \\
+\midrule
+Equilibrio f\'ormulas & \cmark & Saldo Libros sin MAX(0), filtro leaf \\
+Equilibrio datos CUIPO & \cmark\ 7/9 & Upload CUIPO CHIP directo \\
+Ley 617 SI.17 & \cmark & Deducciones reales, GF por c\'odigo fuente \\
+Ley 617 Concejo & \cmark & Umbral 1000$\times$SMLMV \\
+CGA 8 chequeos & \cmark & Sin cambios (ya correcto) \\
+SGP distribuci\'on & \cmark & Sin cambios \\
+Eficiencia Fiscal & \cmark & F\'ormula CGN correcta \\
+Agua Potable & \cmark & 5 sub-validaciones \\
+Mapa Inversiones & \cmark & Cruce BEPIN (valor agregado) \\
+Alertas ICLD & \nmark\ \textbf{NUEVO} & Tipo norma + fecha norma \\
+Acciones de mejora & \nmark\ \textbf{NUEVO} & 4 categor\'ias desagregadas \\
+Vista consolidada & \nmark\ \textbf{NUEVO} & RF + RB + Vigencia agrupadas \\
+Destinaciones espec. & \nmark\ \textbf{NUEVO} & Tabla configurable \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{frame}
+
+% ── 9. ARQUITECTURA TOTAL ──
+\begin{frame}{Arquitectura total entregada}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{Plataforma (gobia.co)}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 10 m\'odulos de validaci\'on
+    \item Upload CUIPO CHIP (4 archivos)
+    \item Upload FUT + CGN (4 archivos)
+    \item Upload Mapa Inversiones
+    \item Fixtures auto-carga (Betania)
+    \item Excel export con estilos
+    \item PDF reporte
+\end{itemize}
+
+\vspace{4pt}
+\textbf{Data Lake (Antioquia)}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 2,947 archivos xlsx
+    \item 125 municipios
+    \item 7 fuentes de datos
+    \item 12 parquets consolidados
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\textbf{Datos de referencia}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 231 fuentes homologadas
+    \item 55 cuentas ICLD + condiciones
+    \item 8 gastos deducibles + reglas
+    \item 45 c\'odigos FUT $\to$ consolidaci\'on
+    \item 148 fuentes $\to$ c\'odigo num\'erico
+    \item 7 alertas ICLD
+    \item 6 destinaciones espec\'ificas
+    \item 4 tipolog\'ias acciones mejora
+\end{itemize}
+
+\vspace{4pt}
+\textbf{Calidad}
+\begin{itemize}\setlength{\itemsep}{0pt}
+    \item 40+ commits
+    \item 4 rondas code review
+    \item 22 bugs corregidos total
+    \item 27 f\'ormulas verificadas
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ── 10. PRÓXIMOS PASOS ──
+\begin{frame}{Pr\'oximos pasos}
+\begin{enumerate}\setlength{\itemsep}{6pt}
+    \item \textbf{Sesi\'on con Johan (s\'abado):} Validar n\'umeros con Betania T4
+    \item \textbf{Descarga masiva T4:} 10 municipios prioritarios desde CHIP
+    \item \textbf{Concejo vigencia anterior:} Obtener ICLD del a\~no anterior para umbral correcto
+    \item \textbf{SGP sub-componentes:} Mapeo por cuenta CUIPO (no keyword)
+    \item \textbf{Destinaciones editables:} Input por municipio para \% y actos administrativos
+    \item \textbf{Rollout comercial:} Identificar municipios con indicadores bajos
+\end{enumerate}
+
+\vspace{12pt}
+\centering
+\textcolor{ochre}{\large\textbf{gobia.co/plataforma/validador}}\\[4pt]
+\textcolor{sepia}{\small Password: gobia2025 $\to$ Betania (datos precargados)}
+\end{frame}
+
+\end{document}
