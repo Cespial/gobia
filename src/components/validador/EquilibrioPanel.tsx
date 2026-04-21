@@ -559,37 +559,51 @@ export default function EquilibrioPanel({
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-[var(--gray-700)] font-medium text-white">
-                <td className="py-2 pr-4">TOTAL</td>
-                <td className="py-2 pr-4 text-right">{formatCOP(data.totalIngresos)}</td>
-                <td className="py-2 pr-4 text-right">{formatCOP(totalCompromisos)}</td>
-                <td className="py-2 pr-4 text-right">{formatCOP(data.totalPagos)}</td>
-                <td className="py-2 pr-4 text-right">{formatCOP(totalReservas)}</td>
-                <td className="py-2 pr-4 text-right">{formatCOP(totalCxP)}</td>
-                <td
-                  className={`py-2 pr-4 text-right ${
-                    data.superavit >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {formatCOP(data.superavit)}
-                </td>
-                <td className={`px-3 py-2 text-right text-sm tabular-nums ${(data.totalValidador ?? 0) !== 0 ? 'text-red-400 font-bold' : 'text-[var(--gray-400)]'}`}>
-                  {formatCOP(data.totalValidador ?? 0)}
-                </td>
-                <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
-                  {formatCOP(data.totalReservasVigAnterior ?? 0)}
-                </td>
-                <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
-                  {formatCOP(data.totalCxpVigAnterior ?? 0)}
-                </td>
-                <td
-                  className={`py-2 text-right ${
-                    saldoEnLibros >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {formatCOP(saldoEnLibros)}
-                </td>
-              </tr>
+              {(() => {
+                const footerIngresos = activeFuentes.reduce((s, f) => s + f.recaudo, 0);
+                const footerCompromisos = activeFuentes.reduce((s, f) => s + f.compromisos, 0);
+                const footerPagos = activeFuentes.reduce((s, f) => s + f.pagos, 0);
+                const footerReservas = activeFuentes.reduce((s, f) => s + (f.reservas ?? 0), 0);
+                const footerCxP = activeFuentes.reduce((s, f) => s + (f.cxp ?? 0), 0);
+                const footerSuperavit = activeFuentes.reduce((s, f) => s + f.superavit, 0);
+                const footerValidador = activeFuentes.reduce((s, f) => s + (f.validador ?? 0), 0);
+                const footerReservasVigAnt = activeFuentes.reduce((s, f) => s + (f.reservasVigAnterior ?? 0), 0);
+                const footerCxpVigAnt = activeFuentes.reduce((s, f) => s + (f.cxpVigAnterior ?? 0), 0);
+                const footerSaldoLibros = activeFuentes.reduce((s, f) => s + (f.saldoEnLibros ?? 0), 0);
+                return (
+                  <tr className="border-t border-[var(--gray-700)] font-medium text-white">
+                    <td className="py-2 pr-4">TOTAL</td>
+                    <td className="py-2 pr-4 text-right">{formatCOP(footerIngresos)}</td>
+                    <td className="py-2 pr-4 text-right">{formatCOP(footerCompromisos)}</td>
+                    <td className="py-2 pr-4 text-right">{formatCOP(footerPagos)}</td>
+                    <td className="py-2 pr-4 text-right">{formatCOP(footerReservas)}</td>
+                    <td className="py-2 pr-4 text-right">{formatCOP(footerCxP)}</td>
+                    <td
+                      className={`py-2 pr-4 text-right ${
+                        footerSuperavit >= 0 ? "text-emerald-400" : "text-red-400"
+                      }`}
+                    >
+                      {formatCOP(footerSuperavit)}
+                    </td>
+                    <td className={`px-3 py-2 text-right text-sm tabular-nums ${footerValidador !== 0 ? 'text-red-400 font-bold' : 'text-[var(--gray-400)]'}`}>
+                      {formatCOP(footerValidador)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
+                      {formatCOP(footerReservasVigAnt)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-sm tabular-nums text-[var(--gray-400)]">
+                      {formatCOP(footerCxpVigAnt)}
+                    </td>
+                    <td
+                      className={`py-2 text-right ${
+                        footerSaldoLibros >= 0 ? "text-emerald-400" : "text-red-400"
+                      }`}
+                    >
+                      {formatCOP(footerSaldoLibros)}
+                    </td>
+                  </tr>
+                );
+              })()}
             </tfoot>
           </table>
         </div>

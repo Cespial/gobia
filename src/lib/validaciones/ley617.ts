@@ -267,30 +267,30 @@ export async function evaluateLey617(
     const tipoNorma = rowAny.tipo_norma ?? rowAny.tipoNorma;
     const fechaNorma = rowAny.fecha_norma ?? rowAny.fechaNorma;
 
+    const alertaMsgs: string[] = [];
+
     if (tipoNorma !== undefined && typeof tipoNorma === "string") {
       const alerta = checkTipoNorma(tipoNorma, fuenteCodigo);
       if (alerta) {
-        alertasICLD.push({
-          cuenta: row.cuenta || "",
-          nombre: row.nombre_cuenta || "",
-          fuente: fuenteNombre,
-          alerta: `Tipo norma "${tipoNorma}" — ${alerta.descripcion}`,
-          valor: recaudo,
-        });
+        alertaMsgs.push(`Tipo norma "${tipoNorma}" — ${alerta.descripcion}`);
       }
     }
 
     if (fechaNorma !== undefined && typeof fechaNorma === "string") {
       const alerta = checkFechaNorma(fechaNorma, fuenteCodigo);
       if (alerta) {
-        alertasICLD.push({
-          cuenta: row.cuenta || "",
-          nombre: row.nombre_cuenta || "",
-          fuente: fuenteNombre,
-          alerta: `Fecha norma "${fechaNorma}" — ${alerta.descripcion}`,
-          valor: recaudo,
-        });
+        alertaMsgs.push(`Fecha norma "${fechaNorma}" — ${alerta.descripcion}`);
       }
+    }
+
+    if (alertaMsgs.length > 0) {
+      alertasICLD.push({
+        cuenta: row.cuenta || "",
+        nombre: row.nombre_cuenta || "",
+        fuente: fuenteNombre,
+        alerta: alertaMsgs.join("; "),
+        valor: recaudo,
+      });
     }
   }
 
