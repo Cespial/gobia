@@ -1,89 +1,108 @@
 /**
  * Ley 617/2000 — ICLD rubros válidos, gastos deducibles, y fondos legales
  *
- * Extracted from the Excel template "2. Cálculo 617" sheet.
+ * Updated with Johan's TAREAS.xlsx data (Sprint A, 2026-04-15).
  * Only income registered under these CUIPO account codes counts as ICLD
  * for the Contraloría General de la República SI.17 indicator.
+ *
+ * Each ICLD account now includes required conditions:
+ * - fuente: the CUIPO funding source code it must be associated with
+ * - tipoNorma: must be "0.0 - NO APLICA" for ICLD rubros
+ * - fechaNorma: must be "NO APLICA" for ICLD rubros
  */
 
 // ---------------------------------------------------------------------------
-// ICLD Valid Account Codes (columns N11:N65 from Excel)
+// ICLD Valid Account Codes — with conditions from Johan's TAREAS.xlsx
 // ---------------------------------------------------------------------------
 
+export interface ICLDCuentaValida {
+  codigo: string;
+  nombre: string;
+  fuente: string;
+  tipoNorma: string;
+  fechaNorma: string;
+}
+
 /**
- * CUIPO account codes that CGR accepts as ICLD.
+ * CUIPO account codes that CGR accepts as ICLD (55 accounts from Johan).
  * Income coded under other accounts does NOT count for SI.17.
  *
  * The formula sums: SUMIFS(EJEC_ING!total, cuenta=code, fuente="ICLD" OR fuente="SGP LD")
  */
-export const ICLD_CUENTAS_VALIDAS: { codigo: string; nombre: string }[] = [
+export const ICLD_CUENTAS_VALIDAS: ICLDCuentaValida[] = [
   // Impuestos directos
-  { codigo: "1.1.01.01.200.01", nombre: "Impuesto predial unificado - urbano" },
-  { codigo: "1.1.01.01.200.02", nombre: "Impuesto predial unificado - rural" },
+  { codigo: "1.1.01.01.200.01", nombre: "Impuesto predial unificado - urbano", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.01.200.02", nombre: "Impuesto predial unificado - rural", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Impuestos indirectos
-  { codigo: "1.1.01.02.109", nombre: "Sobretasa a la gasolina" },
-  { codigo: "1.1.01.02.200.01", nombre: "ICA - sobre actividades comerciales" },
-  { codigo: "1.1.01.02.200.02", nombre: "ICA - sobre actividades industriales" },
-  { codigo: "1.1.01.02.200.03", nombre: "ICA - sobre actividades de servicios" },
-  { codigo: "1.1.01.02.201", nombre: "Impuesto complementario de avisos y tableros" },
-  { codigo: "1.1.01.02.202", nombre: "Impuesto a la publicidad exterior visual" },
-  { codigo: "1.1.01.02.203", nombre: "Impuesto de circulación y tránsito sobre vehículos de servicio público" },
-  { codigo: "1.1.01.02.204", nombre: "Impuesto de delineación" },
-  { codigo: "1.1.01.02.209", nombre: "Impuesto al degüello de ganado menor" },
-  { codigo: "1.1.01.02.210", nombre: "Impuesto sobre teléfonos" },
-  { codigo: "1.1.01.02.216", nombre: "Impuesto de espectáculos públicos municipal" },
+  { codigo: "1.1.01.02.109", nombre: "Sobretasa a la gasolina", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.200.01", nombre: "Impuesto de industria y comercio - sobre actividades comerciales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.200.02", nombre: "Impuesto de industria y comercio - sobre actividades industriales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.200.03", nombre: "Impuesto de industria y comercio - sobre actividades de servicios", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.201", nombre: "Impuesto complementario de avisos y tableros", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.202", nombre: "Impuesto a la publicidad exterior visual", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.203", nombre: "Impuesto de circulación y transito sobre vehículos de servicio publico", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.204", nombre: "Impuesto de delineación", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.209", nombre: "Impuesto al degüello de ganado menor", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.210", nombre: "Impuesto sobre teléfonos", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.01.02.216", nombre: "Impuesto de espectáculos públicos municipal", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Tasas y derechos
-  { codigo: "1.1.02.02.063", nombre: "Certificados catastrales" },
-  { codigo: "1.1.02.02.087", nombre: "Tasas por el derecho de parqueo sobre las vías públicas" },
-  { codigo: "1.1.02.02.095", nombre: "Plaza de mercado" },
-  { codigo: "1.1.02.02.102", nombre: "Derechos de tránsito" },
-  { codigo: "1.1.02.02.134", nombre: "Otros derechos administrativos" },
+  { codigo: "1.1.02.02.015", nombre: "Certificados y constancias", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.02.063", nombre: "Certificados catastrales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.02.095", nombre: "Plaza de mercado", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.02.102", nombre: "Derechos de tránsito", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.02.134", nombre: "Otros derechos administrativos", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Multas y sanciones
-  { codigo: "1.1.02.03.001.03", nombre: "Sanciones disciplinarias" },
-  { codigo: "1.1.02.03.001.04", nombre: "Sanciones contractuales" },
-  { codigo: "1.1.02.03.001.05", nombre: "Sanciones administrativas" },
-  { codigo: "1.1.02.03.001.06", nombre: "Sanciones fiscales" },
-  { codigo: "1.1.02.03.001.11", nombre: "Sanciones tributarias" },
-  { codigo: "1.1.02.03.001.21", nombre: "Multa por incumplimiento en el registro de marcas y herretes" },
-  { codigo: "1.1.02.03.001.23", nombre: "Sanciones urbanísticas" },
-  { codigo: "1.1.02.03.002", nombre: "Intereses de mora" },
-  // Ventas de bienes y servicios (ambas fuentes)
-  { codigo: "1.1.02.05.001.00", nombre: "VBS - Agricultura, silvicultura y pesca" },
-  { codigo: "1.1.02.05.001.01", nombre: "VBS - Minerales; electricidad, gas y agua" },
-  { codigo: "1.1.02.05.001.02", nombre: "VBS - Productos alimenticios, bebidas y tabaco" },
-  { codigo: "1.1.02.05.001.03", nombre: "VBS - Otros bienes transportables" },
-  { codigo: "1.1.02.05.001.04", nombre: "VBS - Productos metálicos, maquinaria y equipo" },
-  { codigo: "1.1.02.05.001.05", nombre: "VBS - Construcción y servicios de la construcción" },
-  { codigo: "1.1.02.05.001.06", nombre: "VBS - Comercio y distribución; alojamiento; transporte" },
-  { codigo: "1.1.02.05.001.07", nombre: "VBS - Servicios financieros y conexos; inmobiliarios" },
-  { codigo: "1.1.02.05.001.08", nombre: "VBS - Servicios prestados a las empresas" },
-  { codigo: "1.1.02.05.001.09", nombre: "VBS - Servicios para la comunidad, sociales y personales" },
-  { codigo: "1.1.02.05.002.00", nombre: "VBS SGP - Agricultura, silvicultura y pesca" },
-  { codigo: "1.1.02.05.002.01", nombre: "VBS SGP - Minerales; electricidad, gas y agua" },
-  { codigo: "1.1.02.05.002.02", nombre: "VBS SGP - Productos alimenticios" },
-  { codigo: "1.1.02.05.002.03", nombre: "VBS SGP - Otros bienes transportables" },
-  { codigo: "1.1.02.05.002.04", nombre: "VBS SGP - Productos metálicos, maquinaria" },
-  { codigo: "1.1.02.05.002.05", nombre: "VBS SGP - Construcción" },
-  { codigo: "1.1.02.05.002.06", nombre: "VBS SGP - Comercio y distribución" },
-  { codigo: "1.1.02.05.002.07", nombre: "VBS SGP - Servicios financieros" },
-  { codigo: "1.1.02.05.002.08", nombre: "VBS SGP - Servicios prestados a las empresas" },
-  { codigo: "1.1.02.05.002.09", nombre: "VBS SGP - Servicios para la comunidad" },
-  // SGP Libre Destinación (Cat 4-6)
-  { codigo: "1.1.02.06.001.03.04", nombre: "SGP Propósito General - Libre Destinación Municipios Cat 4, 5 y 6" },
+  { codigo: "1.1.02.03.001.03", nombre: "Sanciones disciplinarias", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.001.04", nombre: "Sanciones contractuales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.001.05", nombre: "Sanciones administrativas", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.001.06", nombre: "Sanciones fiscales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.001.11", nombre: "Sanciones tributarias", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.001.21", nombre: "Multa por incumplimiento en el registro de marcas y herretes", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.001.23", nombre: "Sanciones urbanísticas", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.03.002", nombre: "Intereses de mora", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  // Ventas de bienes y servicios (fuente ICLD)
+  { codigo: "1.1.02.05.001.00", nombre: "Agricultura, silvicultura y productos de la pesca", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.01", nombre: "Minerales; electricidad, gas y agua", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.02", nombre: "Productos alimenticios, bebidas y tabaco; textiles, prendas de vestir y productos de cuero", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.03", nombre: "Otros bienes transportables (excepto productos metálicos, maquinaria y equipo)", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.04", nombre: "Productos metálicos, maquinaria y equipo", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.05", nombre: "Construcción y servicios de la construcción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.06", nombre: "Comercio y distribución; alojamiento; servicios de suministro de comidas y bebidas; servicios de transporte; y servicios de distribución de electricidad, gas y agua", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.07", nombre: "Servicios financieros y servicios conexos; servicios inmobiliarios; y servicios de arrendamiento y leasing", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.08", nombre: "Servicios prestados a las empresas y servicios de producción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.001.09", nombre: "Servicios para la comunidad, sociales y personales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  // Ventas de bienes y servicios (fuente SGP LD)
+  { codigo: "1.1.02.05.002.00", nombre: "Agricultura, silvicultura y productos de la pesca", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.01", nombre: "Minerales; electricidad, gas y agua", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.02", nombre: "Productos alimenticios, bebidas y tabaco; textiles, prendas de vestir y productos de cuero", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.03", nombre: "Otros bienes transportables (excepto productos metálicos, maquinaria y equipo)", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.04", nombre: "Productos metálicos, maquinaria y equipo", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.05", nombre: "Construcción y servicios de la construcción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.06", nombre: "Comercio y distribución; alojamiento; servicios de suministro de comidas y bebidas; servicios de transporte; y servicios de distribución de electricidad, gas y agua", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.07", nombre: "Servicios financieros y servicios conexos; servicios inmobiliarios; y servicios de arrendamiento y leasing", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.08", nombre: "Servicios prestados a las empresas y servicios de producción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.09", nombre: "Servicios para la comunidad, sociales y personales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  // SGP Libre Destinación (Cat 4-6) — different fuente code
+  { codigo: "1.1.02.06.001.03.04", nombre: "Propósito general libre destinación municipios categorías 4, 5 y 6", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Participaciones de impuestos
-  { codigo: "1.1.02.06.003.01.01", nombre: "Participación impuesto explotación oro, plata y platino" },
-  { codigo: "1.1.02.06.003.01.02", nombre: "Participación impuesto sobre vehículos automotores" },
-  { codigo: "1.1.02.06.003.01.03", nombre: "Participación providencia" },
-  { codigo: "1.1.02.06.003.01.08", nombre: "Participación impuesto degüello ganado mayor" },
-  { codigo: "1.1.02.06.003.03.01", nombre: "Participación sanciones impuesto vehículos" },
-  { codigo: "1.1.02.06.003.03.02", nombre: "Participación intereses de mora impuesto vehículos" },
+  { codigo: "1.1.02.06.003.01.01", nombre: "Participación del impuesto nacional a la explotación de oro, plata y platino", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.06.003.01.02", nombre: "Participación del impuesto sobre vehículos automotores", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.06.003.01.03", nombre: "Participación providencia", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.06.003.01.08", nombre: "Participación del impuesto al degüello de ganado mayor (en los términos que lo defina la ordenanza)", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.06.003.03.01", nombre: "Participación de sanciones del impuesto sobre vehículos automotores", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.06.003.03.02", nombre: "Participación de intereses de mora sobre el impuesto sobre vehículos automotores", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Compensaciones predial
-  { codigo: "1.1.02.06.004.02", nombre: "Compensación predial territorios colectivos comunidades negras" },
-  { codigo: "1.1.02.06.004.03", nombre: "Compensación predial resguardos indígenas" },
+  { codigo: "1.1.02.06.004.02", nombre: "Compensación impuesto predial unificado territorios colectivos de comunidades negras", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.06.004.03", nombre: "Compensación impuesto predial unificado resguardos indígenas", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
 ];
 
 /** Set for O(1) lookup — exact match only */
 const iclCuentasSet = new Set(ICLD_CUENTAS_VALIDAS.map((c) => c.codigo));
+
+/** Lookup map for ICLD account conditions */
+const iclCuentasMap = new Map(
+  ICLD_CUENTAS_VALIDAS.map((c) => [c.codigo, c])
+);
 
 /**
  * Check if a CUIPO account code is a valid ICLD source.
@@ -91,6 +110,42 @@ const iclCuentasSet = new Set(ICLD_CUENTAS_VALIDAS.map((c) => c.codigo));
  */
 export function isICLDCuenta(cuenta: string): boolean {
   return iclCuentasSet.has(cuenta.trim());
+}
+
+/**
+ * Check if a CUIPO account code is valid ICLD WITH conditions.
+ * Validates that fuente, tipoNorma, and fechaNorma match the required values.
+ */
+export function isICLDCuentaConCondiciones(
+  cuenta: string,
+  fuente?: string,
+  tipoNorma?: string,
+  fechaNorma?: string,
+): { valida: boolean; errores: string[] } {
+  const trimmed = cuenta.trim();
+  const entry = iclCuentasMap.get(trimmed);
+  if (!entry) return { valida: false, errores: ["Cuenta no es ICLD válida"] };
+
+  const errores: string[] = [];
+
+  if (fuente !== undefined) {
+    // Extract the fuente code prefix for comparison (e.g., "1.2.1.0.00")
+    const expectedCode = entry.fuente.split(" - ")[0].trim();
+    const actualCode = fuente.split(" - ")[0].trim();
+    if (actualCode !== expectedCode) {
+      errores.push(`Fuente incorrecta: esperada "${entry.fuente}", recibida "${fuente}"`);
+    }
+  }
+
+  if (tipoNorma !== undefined && tipoNorma !== entry.tipoNorma) {
+    errores.push(`Tipo norma incorrecto: esperado "${entry.tipoNorma}", recibido "${tipoNorma}"`);
+  }
+
+  if (fechaNorma !== undefined && fechaNorma !== entry.fechaNorma) {
+    errores.push(`Fecha norma incorrecta: esperada "${entry.fechaNorma}", recibida "${fechaNorma}"`);
+  }
+
+  return { valida: errores.length === 0, errores };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,38 +166,214 @@ export function isICLDFuente(nombreFuente: string): boolean {
 
 // ---------------------------------------------------------------------------
 // Deductible Expense Codes (gastos que descuentan del GF para SI.17)
+// Updated from Johan's TAREAS.xlsx — 8 codes with conditions
 // ---------------------------------------------------------------------------
+
+export interface GastoDeducible617 {
+  codigo: string;
+  nombre: string;
+  seccion: string;
+  fuente: string;
+  vigencia: string;
+  /** If true, deduction is conditional (see condicionDeduccion) */
+  condicional: boolean;
+  condicionDeduccion?: string;
+}
 
 /**
  * Expense account codes that CGR allows to be deducted from total
  * functioning expenses when calculating the SI.17 indicator.
  *
- * These are specific expense items that, while reported as functioning,
- * should not count against the municipality's GF/ICLD ratio.
+ * From Johan's 8-entry table. Key changes vs previous 15-entry list:
+ * - 2.1.2.02.02.007 ONLY deducts if fuente != ICLD (conditional)
+ * - 2.1.3.07.02.002 is the parent code (covers .01 and .02)
+ * - 2.1.3.05.09.060 (Transferencias a fondos de desarrollo local) is NEW
+ * - 2.1.1.01.03.006 (Honorarios concejales) only deducts in sección "16.0 - Admon central"
  */
-export const GASTOS_DEDUCIBLES_617: { codigo: string; nombre: string }[] = [
-  { codigo: "2.1.1.01.02.020.01", nombre: "Aportes Seguridad Social en Pensiones (Concejales)" },
-  { codigo: "2.1.1.01.02.020.02", nombre: "Aportes Seguridad Social en Salud (Concejales)" },
-  { codigo: "2.1.1.01.02.020.04", nombre: "Aportes Cajas de Compensación Familiar (Concejales)" },
-  { codigo: "2.1.1.01.02.020.05", nombre: "Aportes Generales Sistema Riesgos Laborales (Concejales)" },
-  { codigo: "2.1.1.01.03.125", nombre: "Transporte Rural de Concejales" },
-  { codigo: "2.1.3.07.02.001.02", nombre: "Mesadas Pensionales a Cargo de la Entidad de Pensiones" },
-  { codigo: "2.1.3.07.02.002.01", nombre: "Cuotas Partes Pensionales con Cargo a Reservas" },
-  { codigo: "2.1.3.07.02.002.02", nombre: "Cuotas Partes Pensionales a Cargo de la Entidad" },
-  { codigo: "2.1.3.07.02.003.01", nombre: "Bonos Pensionales con Cargo a Reservas" },
-  { codigo: "2.1.3.07.02.003.02", nombre: "Bonos Pensionales a Cargo de la Entidad" },
-  { codigo: "2.1.3.05.04.001.13.01", nombre: "Transferencia Sobretasa Ambiental a Corporaciones Autónomas" },
-  { codigo: "2.1.3.05.01.016", nombre: "Participación en Estampillas" },
-  { codigo: "2.1.3.09.16", nombre: "Sobretasa Bomberil Cuerpos de Bomberos Voluntarios" },
-  { codigo: "2.1.3.13.01.001", nombre: "Sentencias" },
-  { codigo: "2.1.1.01.03.006", nombre: "Honorarios Concejales (pagados por Admón Central)" },
+export const GASTOS_DEDUCIBLES_617: GastoDeducible617[] = [
+  {
+    codigo: "2.1.1.01.03.125",
+    nombre: "Transporte Rural de Concejales",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
+  {
+    codigo: "2.1.1.01.02.020.01",
+    nombre: "Aportes a la Seguridad Social en Pensiones",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
+  {
+    codigo: "2.1.1.01.02.020.02",
+    nombre: "Aportes a la Seguridad Social en Salud",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
+  {
+    codigo: "2.1.1.01.02.020.04",
+    nombre: "Aportes a Cajas de Compensación Familiar",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
+  {
+    codigo: "2.1.1.01.02.020.05",
+    nombre: "Aportes Generales al Sistema de Riesgos Laborales",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
+  {
+    codigo: "2.1.2.02.02.007",
+    nombre: "Servicios Financieros y Servicios Conexos; Servicios Inmobiliarios; y Servicios de Arrendamiento y Leasing",
+    seccion: "16.0 - Admon central",
+    fuente: "Con Fuente diferente a 1.2.1.0.00 - Ingresos Corrientes de Libre Destinación o 1.2.4.3.04 - SGP Propósito general libre destinación municipios categorías 4, 5 y 6",
+    vigencia: "1 - Vigencia Actual (+) 4 - Vigencias futuras vigencia actual",
+    condicional: true,
+    condicionDeduccion: "Solo deducible si fuente != ICLD (1.2.1.0.00) y fuente != SGP-LD (1.2.4.3.04)",
+  },
+  {
+    codigo: "2.1.3.07.02.002",
+    nombre: "Cuotas Partes Pensionales de Pensiones",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
+  {
+    codigo: "2.1.3.05.09.060",
+    nombre: "Transferencias a Fondos de Desarrollo Local",
+    seccion: "16.0 - Admon central",
+    fuente: "Independientemente de la Fuente de Financiación",
+    vigencia: "1 - Vigencia Actual",
+    condicional: false,
+  },
 ];
 
-const gastosDeduciblesSet = new Set(GASTOS_DEDUCIBLES_617.map((g) => g.codigo));
+/** Set for O(1) lookup — exact match only (unconditional deductions) */
+const gastosDeduciblesSet = new Set(
+  GASTOS_DEDUCIBLES_617
+    .filter((g) => !g.condicional)
+    .map((g) => g.codigo)
+);
 
+/** Conditional deduction codes need fuente check */
+const gastosDeduciblesCondicionales = new Map(
+  GASTOS_DEDUCIBLES_617
+    .filter((g) => g.condicional)
+    .map((g) => [g.codigo, g])
+);
+
+/**
+ * Check if a gasto is unconditionally deducible (backwards compatible).
+ * For conditional deductions (e.g., 2.1.2.02.02.007), use isGastoDeducible617ConCondiciones.
+ */
 export function isGastoDeducible617(cuenta: string): boolean {
-  return gastosDeduciblesSet.has(cuenta.trim());
+  const trimmed = cuenta.trim();
+  // Unconditional deductions
+  if (gastosDeduciblesSet.has(trimmed)) return true;
+  // Parent code match: 2.1.3.07.02.002 covers .01 and .02
+  if (trimmed.startsWith("2.1.3.07.02.002")) return true;
+  return false;
 }
+
+/**
+ * Check if a gasto is deducible considering fuente conditions.
+ * - 2.1.2.02.02.007 is ONLY deducible when fuente != ICLD and fuente != SGP-LD
+ * - 2.1.1.01.03.006 is ONLY deducible in sección "16.0 - Admon central"
+ */
+export function isGastoDeducible617ConCondiciones(
+  cuenta: string,
+  codigoFuente?: string,
+  seccion?: string,
+): boolean {
+  const trimmed = cuenta.trim();
+
+  // Unconditional deductions (always deducible)
+  if (gastosDeduciblesSet.has(trimmed)) return true;
+  // Parent code match for cuotas partes pensionales
+  if (trimmed.startsWith("2.1.3.07.02.002")) return true;
+
+  // Conditional: 2.1.2.02.02.007 only deducts if fuente is NOT ICLD/SGP-LD
+  const cond = gastosDeduciblesCondicionales.get(trimmed);
+  if (cond && codigoFuente) {
+    const fCode = codigoFuente.split(" - ")[0].trim();
+    const isICLD = fCode === "1.2.1.0.00";
+    const isSGPLD = fCode === "1.2.4.3.04";
+    if (!isICLD && !isSGPLD) return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Gastos de Funcionamiento Rules (GF — what COUNTS as functioning expenses)
+// From Johan's TAREAS.xlsx gf_suman table
+// ---------------------------------------------------------------------------
+
+export interface GFRule {
+  descripcion: string;
+  secciones: string[];
+  fuentes: string[];
+  vigencias: string[];
+}
+
+/**
+ * Rules for which gastos COUNT as functioning expenses for Ley 617.
+ * Key insight from Johan: only 2.1 codes where fuente = ICLD or SGP-LD,
+ * vigencia = actual + vigencias futuras.
+ */
+export const GF_REGLAS: GFRule[] = [
+  {
+    descripcion: "Gastos de Funcionamiento - Concejo",
+    secciones: ["18.0 - Concejo"],
+    fuentes: [
+      "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación",
+      "1.2.4.3.04 - SGP Propósito general libre destinación municipios categorías 4, 5 y 6",
+    ],
+    vigencias: ["1 - Vigencia Actual", "4 - Vigencias futuras vigencia actual"],
+  },
+  {
+    descripcion: "Gastos de Funcionamiento - Personería",
+    secciones: ["20.0 - Personería"],
+    fuentes: [
+      "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación",
+      "1.2.4.3.04 - SGP Propósito general libre destinación municipios categorías 4, 5 y 6",
+    ],
+    vigencias: ["1 - Vigencia Actual", "4 - Vigencias futuras vigencia actual"],
+  },
+  {
+    descripcion: "Gastos de Funcionamiento - Admón Central y Unidad Servicios Públicos",
+    secciones: ["16.0 - Admon central", "23.0 - Unidad de servicios públicos"],
+    fuentes: [
+      "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación",
+      "1.2.4.3.04 - SGP Propósito general libre destinación municipios categorías 4, 5 y 6",
+    ],
+    vigencias: ["1 - Vigencia Actual", "4 - Vigencias futuras vigencia actual"],
+  },
+];
+
+/** CUIPO fuente codes that count for GF calculation */
+export const GF_FUENTES_VALIDAS = [
+  "1.2.1.0.00",   // ICLD
+  "1.2.4.3.04",   // SGP Propósito general libre destinación
+];
+
+/** Secciones presupuestales that count for GF */
+export const GF_SECCIONES_VALIDAS = [
+  "16.0",  // Admón central
+  "18.0",  // Concejo
+  "20.0",  // Personería
+  "23.0",  // Unidad de servicios públicos
+];
 
 // ---------------------------------------------------------------------------
 // Legal Fund Deductions
