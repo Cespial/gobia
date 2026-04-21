@@ -72,16 +72,16 @@ export const ICLD_CUENTAS_VALIDAS: ICLDCuentaValida[] = [
   { codigo: "1.1.02.05.001.08", nombre: "Servicios prestados a las empresas y servicios de producción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   { codigo: "1.1.02.05.001.09", nombre: "Servicios para la comunidad, sociales y personales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Ventas de bienes y servicios (fuente SGP LD)
-  { codigo: "1.1.02.05.002.00", nombre: "Agricultura, silvicultura y productos de la pesca", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.01", nombre: "Minerales; electricidad, gas y agua", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.02", nombre: "Productos alimenticios, bebidas y tabaco; textiles, prendas de vestir y productos de cuero", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.03", nombre: "Otros bienes transportables (excepto productos metálicos, maquinaria y equipo)", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.04", nombre: "Productos metálicos, maquinaria y equipo", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.05", nombre: "Construcción y servicios de la construcción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.06", nombre: "Comercio y distribución; alojamiento; servicios de suministro de comidas y bebidas; servicios de transporte; y servicios de distribución de electricidad, gas y agua", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.07", nombre: "Servicios financieros y servicios conexos; servicios inmobiliarios; y servicios de arrendamiento y leasing", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.08", nombre: "Servicios prestados a las empresas y servicios de producción", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
-  { codigo: "1.1.02.05.002.09", nombre: "Servicios para la comunidad, sociales y personales", fuente: "1.2.1.0.00 - Ingresos Corrientes de Libre Destinación", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.00", nombre: "Agricultura, silvicultura y productos de la pesca", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.01", nombre: "Minerales; electricidad, gas y agua", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.02", nombre: "Productos alimenticios, bebidas y tabaco; textiles, prendas de vestir y productos de cuero", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.03", nombre: "Otros bienes transportables (excepto productos metálicos, maquinaria y equipo)", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.04", nombre: "Productos metálicos, maquinaria y equipo", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.05", nombre: "Construcción y servicios de la construcción", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.06", nombre: "Comercio y distribución; alojamiento; servicios de suministro de comidas y bebidas; servicios de transporte; y servicios de distribución de electricidad, gas y agua", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.07", nombre: "Servicios financieros y servicios conexos; servicios inmobiliarios; y servicios de arrendamiento y leasing", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.08", nombre: "Servicios prestados a las empresas y servicios de producción", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
+  { codigo: "1.1.02.05.002.09", nombre: "Servicios para la comunidad, sociales y personales", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // SGP Libre Destinación (Cat 4-6) — different fuente code
   { codigo: "1.1.02.06.001.03.04", nombre: "Propósito general libre destinación municipios categorías 4, 5 y 6", fuente: "1.2.4.3.04 SGP-propósito general-libre destinación municipios categorías 4, 5 y 6", tipoNorma: "0.0 - NO APLICA", fechaNorma: "NO APLICA" },
   // Participaciones de impuestos
@@ -130,8 +130,8 @@ export function isICLDCuentaConCondiciones(
 
   if (fuente !== undefined) {
     // Extract the fuente code prefix for comparison (e.g., "1.2.1.0.00")
-    const expectedCode = entry.fuente.split(" - ")[0].trim();
-    const actualCode = fuente.split(" - ")[0].trim();
+    const expectedCode = entry.fuente.split(" ")[0].trim();
+    const actualCode = fuente.split(" ")[0].trim();
     if (actualCode !== expectedCode) {
       errores.push(`Fuente incorrecta: esperada "${entry.fuente}", recibida "${fuente}"`);
     }
@@ -305,7 +305,7 @@ export function isGastoDeducible617ConCondiciones(
   // Conditional: 2.1.2.02.02.007 only deducts if fuente is NOT ICLD/SGP-LD
   const cond = gastosDeduciblesCondicionales.get(trimmed);
   if (cond && codigoFuente) {
-    const fCode = codigoFuente.split(" - ")[0].trim();
+    const fCode = codigoFuente.split(" ")[0].trim();
     const isICLD = fCode === "1.2.1.0.00";
     const isSGPLD = fCode === "1.2.4.3.04";
     if (!isICLD && !isSGPLD) return true;

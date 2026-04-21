@@ -133,7 +133,7 @@ export function checkTipoNorma(
   tipoNorma: string,
   codigoFuente: string,
 ): AlertaICLD | null {
-  const fCode = codigoFuente.split(" - ")[0].trim();
+  const fCode = codigoFuente.split(" ")[0].trim();
   const isICLDOrSGPLD = fCode === "1.2.1.0.00" || fCode === "1.2.4.3.04";
 
   if (isICLDOrSGPLD && tipoNorma !== "0.0 - NO APLICA") {
@@ -150,7 +150,7 @@ export function checkFechaNorma(
   fechaNorma: string,
   codigoFuente: string,
 ): AlertaICLD | null {
-  const fCode = codigoFuente.split(" - ")[0].trim();
+  const fCode = codigoFuente.split(" ")[0].trim();
   const isICLDOrSGPLD = fCode === "1.2.1.0.00" || fCode === "1.2.4.3.04";
 
   if (isICLDOrSGPLD && fechaNorma !== "NO APLICA") {
