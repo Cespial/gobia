@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ACCIONES_MEJORA } from "@/data/acciones-mejora";
 import { DESTINACIONES_ESPECIFICAS_DEFAULT } from "@/data/alertas-icld";
 
@@ -67,6 +68,7 @@ interface Ley617PanelProps {
     gastosFuncionamientoNeto?: number;
     gastosDeducidosDetalle?: GastoDeducidoDetalle[];
     alertasICLD?: { cuenta: string; nombre: string; fuente: string; alerta: string; valor: number }[];
+    icldDetalle?: { cuenta: string; nombre: string; recaudo: number; esValido: boolean }[];
   };
   certifications?: Ley617Certification[];
   periodo: string;
@@ -367,6 +369,7 @@ export default function Ley617Panel({
   municipio,
 }: Ley617PanelProps) {
   const isCumple = data.status === "cumple";
+  const [showICLDDetalle, setShowICLDDetalle] = useState(false);
 
   return (
     <div className="rounded-2xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-6">
@@ -502,6 +505,102 @@ export default function Ley617Panel({
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ICLD Detalle — collapsible per-rubro breakdown */}
+      {data.icldDetalle && data.icldDetalle.length > 0 && (
+        <div className="mb-6 rounded-xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-5">
+          {/* Header row with toggle */}
+          <div className="flex items-center justify-between">
+            <h3
+              className="text-sm font-semibold text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Detalle Rubros ICLD ({data.icldDetalle.length} rubros)
+            </h3>
+            <button
+              onClick={() => setShowICLDDetalle((v) => !v)}
+              className="rounded-lg border border-[var(--gray-700)] bg-[var(--gray-800)] px-3 py-1 text-xs text-[var(--gray-400)] transition-colors hover:border-[var(--gray-600)] hover:text-white"
+            >
+              {showICLDDetalle ? "Ocultar rubros ICLD" : "Ver rubros ICLD"}
+            </button>
+          </div>
+
+          {showICLDDetalle && (() => {
+            const sorted = [...data.icldDetalle!].sort((a, b) => b.recaudo - a.recaudo);
+            const subtotalValidos = sorted.filter((d) => d.esValido).reduce((s, d) => s + d.recaudo, 0);
+            const subtotalNoValidos = sorted.filter((d) => !d.esValido).reduce((s, d) => s + d.recaudo, 0);
+
+            return (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--gray-700)] text-left text-[var(--gray-500)]">
+                      <th className="py-2 pr-4 font-medium">Código</th>
+                      <th className="py-2 pr-4 font-medium">Nombre</th>
+                      <th className="py-2 pr-4 text-right font-medium">Recaudo</th>
+                      <th className="py-2 text-center font-medium">¿Válido?</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((d, i) => (
+                      <tr
+                        key={`${d.cuenta}-${i}`}
+                        className={`border-b ${
+                          d.esValido
+                            ? "border-emerald-400/10 bg-emerald-400/5"
+                            : "border-amber-400/10 bg-amber-400/5"
+                        }`}
+                      >
+                        <td
+                          className="py-2 pr-4 font-mono text-xs text-[var(--gray-400)]"
+                          style={{ fontFamily: "Consolas, monospace" }}
+                        >
+                          {d.cuenta}
+                        </td>
+                        <td className="py-2 pr-4 text-[var(--gray-300)]">{d.nombre}</td>
+                        <td className="py-2 pr-4 text-right text-[var(--gray-300)]">
+                          {formatCOP(d.recaudo)}
+                        </td>
+                        <td className="py-2 text-center">
+                          {d.esValido ? (
+                            <span className="font-semibold text-emerald-400">SI ✓</span>
+                          ) : (
+                            <span className="font-semibold text-amber-400">
+                              NO ✗ → Acción de mejora
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-[var(--gray-700)]">
+                      <td colSpan={2} className="py-2 pr-4 text-xs font-semibold text-emerald-400">
+                        Subtotal Válidos
+                      </td>
+                      <td className="py-2 pr-4 text-right text-xs font-semibold text-emerald-400">
+                        {formatCOP(subtotalValidos)}
+                      </td>
+                      <td />
+                    </tr>
+                    {subtotalNoValidos > 0 && (
+                      <tr className="border-t border-[var(--gray-800)]">
+                        <td colSpan={2} className="py-2 pr-4 text-xs font-semibold text-amber-400">
+                          Subtotal No Válidos (acciones de mejora)
+                        </td>
+                        <td className="py-2 pr-4 text-right text-xs font-semibold text-amber-400">
+                          {formatCOP(subtotalNoValidos)}
+                        </td>
+                        <td />
+                      </tr>
+                    )}
+                  </tfoot>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       )}
 
