@@ -32,7 +32,8 @@ export interface FUTCierreRow {
   cxpVigenciasAnteriores: number;
   otrasExigibilidades: number;
   reservasPresupuestales: number;
-  saldoEnLibros: number;
+  totalExigibilidades: number;
+  saldoEnLibros: number; // SUPERÁVIT O DÉFICIT (col O)
 }
 
 export interface FUTCierreData {
@@ -52,8 +53,9 @@ export function parseFUTCierre(buffer: ArrayBuffer): FUTCierreData {
   const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
   // Find the header row (contains "CODIGO" or "NOMBRE")
+  // CHIP FUT files have header at row 12, so search up to 15
   let headerIdx = 0;
-  for (let i = 0; i < Math.min(jsonData.length, 5); i++) {
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
     const row = jsonData[i];
     if (row && Array.isArray(row) && row.some(cell => String(cell).toUpperCase().includes('CODIGO'))) {
       headerIdx = i;
@@ -85,7 +87,8 @@ export function parseFUTCierre(buffer: ArrayBuffer): FUTCierreData {
       cxpVigenciasAnteriores: toNum(row[10]),
       otrasExigibilidades: toNum(row[11]),
       reservasPresupuestales: toNum(row[12]),
-      saldoEnLibros: toNum(row[13]),
+      totalExigibilidades: toNum(row[13]),
+      saldoEnLibros: toNum(row[14]),  // SUPERÁVIT O DÉFICIT (col O)
     };
 
     if (codigo === 'C' || codigo === 'VAL') {
