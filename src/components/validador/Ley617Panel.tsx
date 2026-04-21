@@ -55,6 +55,9 @@ interface Ley617PanelProps {
     icldBruto?: number;
     icldValidado?: number;
     deduccionFondos?: number;
+    deduccionReportada?: number;
+    deduccionCalculada?: number;
+    deduccionReportadaDetalle?: { codigoFuente: string; nombreFuente: string; valor: number }[];
     icldNeto?: number;
     accionesMejora?: number;
     gastosDeducidos?: number;
@@ -455,12 +458,30 @@ export default function Ley617Panel({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[var(--gray-400)]">
-                (&minus;) Fondos legales (3%)
+                (&minus;) Deducciones fondos legales
               </span>
               <span className="font-medium text-[var(--gray-400)]">
                 -{formatCOP(data.deduccionFondos ?? 0)}
               </span>
             </div>
+            {/* Show reported vs calculated deduction comparison */}
+            {data.deduccionReportada !== undefined && data.deduccionCalculada !== undefined && (
+              <div className="ml-4 space-y-0.5 text-xs">
+                <div className="flex justify-between text-[var(--gray-500)]">
+                  <span>Reportada (datos CUIPO)</span>
+                  <span>{formatCOP(data.deduccionReportada)}</span>
+                </div>
+                <div className="flex justify-between text-[var(--gray-500)]">
+                  <span>Calculada (3%)</span>
+                  <span>{formatCOP(data.deduccionCalculada)}</span>
+                </div>
+                {data.deduccionReportada > 0 && Math.abs(data.deduccionReportada - data.deduccionCalculada) > 1000 && (
+                  <div className="mt-1 text-amber-400/80">
+                    Diferencia: {formatCOP(Math.abs(data.deduccionReportada - data.deduccionCalculada))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="my-1 border-t border-[var(--gray-800)]" />
             <div className="flex items-center justify-between rounded-lg bg-[var(--gray-800)] px-3 py-2">
               <span

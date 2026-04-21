@@ -29,9 +29,10 @@ import {
 import {
   isICLDFuente,
   isICLDCuenta,
-  isGastoDeducible617,
+  isGastoDeducible617ConCondiciones,
   GASTOS_DEDUCIBLES_617,
   TOTAL_DEDUCCION_FONDOS,
+  GF_FUENTES_VALIDAS,
   LIMITES_ADMIN_CENTRAL,
   LIMITES_PERSONERIA_SMLMV,
   SMLMV_2025,
@@ -67,8 +68,14 @@ export interface Ley617Result {
   icldBruto: number;
   /** Sum of income where funding source is ICLD AND account code is valid */
   icldValidado: number;
-  /** 3% legal fund deduction from icldValidado */
+  /** Deduction amount used for ICLD Neto (max of reportada vs calculada) */
   deduccionFondos: number;
+  /** Deduction read from actual CUIPO data (destinación específica fuentes) */
+  deduccionReportada: number;
+  /** 3% automatic calculation from icldValidado */
+  deduccionCalculada: number;
+  /** Detail of each reported deduction fuente */
+  deduccionReportadaDetalle: { codigoFuente: string; nombreFuente: string; valor: number }[];
   /** icldValidado - deduccionFondos — the denominator for ratio calculations */
   icldNeto: number;
   /** icldBruto - icldValidado — money in ICLD sources but wrong account codes */
@@ -134,6 +141,25 @@ function isRecursosDelBalance(nombreFuente: string): boolean {
   );
 }
 
+/**
+ * Check if a funding source CODE is ICLD or SGP-LD (for gastos filtering).
+ * Uses the exact codes from GF_FUENTES_VALIDAS: 1.2.1.0.00 and 1.2.4.3.04.
+ */
+function isGFFuenteValida(codigoFuente: string): boolean {
+  const code = (codigoFuente || "").split(" ")[0].trim();
+  return GF_FUENTES_VALIDAS.includes(code);
+}
+
+/**
+ * Fuente codes that represent destinación específica deductions carved from ICLD.
+ * These are legal obligations (Ley 99 ambiental, fondos de gestión riesgo, etc.)
+ * whose reported income should be deducted from ICLD to get ICLD Neto.
+ */
+const FUENTES_DEDUCCION_ICLD = [
+  "1.2.3.4.02",  // ICLD LEY 99 - DESTINO AMBIENTAL
+  "1.2.2.0.00",  // INGRESOS CORRIENTES DE DESTINACION ESPECIFICA POR ACTO ADMINISTRATIVO
+];
+
 // ---------------------------------------------------------------------------
 // Main evaluation
 // ---------------------------------------------------------------------------
@@ -160,13 +186,41 @@ export async function evaluateLey617(
   let icldBruto = 0;
   let icldValidado = 0;
 
+  // C2: Collect reported deductions from destinación específica fuentes
+  let deduccionReportada = 0;
+  const deduccionReportadaDetalle: { codigoFuente: string; nombreFuente: string; valor: number }[] = [];
+
   for (const row of ingresosRows) {
-    const fuenteIsICLD = isICLDFuente(row.nom_fuentes_financiacion);
+    const fuenteNombre = row.nom_fuentes_financiacion || "";
+    const fuenteCodigo = (row.cod_fuentes_financiacion || "").split(" ")[0].trim();
+
+    // C2: Check if this is a destinación específica fuente carved from ICLD
+    if (FUENTES_DEDUCCION_ICLD.includes(fuenteCodigo)) {
+      const recaudo = parseFloat(row.total_recaudo || "0");
+      if (recaudo > 0) {
+        deduccionReportada += recaudo;
+        // Aggregate by fuente code
+        const existing = deduccionReportadaDetalle.find(
+          (d) => d.codigoFuente === fuenteCodigo
+        );
+        if (existing) {
+          existing.valor += recaudo;
+        } else {
+          deduccionReportadaDetalle.push({
+            codigoFuente: fuenteCodigo,
+            nombreFuente: fuenteNombre,
+            valor: recaudo,
+          });
+        }
+      }
+    }
+
+    // C1: Only ICLD fuentes count for ICLD bruto
+    const fuenteIsICLD = isICLDFuente(fuenteNombre);
     if (!fuenteIsICLD) continue;
 
     // Exclude Rendimientos Financieros (RF) and Recursos del Balance (RB)
     // from ICLD — only vigencia actual income should count
-    const fuenteNombre = row.nom_fuentes_financiacion || "";
     if (isRendimientosFinancieros(fuenteNombre) || isRecursosDelBalance(fuenteNombre)) {
       continue;
     }
@@ -181,13 +235,18 @@ export async function evaluateLey617(
   }
 
   const accionesMejora = icldBruto - icldValidado;
-  const deduccionFondos = icldValidado * TOTAL_DEDUCCION_FONDOS;
+
+  // C2: Use reported deductions from data; fall back to 3% calculated if no data
+  const deduccionCalculada = icldValidado * TOTAL_DEDUCCION_FONDOS;
+  // Use the reported value when available, otherwise use the calculated 3%
+  const deduccionFondos = deduccionReportada > 0 ? deduccionReportada : deduccionCalculada;
   const icldNeto = icldValidado - deduccionFondos;
 
   // -------------------------------------------------------------------------
   // 2. Aggregate operating expenses (cuenta starts with "2.1") by section,
-  //    filtered to ICLD funding sources only.
-  //    fetchGastosPorSeccion already filters for cuenta like '2.1%' and VIGENCIA ACTUAL.
+  //    filtered to ICLD/SGP-LD funding sources only (by fuente CODE).
+  //    fetchGastosPorSeccion filters for cuenta like '2.1%' and
+  //    cod_vigencia_del_gasto in ('1','4') (vigencia actual + vigencias futuras).
   //    It returns individual account rows (with `cuenta`) for deduction matching.
   // -------------------------------------------------------------------------
   const seccionMap = new Map<
@@ -201,8 +260,9 @@ export async function evaluateLey617(
   >();
 
   for (const row of gastosPorSeccion) {
-    // Only count expenses funded by ICLD
-    if (!isICLDFuente(row.nom_fuentes_financiacion)) continue;
+    // C3: Only count expenses funded by ICLD/SGP-LD — check fuente CODE, not just name
+    const fuenteCodigo = row.cod_fuentes_financiacion || "";
+    if (!isGFFuenteValida(fuenteCodigo)) continue;
 
     const seccionName = row.nom_seccion_presupuestal || "SIN SECCION";
     const compromisos = parseFloat(row.compromisos || "0");
@@ -217,8 +277,8 @@ export async function evaluateLey617(
 
     existing.gastos += compromisos;
 
-    // Check if this expense is deductible (for Admin Central primarily)
-    if (isGastoDeducible617(cuenta) && compromisos > 0) {
+    // C4: Use conditional deduction check — 2.1.2.02.02.007 only deducts if fuente != ICLD/SGP-LD
+    if (isGastoDeducible617ConCondiciones(cuenta, fuenteCodigo) && compromisos > 0) {
       existing.gastosDeducidos += compromisos;
       // Find the canonical name from GASTOS_DEDUCIBLES_617
       const gastoInfo = GASTOS_DEDUCIBLES_617.find(
@@ -350,6 +410,9 @@ export async function evaluateLey617(
     icldBruto,
     icldValidado,
     deduccionFondos,
+    deduccionReportada,
+    deduccionCalculada,
+    deduccionReportadaDetalle,
     icldNeto,
     accionesMejora,
     // Expense fields

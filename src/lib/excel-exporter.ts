@@ -780,7 +780,13 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
 
   writeKV(ws, r++, "ICLD Bruto:", data.icldBruto, detailCols);
   writeKV(ws, r++, "ICLD Validado:", data.icldValidado, detailCols);
-  writeKV(ws, r++, "Deduccion Fondos (3%):", data.deduccionFondos, detailCols);
+  writeKV(ws, r++, "Deduccion Fondos (usada):", data.deduccionFondos, detailCols);
+  if (data.deduccionReportada !== undefined) {
+    writeKV(ws, r++, "  Deduccion Reportada (datos CUIPO):", data.deduccionReportada, detailCols);
+  }
+  if (data.deduccionCalculada !== undefined) {
+    writeKV(ws, r++, "  Deduccion Calculada (3%):", data.deduccionCalculada, detailCols);
+  }
   writeKV(ws, r++, "ICLD Neto:", data.icldNeto, detailCols);
   writeKV(ws, r++, "Acciones de Mejora:", data.accionesMejora, detailCols);
   writeEmptyRow(ws, r++, detailCols);
