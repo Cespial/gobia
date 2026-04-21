@@ -424,7 +424,9 @@ function writeKVPct(
   colSpan: number = 2,
 ): void {
   writeText(ws, row, 0, label, labelStyle);
-  writeNum(ws, row, 1, value, { ...valueNumStyle, numFmt: "0.00%" });
+  // Excel % format auto-multiplies by 100, so divide first.
+  // Our values come as 91.47 (already ×100), need to pass 0.9147
+  writeNum(ws, row, 1, value / 100, { ...valueNumStyle, numFmt: "0.00%" });
   for (let c = 2; c < colSpan; c++) {
     writeText(ws, row, c, "", dataStyle);
   }
@@ -1131,9 +1133,9 @@ function addSGPSheet(wb: XLSX.WorkBook, data: SGPEvaluationResult): void {
     writeNum(ws, r, 2, c.presupuestado, ns);
     writeNum(ws, r, 3, c.recaudado, ns);
     writeNum(ws, r, 4, c.ejecutado, ns);
-    writeNum(ws, r, 5, c.pctPresupuesto, ps);
-    writeNum(ws, r, 6, c.pctRecaudo, ps);
-    writeNum(ws, r, 7, c.pctEjecucion, ps);
+    writeNum(ws, r, 5, c.pctPresupuesto / 100, ps);
+    writeNum(ws, r, 6, c.pctRecaudo / 100, ps);
+    writeNum(ws, r, 7, c.pctEjecucion / 100, ps);
     writeText(ws, r, 8, c.status.toUpperCase(), statusStyle(c.status.toUpperCase()));
     r++;
   }
