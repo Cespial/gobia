@@ -124,7 +124,7 @@ const totalStyle = {
 /** Total row with number format */
 const totalNumStyle = {
   ...totalStyle,
-  numFmt: "#,##0",
+  numFmt: "#,##0.00",
   alignment: { horizontal: "right" as const },
 };
 
@@ -135,9 +135,9 @@ const totalPctStyle = {
   alignment: { horizontal: "right" as const },
 };
 
-/** Regular number cells — thin border, #,##0 format */
+/** Regular number cells — thin border, #,##0.00 format (full precision) */
 const numStyle = {
-  numFmt: "#,##0",
+  numFmt: "#,##0.00",
   border: thinBorder,
   font: { sz: 9, name: "Calibri" },
   alignment: { horizontal: "right" as const },
@@ -183,7 +183,7 @@ const labelStyle = {
 const valueNumStyle = {
   font: { sz: 10, name: "Calibri" },
   border: thinBorder,
-  numFmt: "#,##0",
+  numFmt: "#,##0.00",
   alignment: { horizontal: "right" as const },
 };
 
@@ -217,7 +217,7 @@ const altRowStyle = {
 
 const altRowNumStyle = {
   ...altRowStyle,
-  numFmt: "#,##0",
+  numFmt: "#,##0.00",
   alignment: { horizontal: "right" as const },
 };
 
@@ -599,7 +599,7 @@ function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
 
 function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
   const ws: XLSX.WorkSheet = {};
-  const detailCols = 11;
+  const detailCols = 13; // +2 columns: Formula, Verificacion
   let r = 0;
 
   writeTitle(ws, r++, "EQUILIBRIO PRESUPUESTAL POR FUENTE DE FINANCIACION", detailCols);
@@ -637,6 +637,8 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
     "Superavit",
     "Validador",
     "Saldo Libros",
+    "Formula",
+    "Verificacion",
   ];
   writeHeaderRow(ws, r++, headers);
   const freezeRow = r;
@@ -659,6 +661,46 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
     writeNum(ws, r, 8, f.superavit, ns);
     writeNum(ws, r, 9, f.validador ?? 0, ns);
     writeNum(ws, r, 10, f.saldoEnLibros ?? 0, ns);
+
+    // Formula column — describes how each derived field was calculated
+    const reservas = f.reservas ?? 0;
+    const cxp = f.cxp ?? 0;
+    const obligaciones = f.obligaciones ?? 0;
+    const resAnt = f.reservasVigAnterior ?? 0;
+    const cxpAnt = f.cxpVigAnterior ?? 0;
+    const formulaText = [
+      "Reservas= Compromisos - Obligaciones",
+      "CxP= Obligaciones - Pagos",
+      "Superavit= Recaudo - Compromisos",
+      "SaldoLibros= Superavit + Reservas + CxP + Res.Ant + CxP.Ant",
+    ].join(" | ");
+    writeText(ws, r, 11, formulaText, ds);
+
+    // Verification column — recalculate and confirm within $1 tolerance
+    const checks: string[] = [];
+    const expectedReservas = f.compromisos - obligaciones;
+    if (Math.abs(reservas - expectedReservas) > 1) {
+      checks.push(`Reservas DIFF=$${(reservas - expectedReservas).toFixed(2)}`);
+    }
+    const expectedCxP = obligaciones - f.pagos;
+    if (Math.abs(cxp - expectedCxP) > 1) {
+      checks.push(`CxP DIFF=$${(cxp - expectedCxP).toFixed(2)}`);
+    }
+    const validador = f.validador ?? 0;
+    if (Math.abs(validador) > 1) {
+      checks.push(`Validador DIFF=$${validador.toFixed(2)}`);
+    }
+    const expectedSaldo = f.superavit + reservas + cxp + resAnt + cxpAnt;
+    const saldoLibros = f.saldoEnLibros ?? 0;
+    if (Math.abs(saldoLibros - expectedSaldo) > 1) {
+      checks.push(`SaldoLibros DIFF=$${(saldoLibros - expectedSaldo).toFixed(2)}`);
+    }
+    const verificationText = checks.length === 0 ? "\u2713" : `\u2717 ${checks.join("; ")}`;
+    const verStyle = checks.length === 0
+      ? statusStyle("CUMPLE")
+      : statusStyle("NO CUMPLE");
+    writeText(ws, r, 12, verificationText, verStyle);
+
     r++;
   }
 
@@ -675,6 +717,8 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
     { wch: 16 }, // Superavit
     { wch: 14 }, // Validador
     { wch: 16 }, // Saldo Libros
+    { wch: 55 }, // Formula
+    { wch: 40 }, // Verificacion
   ];
   freezeRows(ws, freezeRow);
   XLSX.utils.book_append_sheet(wb, ws, "0. Equilibrio");
@@ -798,6 +842,30 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
   writeKV(ws, r++, "Gastos Funcionamiento Neto:", data.gastosFuncionamientoNeto, detailCols);
   writeEmptyRow(ws, r++, detailCols);
 
+  // Formula annotations for auditability
+  writeSectionRow(ws, r++, "FORMULAS DE CALCULO", detailCols);
+  const formulaAnnotationStyle = {
+    font: { sz: 8, name: "Consolas", color: { rgb: SEPIA } },
+    border: thinBorder,
+    alignment: { horizontal: "left" as const, wrapText: true },
+  };
+  const ley617Formulas = [
+    "ICLD Bruto = \u03A3 recaudo donde fuente \u2208 {1.2.1.0.00, 1.2.4.3.04} (solo vigencia, sin RF/RB)",
+    "ICLD Validado = \u03A3 recaudo donde cuenta \u2208 ICLD_CUENTAS_VALIDAS (55 cuentas CGR)",
+    "Deduccion = dato reportado en fuente 1.2.3.4.02 (Ley 99 Ambiental)",
+    "ICLD Neto = ICLD Validado - Deduccion",
+    "GF Neto = GF Total (2.1, fuente ICLD/SGP-LD, vig actual+futuras) - Gastos Deducidos",
+    "Ratio = GF Neto / ICLD Neto",
+  ];
+  for (const formula of ley617Formulas) {
+    writeText(ws, r, 0, formula, formulaAnnotationStyle);
+    for (let c = 1; c < detailCols; c++) writeText(ws, r, c, "", dataStyle);
+    if (!ws["!merges"]) ws["!merges"] = [];
+    ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: detailCols - 1 } });
+    r++;
+  }
+  writeEmptyRow(ws, r++, detailCols);
+
   // Secciones table
   writeSectionRow(ws, r++, "DETALLE POR SECCION", detailCols);
   writeHeaderRow(ws, r++, [
@@ -874,7 +942,7 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
     };
     const greenRowNumStyle = {
       ...greenRowStyle,
-      numFmt: "#,##0",
+      numFmt: "#,##0.00",
       alignment: { horizontal: "right" as const },
     };
     const greenRowCenterStyle = {
@@ -895,7 +963,7 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
     };
     const amberRowNumStyle = {
       ...amberRowStyle,
-      numFmt: "#,##0",
+      numFmt: "#,##0.00",
       alignment: { horizontal: "right" as const },
     };
     const amberRowCenterStyle = {
@@ -941,7 +1009,7 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
 
 function addCGASheet(wb: XLSX.WorkBook, data: CGAResult): void {
   const ws: XLSX.WorkSheet = {};
-  const detailCols = 9;
+  const detailCols = 10; // +1 column: Formula
   let r = 0;
 
   writeTitle(ws, r++, "EQUILIBRIO CGA \u2014 CONTRALORIA GENERAL DE LA REPUBLICA", detailCols);
@@ -963,8 +1031,22 @@ function addCGASheet(wb: XLSX.WorkBook, data: CGAResult): void {
     "Diferencia",
     "Tolerancia",
     "Estado",
+    "Formula",
   ]);
   const freezeRow = r;
+
+  // CGA formula annotations per check name pattern
+  const cgaFormulaMap: Record<string, string> = {
+    "ppto_ini": "Ppto Ini Ing (PROG_ING cuenta=1) vs Ppto Ini Gas (PROG_GAS cuenta=2, vigencia=1)",
+    "ppto_def": "Ppto Def Ing (PROG_ING cuenta=1, def) vs Ppto Def Gas (PROG_GAS cuenta=2, def, vigencia=1)",
+    "reservas": "Reservas FUT (FUT_CIERRE col M, fila C) vs Reservas CUIPO (\u03A3 compromisos_VA - obligaciones_VA)",
+    "cxp": "CxP FUT (FUT_CIERRE col N, fila C) vs CxP CUIPO (\u03A3 obligaciones_VA - pagos_VA)",
+    "saldo": "Saldo Libros FUT vs Saldo CUIPO (Superavit + Reservas + CxP + Res.Ant + CxP.Ant)",
+    "recaudo": "Recaudo CUIPO (EJE_ING) vs Recaudo FUT (FUT_CIERRE col L)",
+    "compromisos": "Compromisos CUIPO (EJE_GAS) vs Compromisos FUT (FUT_CIERRE col G)",
+    "obligaciones": "Obligaciones CUIPO (EJE_GAS) vs Obligaciones FUT (FUT_CIERRE col H)",
+    "pagos": "Pagos CUIPO (EJE_GAS) vs Pagos FUT (FUT_CIERRE col I)",
+  };
 
   for (let i = 0; i < data.checks.length; i++) {
     const c = data.checks[i];
@@ -981,6 +1063,17 @@ function addCGASheet(wb: XLSX.WorkBook, data: CGAResult): void {
     writeNum(ws, r, 6, c.difference, ns);
     writeNum(ws, r, 7, c.tolerance, ns);
     writeText(ws, r, 8, c.status.toUpperCase(), statusStyle(c.status.toUpperCase()));
+
+    // Formula column — match check name to known formula patterns
+    const nameLower = c.name.toLowerCase();
+    let formulaText = `${c.value1Label} vs ${c.value2Label}`;
+    for (const [key, formula] of Object.entries(cgaFormulaMap)) {
+      if (nameLower.includes(key)) {
+        formulaText = formula;
+        break;
+      }
+    }
+    writeText(ws, r, 9, formulaText, ds);
     r++;
   }
 
@@ -988,6 +1081,7 @@ function addCGASheet(wb: XLSX.WorkBook, data: CGAResult): void {
   ws["!cols"] = [
     { wch: 30 }, { wch: 18 }, { wch: 20 }, { wch: 16 },
     { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
+    { wch: 55 }, // Formula
   ];
   freezeRows(ws, freezeRow);
   XLSX.utils.book_append_sheet(wb, ws, "3. CGA");
@@ -1386,30 +1480,54 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
   writeText(ws, r++, 2, "", dataStyle);
   writeKV(ws, r++, "Periodo:", data.periodo, cols);
   writeKV(ws, r++, "Fecha de exportacion:", new Date().toISOString().split("T")[0], cols);
+  writeKV(ws, r++, "Hora de exportacion (UTC):", new Date().toISOString(), cols);
   writeEmptyRow(ws, r++, cols);
 
-  writeHeaderRow(ws, r++, ["FUENTE", "DESCRIPCION", "URL"]);
+  // Data sources table
+  writeSectionRow(ws, r++, "FUENTES DE DATOS Y PARAMETROS API", cols);
+  writeHeaderRow(ws, r++, ["FUENTE", "DESCRIPCION / QUERY", "URL"]);
   const freezeRow = r;
+
+  const dane = data.municipio.code;
+  const chip = data.municipio.chipCode;
+  const periodo = data.periodo;
 
   const sources: [string, string, string][] = [
     [
       "CUIPO Ejecucion Ingresos",
-      "datos.gov.co - 9axr-9gnb",
+      `datos.gov.co - 9axr-9gnb | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
       "https://www.datos.gov.co/resource/9axr-9gnb.json",
     ],
     [
       "CUIPO Ejecucion Gastos",
-      "datos.gov.co - 4f7r-epif",
+      `datos.gov.co - 4f7r-epif | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
       "https://www.datos.gov.co/resource/4f7r-epif.json",
     ],
     [
+      "CUIPO Programacion Ingresos",
+      `datos.gov.co - e84r-mfgi | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
+      "https://www.datos.gov.co/resource/e84r-mfgi.json",
+    ],
+    [
       "CUIPO Programacion Gastos",
-      "datos.gov.co - d9mu-h6ar",
+      `datos.gov.co - d9mu-h6ar | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
       "https://www.datos.gov.co/resource/d9mu-h6ar.json",
     ],
-    ["SICODIS SGP", "DNP API", "https://sicodis.dnp.gov.co"],
-    ["FUT Cierre Fiscal", "CHIP upload", "https://chip.gov.co"],
-    ["CGN Saldos", "CHIP upload", "https://chip.gov.co"],
+    [
+      "SICODIS SGP",
+      `DNP API | codigo_dane='${dane}' periodo='${periodo}'`,
+      "https://sicodis.dnp.gov.co",
+    ],
+    [
+      "FUT Cierre Fiscal",
+      `CHIP upload | entidad='${chip}' vigencia='${periodo}'`,
+      "https://chip.gov.co",
+    ],
+    [
+      "CGN Saldos",
+      `CHIP upload | entidad='${chip}' vigencia='${periodo}'`,
+      "https://chip.gov.co",
+    ],
   ];
 
   for (let i = 0; i < sources.length; i++) {
@@ -1426,8 +1544,64 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
     r++;
   }
 
+  writeEmptyRow(ws, r++, cols);
+
+  // Leaf-row detection note
+  writeSectionRow(ws, r++, "NOTAS DE PROCESAMIENTO", cols);
+  const noteStyle = {
+    font: { sz: 9, name: "Calibri", italic: true, color: { rgb: SEPIA } },
+    border: thinBorder,
+    alignment: { horizontal: "left" as const, wrapText: true },
+  };
+  const processingNotes = [
+    "Solo filas con fuente asignada (leaf rows). Filas de agregacion excluidas.",
+    `Periodo de datos: vigencia fiscal ${periodo}.`,
+    "Precision numerica: todos los valores con 2 decimales (#,##0.00) para auditabilidad.",
+    "Los campos derivados (Reservas, CxP, Superavit, Saldo en Libros) se recalculan y verifican en la hoja Equilibrio.",
+  ];
+  for (const note of processingNotes) {
+    writeText(ws, r, 0, note, noteStyle);
+    writeText(ws, r, 1, "", dataStyle);
+    writeText(ws, r, 2, "", dataStyle);
+    if (!ws["!merges"]) ws["!merges"] = [];
+    ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: cols - 1 } });
+    r++;
+  }
+
+  writeEmptyRow(ws, r++, cols);
+
+  // Formula reference section
+  writeSectionRow(ws, r++, "FORMULAS UTILIZADAS", cols);
+  const formulaRefStyle = {
+    font: { sz: 8, name: "Consolas", color: { rgb: INK } },
+    border: thinBorder,
+    alignment: { horizontal: "left" as const, wrapText: true },
+  };
+  const allFormulas = [
+    "Reservas = MAX(0, Compromisos - Obligaciones)",
+    "CxP = MAX(0, Obligaciones - Pagos)",
+    "Superavit = Recaudo - Compromisos",
+    "Saldo en Libros = Superavit + Reservas + CxP + Res.Vig.Ant + CxP.Vig.Ant",
+    "ICLD Bruto = \u03A3 recaudo (fuente ICLD/SGP-LD, sin RF/RB, solo leaf rows)",
+    "ICLD Validado = \u03A3 recaudo (ICLD Bruto \u2229 cuenta \u2208 55 cuentas validas CGR)",
+    "GF Neto = \u03A3 compromisos 2.1 (fuente ICLD/SGP-LD, vig 1+4) - Gastos Deducidos",
+    "Ratio SI.17 = GF Neto / ICLD Neto",
+    "CGN Total = CxC_saldo_final_I + Income_IV - Adj_IV - CxC_saldo_final_IV",
+    "% Ejecucion = (Compromisos / Ppto Definitivo Gastos) * 100",
+    "Equilibrio Inicial = Ppto Inicial Ingresos - Ppto Inicial Gastos",
+    "Equilibrio Definitivo = Ppto Definitivo Ingresos - Ppto Definitivo Gastos",
+  ];
+  for (const formula of allFormulas) {
+    writeText(ws, r, 0, formula, formulaRefStyle);
+    writeText(ws, r, 1, "", dataStyle);
+    writeText(ws, r, 2, "", dataStyle);
+    if (!ws["!merges"]) ws["!merges"] = [];
+    ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: cols - 1 } });
+    r++;
+  }
+
   setRange(ws, r - 1, cols - 1);
-  ws["!cols"] = [{ wch: 30 }, { wch: 25 }, { wch: 55 }];
+  ws["!cols"] = [{ wch: 35 }, { wch: 55 }, { wch: 55 }];
   freezeRows(ws, freezeRow);
   XLSX.utils.book_append_sheet(wb, ws, "Trazabilidad");
 }
