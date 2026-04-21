@@ -167,6 +167,11 @@ export default function EquilibrioPanel({
   const pptoDefinitivoGastos = data.pptoDefinitivoGastos ?? 0;
   const hasProgramming = pptoInicialIngresos > 0 || pptoDefinitivoIngresos > 0;
 
+  // Execution metrics
+  const pctEjecucionGastos = pptoDefinitivoGastos > 0 ? (totalCompromisos / pptoDefinitivoGastos) * 100 : 0;
+  const saldoDisponible = pptoDefinitivoGastos > 0 ? pptoDefinitivoGastos - totalCompromisos : 0;
+  const showPresupuestoBox = pptoInicialGastos > 0;
+
   return (
     <div className="rounded-2xl border border-[var(--gray-800)] bg-[var(--gray-900)] p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -185,6 +190,97 @@ export default function EquilibrioPanel({
           </p>
         </div>
       </div>
+
+      {/* Presupuesto Summary Box */}
+      {showPresupuestoBox && (
+        <div className="mb-6 rounded-xl border border-[var(--gray-800)] bg-[var(--gray-800)]/40 p-5">
+          <h3
+            className="mb-4 text-sm font-bold uppercase tracking-wider text-[var(--gray-400)]"
+          >
+            Equilibrio Presupuestal
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[var(--gray-700)] text-left text-[var(--gray-500)]">
+                  <th className="py-2 pr-6 font-medium"></th>
+                  <th className="py-2 pr-6 text-right font-medium">Inicial</th>
+                  <th className="py-2 pr-6 text-right font-medium">Definitivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-[var(--gray-800)]/50">
+                  <td className="py-2 pr-6 text-[var(--gray-400)]">Ingresos</td>
+                  <td className="py-2 pr-6 text-right text-[var(--gray-300)]">{formatCOP(pptoInicialIngresos)}</td>
+                  <td className="py-2 pr-6 text-right text-[var(--gray-300)]">{formatCOP(pptoDefinitivoIngresos)}</td>
+                </tr>
+                <tr className="border-b border-[var(--gray-800)]/50">
+                  <td className="py-2 pr-6 text-[var(--gray-400)]">Gastos</td>
+                  <td className="py-2 pr-6 text-right text-[var(--gray-300)]">{formatCOP(pptoInicialGastos)}</td>
+                  <td className="py-2 pr-6 text-right text-[var(--gray-300)]">{formatCOP(pptoDefinitivoGastos)}</td>
+                </tr>
+                <tr className="border-b border-[var(--gray-800)]/50">
+                  <td className="py-2 pr-6 font-medium text-white">Diferencia</td>
+                  <td className={`py-2 pr-6 text-right font-medium ${pptoInicialIngresos - pptoInicialGastos >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {formatCOP(pptoInicialIngresos - pptoInicialGastos)}
+                  </td>
+                  <td className={`py-2 pr-6 text-right font-medium ${pptoDefinitivoIngresos - pptoDefinitivoGastos >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {formatCOP(pptoDefinitivoIngresos - pptoDefinitivoGastos)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-6 text-[var(--gray-400)]">Estado</td>
+                  <td className="py-2 pr-6 text-right">
+                    {pptoInicialIngresos > 0 ? (
+                      pptoInicialIngresos >= pptoInicialGastos ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+                          <CheckCircle2 className="h-3 w-3" /> CUMPLE
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-red-400 font-semibold">
+                          <XCircle className="h-3 w-3" /> NO CUMPLE
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-[var(--gray-600)]">N/D</span>
+                    )}
+                  </td>
+                  <td className="py-2 pr-6 text-right">
+                    {pptoDefinitivoIngresos > 0 ? (
+                      pptoDefinitivoIngresos >= pptoDefinitivoGastos ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+                          <CheckCircle2 className="h-3 w-3" /> CUMPLE
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-red-400 font-semibold">
+                          <XCircle className="h-3 w-3" /> NO CUMPLE
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-[var(--gray-600)]">N/D</span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {/* Execution metrics */}
+          <div className="mt-4 flex flex-wrap gap-6 border-t border-[var(--gray-700)] pt-3">
+            <div className="text-xs">
+              <span className="text-[var(--gray-500)]">% Ejecucion (compromisos / ppto definitivo gastos): </span>
+              <span className="font-semibold text-white">{pctEjecucionGastos.toFixed(1)}%</span>
+            </div>
+            {pptoDefinitivoGastos > 0 && (
+              <div className="text-xs">
+                <span className="text-[var(--gray-500)]">Saldo disponible: </span>
+                <span className={`font-semibold ${saldoDisponible >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {formatCOP(saldoDisponible)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* KPIs — Row 1 */}
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">

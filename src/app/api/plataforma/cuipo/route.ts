@@ -119,32 +119,35 @@ export async function GET(request: NextRequest) {
         }
 
         // Calculate derived fields per funding source
-        const porFuente = Array.from(fuenteMap.values()).map((f) => {
-          const reservas_va = Math.max(0, f.compromisos_va - f.obligaciones_va);
-          const cxp_va = Math.max(0, f.obligaciones_va - f.pagos_va);
-          const superavit = f.recaudo - f.compromisos_va;
-          const reservasVigAnterior = f.compromisos_res - f.pagos_res;
-          const cxpVigAnterior = f.compromisos_cxp - f.pagos_cxp;
-          const saldoEnLibros = Math.max(0, superavit) + reservas_va + cxp_va + reservasVigAnterior + cxpVigAnterior;
-          const validador = f.compromisos_va - f.pagos_va - reservas_va - cxp_va;
+        // Filter out aggregation rows without a real funding source (SIN_FUENTE)
+        const porFuente = Array.from(fuenteMap.values())
+          .filter((f) => f.codigo !== "SIN_FUENTE")
+          .map((f) => {
+            const reservas_va = Math.max(0, f.compromisos_va - f.obligaciones_va);
+            const cxp_va = Math.max(0, f.obligaciones_va - f.pagos_va);
+            const superavit = f.recaudo - f.compromisos_va;
+            const reservasVigAnterior = f.compromisos_res - f.pagos_res;
+            const cxpVigAnterior = f.compromisos_cxp - f.pagos_cxp;
+            const saldoEnLibros = superavit + reservas_va + cxp_va + reservasVigAnterior + cxpVigAnterior;
+            const validador = f.compromisos_va - f.pagos_va - reservas_va - cxp_va;
 
-          return {
-            codigo: f.codigo,
-            nombre: f.nombre,
-            consolidacion: getConsolidacion(f.codigo),
-            recaudo: f.recaudo,
-            compromisos: f.compromisos_va,
-            obligaciones: f.obligaciones_va,
-            pagos: f.pagos_va,
-            reservas: reservas_va,
-            cxp: cxp_va,
-            superavit,
-            validador,
-            reservasVigAnterior,
-            cxpVigAnterior,
-            saldoEnLibros,
-          };
-        });
+            return {
+              codigo: f.codigo,
+              nombre: f.nombre,
+              consolidacion: getConsolidacion(f.codigo),
+              recaudo: f.recaudo,
+              compromisos: f.compromisos_va,
+              obligaciones: f.obligaciones_va,
+              pagos: f.pagos_va,
+              reservas: reservas_va,
+              cxp: cxp_va,
+              superavit,
+              validador,
+              reservasVigAnterior,
+              cxpVigAnterior,
+              saldoEnLibros,
+            };
+          });
 
         const totalIngresos = porFuente.reduce((s, f) => s + f.recaudo, 0);
         const totalCompromisos = porFuente.reduce((s, f) => s + f.compromisos, 0);

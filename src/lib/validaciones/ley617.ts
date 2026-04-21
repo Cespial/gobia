@@ -108,6 +108,32 @@ function isAdminCentral(seccionName: string): boolean {
   return upper.includes("ADMINISTRACION") || upper.includes("CENTRAL");
 }
 
+/**
+ * Check if a funding source name corresponds to Rendimientos Financieros (RF).
+ * These should be excluded from ICLD bruto because they are not vigencia actual income.
+ */
+function isRendimientosFinancieros(nombreFuente: string): boolean {
+  const upper = (nombreFuente || "").toUpperCase().trim();
+  return (
+    upper.startsWith("R.F.") ||
+    upper.startsWith("RF ") ||
+    upper.includes("RENDIMIENTOS FINANCIEROS")
+  );
+}
+
+/**
+ * Check if a funding source name corresponds to Recursos del Balance (RB).
+ * These should be excluded from ICLD bruto because they are prior-year resources.
+ */
+function isRecursosDelBalance(nombreFuente: string): boolean {
+  const upper = (nombreFuente || "").toUpperCase().trim();
+  return (
+    upper.startsWith("R.B.") ||
+    upper.startsWith("RB ") ||
+    upper.includes("RECURSOS DEL BALANCE")
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main evaluation
 // ---------------------------------------------------------------------------
@@ -137,6 +163,13 @@ export async function evaluateLey617(
   for (const row of ingresosRows) {
     const fuenteIsICLD = isICLDFuente(row.nom_fuentes_financiacion);
     if (!fuenteIsICLD) continue;
+
+    // Exclude Rendimientos Financieros (RF) and Recursos del Balance (RB)
+    // from ICLD — only vigencia actual income should count
+    const fuenteNombre = row.nom_fuentes_financiacion || "";
+    if (isRendimientosFinancieros(fuenteNombre) || isRecursosDelBalance(fuenteNombre)) {
+      continue;
+    }
 
     const recaudo = parseFloat(row.total_recaudo || "0");
     icldBruto += recaudo;
