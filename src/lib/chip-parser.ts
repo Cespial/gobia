@@ -205,7 +205,17 @@ export function parseCGNSaldos(buffer: ArrayBuffer): CGNSaldosData {
 
 function toNum(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0;
-  const n = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  let s = String(val).trim();
+  // Colombian format: "5405287257,00" (comma = decimal, no dots as thousands)
+  // If string ends with ,XX (comma + 1-2 digits), treat comma as decimal separator
+  if (/,\d{1,2}$/.test(s)) {
+    s = s.replace(',', '.');
+  } else {
+    // Otherwise treat commas as thousands separators
+    s = s.replace(/,/g, '');
+  }
+  const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
 
