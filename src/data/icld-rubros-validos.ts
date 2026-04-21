@@ -399,17 +399,24 @@ export const TOTAL_DEDUCCION_FONDOS = 0.03; // 3%
 export const SMLMV_2025 = 1_423_500;
 
 /**
- * Concejo annual limit calculation:
+ * Concejo annual limit calculation (Art. 10 Ley 617/2000):
  * - Honorarios: (número concejales × número sesiones × valor sesión)
- * - Gastos generales: depends on ICLD size
- *   - If ICLD < 1,000,000,000: 60 SMLMV
- *   - If ICLD >= 1,000,000,000: 1.5% of ICLD
+ * - Gastos generales: depends on ICLD vigencia anterior vs SMLMV threshold
+ *   - If ICLD vigencia anterior < (1000 × SMLMV) → 60 × SMLMV
+ *   - If ICLD vigencia anterior ≥ (1000 × SMLMV) → 1.5% × ICLD current
  * - Total limit = Honorarios + Gastos generales
+ *
+ * @param icld - ICLD neto of the CURRENT vigencia (for the 1.5% calculation)
+ * @param numeroConcejales - Number of concejales
+ * @param numeroSesiones - Number of ordinary sessions per year
+ * @param icldVigenciaAnterior - ICLD of the PREVIOUS year (for the threshold check).
+ *   If not provided, defaults to using current ICLD as proxy.
  */
 export function calcularLimiteConcejoAnual(
   icld: number,
   numeroConcejales: number,
-  numeroSesiones: number
+  numeroSesiones: number,
+  icldVigenciaAnterior?: number
 ): { honorarios: number; gastosGenerales: number; total: number; valorSesion: number } {
   // Valor de la sesión 2025 — derived from SMLMV
   // Ley 1368/2009 Art. 1: honorarios = SMLMV / (30 días / 6.25) = SMLMV * 6.25 / 30
@@ -418,8 +425,13 @@ export function calcularLimiteConcejoAnual(
 
   const honorarios = numeroConcejales * numeroSesiones * valorSesion;
 
+  // C5: Use SMLMV-based threshold per Johan's specification
+  // The threshold check uses vigencia anterior ICLD; if unavailable, use current as proxy
+  const icldParaUmbral = icldVigenciaAnterior ?? icld;
+  const umbralSMLMV = 1000 * SMLMV_2025;
+
   const gastosGenerales =
-    icld < 1_000_000_000
+    icldParaUmbral < umbralSMLMV
       ? 60 * SMLMV_2025
       : icld * 0.015;
 
