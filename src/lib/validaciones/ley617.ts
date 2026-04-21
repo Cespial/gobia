@@ -41,6 +41,8 @@ import {
   SESIONES_ORDINARIAS_DEFECTO,
 } from "@/data/icld-rubros-validos";
 
+import { checkTipoNorma, checkFechaNorma } from "@/data/alertas-icld";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -59,6 +61,14 @@ export interface Ley617Section {
   status: "cumple" | "no_cumple";
   /** Indicates whether limit is a percentage of ICLD or an absolute COP amount */
   tipoLimite: "porcentaje" | "absoluto";
+}
+
+export interface AlertaICLDRow {
+  cuenta: string;
+  nombre: string;
+  fuente: string;
+  alerta: string;
+  valor: number;
 }
 
 export interface Ley617Result {
@@ -91,6 +101,8 @@ export interface Ley617Result {
   secciones: Ley617Section[];
   /** Detailed breakdown of each deducted expense */
   gastosDeducidosDetalle: { codigo: string; nombre: string; valor: number }[];
+  /** ICLD rows flagged with tipoNorma / fechaNorma alerts (D1) */
+  alertasICLD: AlertaICLDRow[];
   status: "cumple" | "no_cumple";
 }
 
@@ -236,6 +248,51 @@ export async function evaluateLey617(
   }
 
   const accionesMejora = icldBruto - icldValidado;
+
+  // -------------------------------------------------------------------------
+  // D1: Scan ICLD rows for tipoNorma / fechaNorma alert conditions
+  // The API (datos.gov.co) does not include these fields, so alertas will
+  // only populate when CUIPO files are uploaded directly with those columns.
+  // -------------------------------------------------------------------------
+  const alertasICLD: AlertaICLDRow[] = [];
+  for (const row of ingresosRows) {
+    const fuenteCodigo = (row.cod_fuentes_financiacion || "").split(" ")[0].trim();
+    const fuenteNombre = row.nom_fuentes_financiacion || "";
+    const fuenteIsICLD = isICLDFuente(fuenteNombre);
+    if (!fuenteIsICLD) continue;
+
+    const recaudo = parseFloat(row.total_recaudo || "0");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowAny = row as Record<string, any>;
+    const tipoNorma = rowAny.tipo_norma ?? rowAny.tipoNorma;
+    const fechaNorma = rowAny.fecha_norma ?? rowAny.fechaNorma;
+
+    const alertaMsgs: string[] = [];
+
+    if (tipoNorma !== undefined && typeof tipoNorma === "string") {
+      const alerta = checkTipoNorma(tipoNorma, fuenteCodigo);
+      if (alerta) {
+        alertaMsgs.push(`Tipo norma "${tipoNorma}" — ${alerta.descripcion}`);
+      }
+    }
+
+    if (fechaNorma !== undefined && typeof fechaNorma === "string") {
+      const alerta = checkFechaNorma(fechaNorma, fuenteCodigo);
+      if (alerta) {
+        alertaMsgs.push(`Fecha norma "${fechaNorma}" — ${alerta.descripcion}`);
+      }
+    }
+
+    if (alertaMsgs.length > 0) {
+      alertasICLD.push({
+        cuenta: row.cuenta || "",
+        nombre: row.nombre_cuenta || "",
+        fuente: fuenteNombre,
+        alerta: alertaMsgs.join("; "),
+        valor: recaudo,
+      });
+    }
+  }
 
   // C2: Use reported deductions from data; fall back to 3% calculated if no data
   const deduccionCalculada = icldValidado * TOTAL_DEDUCCION_FONDOS;
@@ -425,6 +482,7 @@ export async function evaluateLey617(
     limiteGlobal,
     secciones,
     gastosDeducidosDetalle,
+    alertasICLD,
     status: globalCumple && allSectionsCumple ? "cumple" : "no_cumple",
   };
 }
