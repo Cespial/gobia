@@ -128,8 +128,7 @@ function StatusBadge({ status }: { status: ValidationResult["status"] }) {
 }
 
 function formatCOP(value: number): string {
-  if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(2)}MM`;
-  if (Math.abs(value) >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
+  if (Math.abs(value) >= 1e6) { const m = value / 1e6; return `$${Math.abs(m) >= 1000 ? m.toFixed(0) : m.toFixed(1)}M`; }
   return `$${value.toLocaleString("es-CO")}`;
 }
 
