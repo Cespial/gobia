@@ -95,6 +95,20 @@ export function periodoLabel(periodo: string): string {
   return `${labels[quarter]} ${year}`;
 }
 
+export function parseCuipoAmount(
+  value: string | number | null | undefined
+): number {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toUpperCase() === "NO APLICA") return 0;
+
+  const normalized = trimmed.replace(/\./g, "").replace(",", ".");
+  const parsed = parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 // ---------------------------------------------------------------------------
 // CHIP entity code mapping
 // ---------------------------------------------------------------------------
@@ -151,11 +165,30 @@ export interface CuipoProgIngresos {
   periodo: string;
   codigo_entidad: string;
   nombre_entidad: string;
+  /** In PROG_INGRESOS this is often the entity scope (e.g. A439), not the budget code. */
   cuenta: string;
   nombre_cuenta: string;
   ambito_codigo: string;
   presupuesto_inicial: string;
   presupuesto_definitivo: string;
+}
+
+export function getProgramacionIngresoCode(
+  row: Pick<CuipoProgIngresos, "ambito_codigo" | "cuenta">
+): string {
+  return (row.ambito_codigo || row.cuenta || "").trim();
+}
+
+export function isLeafCuipoCode(code: string, allCodes: Iterable<string>): boolean {
+  const trimmed = code.trim();
+  if (!trimmed) return true;
+
+  const prefix = `${trimmed}.`;
+  for (const current of allCodes) {
+    if (current.startsWith(prefix)) return false;
+  }
+
+  return true;
 }
 
 export interface CuipoProgGastos {
@@ -210,7 +243,7 @@ export async function fetchProgramacionIngresos(
     dataset: CUIPO_DATASETS.PROG_INGRESOS,
     where: `codigo_entidad='${chipCode}' AND periodo='${periodo}'`,
     limit: 50000,
-    order: "cuenta ASC",
+    order: "ambito_codigo ASC",
   });
 }
 

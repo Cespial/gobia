@@ -14,9 +14,13 @@
 import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
+  getProgramacionIngresoCode,
+  isLeafCuipoCode,
   parsePeriodo,
+  parseCuipoAmount,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
+  type CuipoProgIngresos,
 } from "@/lib/datos-gov-cuipo";
 import {
   fetchSGPResumen,
@@ -89,6 +93,7 @@ export async function evaluateAguaPotable(
   const [
     sicodisData,
     ejecIngresosApsb,
+    progIngresosApsb,
     ejecGastosApsb,
     ejecGastosSubsidios,
     ejecIngresosContribuciones,
@@ -105,6 +110,14 @@ export async function evaluateAguaPotable(
       where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='1.1.02.06.001.05'`,
       limit: 10,
       order: "cuenta ASC",
+    }),
+
+    // Income programming for SGP Agua Potable account (PROG_INGRESOS uses ambito_codigo)
+    sodaCuipoQuery<CuipoProgIngresos>({
+      dataset: CUIPO_DATASETS.PROG_INGRESOS,
+      where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND ambito_codigo like '1.1.02.06.001.05%'`,
+      limit: 500,
+      order: "ambito_codigo ASC",
     }),
 
     // Expense execution for Agua Potable funding source, VIGENCIA ACTUAL
@@ -161,15 +174,23 @@ export async function evaluateAguaPotable(
   }
 
   // -------------------------------------------------------------------------
-  // 3. Extract presupuesto definitivo from EJEC_INGRESOS top-level row
-  //    The account 1.1.02.06.001.05 top-level row contains the aggregate
+  // 3. Extract presupuesto definitivo from PROG_INGRESOS leaf rows
   // -------------------------------------------------------------------------
   let presupuestoDefinitivo = 0;
+  const progIngresoCodes = new Set(
+    progIngresosApsb.map((row) => getProgramacionIngresoCode(row))
+  );
+  for (const row of progIngresosApsb) {
+    const cuenta = getProgramacionIngresoCode(row);
+    if (!isLeafCuipoCode(cuenta, progIngresoCodes)) continue;
+    presupuestoDefinitivo += parseCuipoAmount(row.presupuesto_definitivo);
+  }
+
+  const hasProgramacionApsb = progIngresosApsb.length > 0;
+
   let recaudoApsb = 0;
   for (const row of ejecIngresosApsb) {
-    // The top-level row (cuenta exactly '1.1.02.06.001.05') has the total
     recaudoApsb = parseFloat(row.total_recaudo || "0");
-    presupuestoDefinitivo = recaudoApsb; // Best proxy from execution data
   }
 
   // -------------------------------------------------------------------------
@@ -243,7 +264,7 @@ export async function evaluateAguaPotable(
     porcentaje: safePct(presupuestoDefinitivo, distribucionSICODIS),
     umbral: null, // No fixed threshold — presupuesto >= distribucion
     status:
-      distribucionSICODIS === 0
+      distribucionSICODIS === 0 || !hasProgramacionApsb
         ? "pendiente"
         : presupuestoDefinitivo >= distribucionSICODIS
           ? "cumple"

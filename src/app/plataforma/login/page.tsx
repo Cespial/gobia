@@ -20,11 +20,12 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
+      const data = await res.json().catch(() => null);
 
       if (res.ok) {
         router.push("/plataforma/validador");
       } else {
-        setError("Contraseña incorrecta");
+        setError(data?.error || "Contraseña incorrecta");
       }
     } catch {
       setError("Error de conexión");

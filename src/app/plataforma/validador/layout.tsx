@@ -2,6 +2,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "@/components/validador/LogoutButton";
+import {
+  PLATAFORMA_AUTH_COOKIE_NAME,
+  isValidPlataformaSessionToken,
+} from "@/lib/plataforma-auth";
 
 export default async function ValidadorLayout({
   children,
@@ -9,9 +13,9 @@ export default async function ValidadorLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const auth = cookieStore.get("gobia-auth");
+  const auth = cookieStore.get(PLATAFORMA_AUTH_COOKIE_NAME);
 
-  if (!auth?.value) {
+  if (!isValidPlataformaSessionToken(auth?.value)) {
     redirect("/plataforma/login");
   }
 

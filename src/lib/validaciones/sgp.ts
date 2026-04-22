@@ -12,7 +12,10 @@
 import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
+  getProgramacionIngresoCode,
+  isLeafCuipoCode,
   parsePeriodo,
+  parseCuipoAmount,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
   type CuipoProgIngresos,
@@ -158,9 +161,9 @@ export async function evaluateSGP(
       }),
       sodaCuipoQuery<CuipoProgIngresos>({
         dataset: CUIPO_DATASETS.PROG_INGRESOS,
-        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta like '1.1.02.06.001%'`,
+        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND ambito_codigo like '1.1.02.06.001%'`,
         limit: 50000,
-        order: "cuenta ASC",
+        order: "ambito_codigo ASC",
       }),
     ]);
 
@@ -175,7 +178,9 @@ export async function evaluateSGP(
 
   // 3. Leaf-row detection for income accounts to prevent double-counting
   const allIncomeCuentas = new Set(cuipoIngresos.map((r) => r.cuenta || ""));
-  const allProgCuentas = new Set(cuipoProgIngresos.map((r) => r.cuenta || ""));
+  const allProgCuentas = new Set(
+    cuipoProgIngresos.map((r) => getProgramacionIngresoCode(r))
+  );
 
   function isLeaf(cuenta: string, allCuentas: Set<string>): boolean {
     const prefix = cuenta + ".";
@@ -226,10 +231,10 @@ export async function evaluateSGP(
   // 5. Aggregate CUIPO programming (presupuesto definitivo) by SGP component
   const budgetByComponent = new Map<string, number>();
   for (const row of cuipoProgIngresos) {
-    const cuenta = row.cuenta || "";
-    if (!isLeaf(cuenta, allProgCuentas)) continue;
+    const cuenta = getProgramacionIngresoCode(row);
+    if (!isLeafCuipoCode(cuenta, allProgCuentas)) continue;
 
-    const ppto = parseFloat(row.presupuesto_definitivo || "0");
+    const ppto = parseCuipoAmount(row.presupuesto_definitivo);
 
     for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
       if (cuenta.startsWith(mapping.cuipoPrefix)) {

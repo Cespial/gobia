@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import {
   fetchPeriodosDisponibles,
   fetchEjecucionIngresos,
@@ -13,8 +14,32 @@ import { calculateIDF } from "@/lib/validaciones/idf";
 import { evaluateEficienciaFiscal } from "@/lib/validaciones/eficiencia-fiscal";
 import { evaluateCGA } from "@/lib/validaciones/cga";
 import { getConsolidacion } from "@/data/fuentes-consolidacion";
+import {
+  PLATAFORMA_AUTH_COOKIE_NAME,
+  isPlataformaAuthConfigured,
+  isValidPlataformaSessionToken,
+} from "@/lib/plataforma-auth";
 
 export async function GET(request: NextRequest) {
+  if (!isPlataformaAuthConfigured()) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "La autenticacion de la plataforma no esta configurada.",
+      },
+      { status: 503 }
+    );
+  }
+
+  const cookieStore = await cookies();
+  const authToken = cookieStore.get(PLATAFORMA_AUTH_COOKIE_NAME)?.value;
+  if (!isValidPlataformaSessionToken(authToken)) {
+    return NextResponse.json(
+      { ok: false, error: "No autenticado" },
+      { status: 401 }
+    );
+  }
+
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
   const chipCode = searchParams.get("chip");

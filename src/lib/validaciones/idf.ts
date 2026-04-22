@@ -19,6 +19,9 @@
 import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
+  getProgramacionIngresoCode,
+  isLeafCuipoCode,
+  parseCuipoAmount,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
   type CuipoProgIngresos,
@@ -209,7 +212,7 @@ export async function calculateIDF(
         dataset: CUIPO_DATASETS.PROG_INGRESOS,
         where: `codigo_entidad='${chipCode}' AND periodo='${periodo}'`,
         limit: 50000,
-        order: "cuenta ASC",
+        order: "ambito_codigo ASC",
       }),
       sodaCuipoQuery<CuipoProgGastos>({
         dataset: CUIPO_DATASETS.PROG_GASTOS,
@@ -310,17 +313,17 @@ export async function calculateIDF(
   // ---------------------------------------------------------------------------
   // Aggregate programming data (leaf rows only)
   // ---------------------------------------------------------------------------
-  const allProgIngCuentas = new Set(progIngresos.map((r) => r.cuenta || ""));
+  const allProgIngCuentas = new Set(
+    progIngresos.map((r) => getProgramacionIngresoCode(r))
+  );
   const allProgGasCuentas = new Set(progGastos.map((r) => r.cuenta || ""));
 
   let presupuestoInicialPropios = 0;
   for (const row of progIngresos) {
-    const cuenta = row.cuenta || "";
-    if (!isLeafCuenta(cuenta, allProgIngCuentas)) continue;
+    const cuenta = getProgramacionIngresoCode(row);
+    if (!isLeafCuipoCode(cuenta, allProgIngCuentas)) continue;
     if (isIngresoPropioForProgramming(cuenta)) {
-      presupuestoInicialPropios += parseFloat(
-        row.presupuesto_inicial || "0"
-      );
+      presupuestoInicialPropios += parseCuipoAmount(row.presupuesto_inicial);
     }
   }
 
@@ -328,9 +331,7 @@ export async function calculateIDF(
   for (const row of progGastos) {
     const cuenta = row.cuenta || "";
     if (!isLeafCuenta(cuenta, allProgGasCuentas)) continue;
-    apropiacionDefinitivaTotal += parseFloat(
-      row.apropiacion_definitiva || "0"
-    );
+    apropiacionDefinitivaTotal += parseCuipoAmount(row.apropiacion_definitiva);
   }
 
   // ---------------------------------------------------------------------------
