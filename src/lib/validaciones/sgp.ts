@@ -12,14 +12,12 @@
 import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
-  getProgramacionIngresoCode,
-  isLeafCuipoCode,
   parsePeriodo,
-  parseCuipoAmount,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
-  type CuipoProgIngresos,
 } from "@/lib/datos-gov-cuipo";
+import type { CuipoProgIngresosRow } from "@/lib/chip-parser";
+import { sumProgramacionUploadByPrefixes } from "@/lib/cuipo-processor";
 import {
   fetchSGPResumen,
   SGP_CONCEPTOS,
@@ -33,10 +31,10 @@ import {
 export interface SGPComponentResult {
   concepto: string;
   distribucionDNP: number;
-  presupuestado: number;
+  presupuestado: number | null;
   recaudado: number;
   ejecutado: number;
-  pctPresupuesto: number;
+  pctPresupuesto: number | null;
   pctRecaudo: number;
   pctEjecucion: number;
   status: "cumple" | "alerta" | "critico";
@@ -44,10 +42,11 @@ export interface SGPComponentResult {
 
 export interface SGPEvaluationResult {
   totalDistribuido: number;
-  totalPresupuestado: number;
+  totalPresupuestado: number | null;
   totalRecaudado: number;
   totalEjecutado: number;
   pctEjecucionGlobal: number;
+  hasProgramacionData: boolean;
   componentes: SGPComponentResult[];
   status: "cumple" | "parcial" | "no_cumple";
 }
@@ -128,6 +127,11 @@ function safePct(numerator: number, denominator: number): number {
   return Math.round((numerator / denominator) * 10000) / 100;
 }
 
+function safePctOrNull(numerator: number, denominator: number): number | null {
+  if (denominator <= 0) return null;
+  return Math.round((numerator / denominator) * 10000) / 100;
+}
+
 // ---------------------------------------------------------------------------
 // Main evaluation
 // ---------------------------------------------------------------------------
@@ -136,13 +140,14 @@ export async function evaluateSGP(
   chipCode: string,
   daneCode: string,
   deptCode: string,
-  periodo: string
+  periodo: string,
+  progIngresosUpload?: CuipoProgIngresosRow[] | null
 ): Promise<SGPEvaluationResult> {
   const { year } = parsePeriodo(periodo);
 
-  // 1. Fetch data in parallel: SICODIS distribution + CUIPO income + CUIPO expenses + CUIPO programming
+  // 1. Fetch data in parallel: SICODIS distribution + CUIPO income + CUIPO expenses
   //    Restrict income queries to 1.1.02.06.001% (SGP-specific accounts only)
-  const [sicodisData, cuipoIngresos, cuipoGastos, cuipoProgIngresos] =
+  const [sicodisData, cuipoIngresos, cuipoGastos] =
     await Promise.all([
       fetchSGPResumen(year, deptCode, daneCode).catch(
         (): SGPResumenParticipacion[] => []
@@ -159,12 +164,6 @@ export async function evaluateSGP(
         limit: 50000,
         order: "cuenta ASC",
       }),
-      sodaCuipoQuery<CuipoProgIngresos>({
-        dataset: CUIPO_DATASETS.PROG_INGRESOS,
-        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND ambito_codigo like '1.1.02.06.001%'`,
-        limit: 50000,
-        order: "ambito_codigo ASC",
-      }),
     ]);
 
   // 2. Build SICODIS distribution map by concept ID
@@ -178,10 +177,6 @@ export async function evaluateSGP(
 
   // 3. Leaf-row detection for income accounts to prevent double-counting
   const allIncomeCuentas = new Set(cuipoIngresos.map((r) => r.cuenta || ""));
-  const allProgCuentas = new Set(
-    cuipoProgIngresos.map((r) => getProgramacionIngresoCode(r))
-  );
-
   function isLeaf(cuenta: string, allCuentas: Set<string>): boolean {
     const prefix = cuenta + ".";
     for (const c of allCuentas) {
@@ -228,22 +223,28 @@ export async function evaluateSGP(
     }
   }
 
-  // 5. Aggregate CUIPO programming (presupuesto definitivo) by SGP component
+  // 5. Aggregate uploaded CHIP programming (presupuesto definitivo) by SGP component
   const budgetByComponent = new Map<string, number>();
-  for (const row of cuipoProgIngresos) {
-    const cuenta = getProgramacionIngresoCode(row);
-    if (!isLeafCuipoCode(cuenta, allProgCuentas)) continue;
+  let hasProgramacionData = false;
 
-    const ppto = parseCuipoAmount(row.presupuesto_definitivo);
+  for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
+    const summary = sumProgramacionUploadByPrefixes(
+      progIngresosUpload,
+      [mapping.cuipoPrefix],
+      "presupuestoDefinitivo"
+    );
 
-    for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
-      if (cuenta.startsWith(mapping.cuipoPrefix)) {
-        const current = budgetByComponent.get(conceptoId) || 0;
-        budgetByComponent.set(conceptoId, current + ppto);
-        break;
-      }
+    if (summary.hasData) {
+      budgetByComponent.set(conceptoId, summary.total ?? 0);
+      hasProgramacionData = true;
     }
   }
+
+  const primeraInfanciaBudget = sumProgramacionUploadByPrefixes(
+    progIngresosUpload,
+    [PRIMERA_INFANCIA_PREFIX],
+    "presupuestoDefinitivo"
+  );
 
   // 6. Aggregate CUIPO expenses (compromisos) — match each row to its SGP component
   //    using the nom_fuentes_financiacion field, which contains the specific funding
@@ -267,14 +268,16 @@ export async function evaluateSGP(
 
   for (const [conceptoId, mapping] of Object.entries(SGP_ACCOUNT_MAP)) {
     const distribucionDNP = sicodisMap.get(conceptoId) || 0;
-    const presupuestado = budgetByComponent.get(conceptoId) || 0;
+    const presupuestado = hasProgramacionData
+      ? (budgetByComponent.get(conceptoId) ?? 0)
+      : null;
     const recaudado = incomeByComponent.get(conceptoId) || 0;
     const ejecutado = expenseByComponent.get(conceptoId) || 0;
 
     // Skip components with zero across the board
     if (
       distribucionDNP === 0 &&
-      presupuestado === 0 &&
+      (presupuestado ?? 0) === 0 &&
       recaudado === 0 &&
       ejecutado === 0
     ) {
@@ -282,7 +285,10 @@ export async function evaluateSGP(
     }
 
     // Use recaudado as reference for percentages when DNP distribution is available
-    const pctPresupuesto = safePct(presupuestado, distribucionDNP);
+    const pctPresupuesto =
+      presupuestado === null
+        ? null
+        : safePctOrNull(presupuestado, distribucionDNP);
     const pctRecaudo = safePct(recaudado, distribucionDNP);
     const pctEjecucion = safePct(ejecutado, distribucionDNP);
 
@@ -304,10 +310,10 @@ export async function evaluateSGP(
     componentes.push({
       concepto: "  Primera Infancia (sub-componente)",
       distribucionDNP: 0,
-      presupuestado: 0,
+      presupuestado: hasProgramacionData ? (primeraInfanciaBudget.total ?? 0) : null,
       recaudado: primeraInfanciaRecaudo,
       ejecutado: 0,
-      pctPresupuesto: 0,
+      pctPresupuesto: null,
       pctRecaudo: 0,
       pctEjecucion: 0,
       status: "alerta",
@@ -322,10 +328,9 @@ export async function evaluateSGP(
     (s, c) => s + c.distribucionDNP,
     0
   );
-  const totalPresupuestado = mainComponents.reduce(
-    (s, c) => s + c.presupuestado,
-    0
-  );
+  const totalPresupuestado = hasProgramacionData
+    ? mainComponents.reduce((s, c) => s + (c.presupuestado ?? 0), 0)
+    : null;
   const totalRecaudado = mainComponents.reduce((s, c) => s + c.recaudado, 0);
   const totalEjecutado = mainComponents.reduce((s, c) => s + c.ejecutado, 0);
   const pctEjecucionGlobal = safePct(totalEjecutado, totalDistribuido);
@@ -341,6 +346,8 @@ export async function evaluateSGP(
   let status: "cumple" | "parcial" | "no_cumple";
   if (mainComponents.length === 0) {
     status = "no_cumple";
+  } else if (!hasProgramacionData) {
+    status = "parcial";
   } else if (cumpleCount === mainComponents.length) {
     status = "cumple";
   } else if (criticoCount === mainComponents.length) {
@@ -355,6 +362,7 @@ export async function evaluateSGP(
     totalRecaudado,
     totalEjecutado,
     pctEjecucionGlobal,
+    hasProgramacionData,
     componentes,
     status,
   };

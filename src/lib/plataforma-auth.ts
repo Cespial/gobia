@@ -110,6 +110,6 @@ export function getPlataformaAuthCookieOptions() {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     maxAge: PLATAFORMA_AUTH_MAX_AGE_SECONDS,
-    path: "/plataforma",
+    path: "/",
   };
 }

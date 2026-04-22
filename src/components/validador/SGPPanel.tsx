@@ -18,6 +18,18 @@ function formatCOP(value: number): string {
   return `$${Math.round(value).toLocaleString("es-CO")}`;
 }
 
+function formatMaybeCOP(value: number | null): string {
+  return value === null ? "N/D" : formatCOP(value);
+}
+
+function formatDistributionPct(
+  numerator: number | null,
+  denominator: number
+): string | undefined {
+  if (numerator === null || denominator <= 0) return undefined;
+  return `${((numerator / denominator) * 100).toFixed(1)}% de distribución`;
+}
+
 function statusColor(s: "cumple" | "alerta" | "critico") {
   if (s === "cumple") return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
   if (s === "alerta") return "text-amber-400 bg-amber-400/10 border-amber-400/20";
@@ -82,17 +94,18 @@ function KPI({
 interface SGPPanelProps {
   data: {
     totalDistribuido: number;
-    totalPresupuestado: number;
+    totalPresupuestado: number | null;
     totalRecaudado: number;
     totalEjecutado: number;
     pctEjecucionGlobal: number;
+    hasProgramacionData: boolean;
     componentes: {
       concepto: string;
       distribucionDNP: number;
-      presupuestado: number;
+      presupuestado: number | null;
       recaudado: number;
       ejecutado: number;
-      pctPresupuesto: number;
+      pctPresupuesto: number | null;
       pctRecaudo: number;
       pctEjecucion: number;
       status: "cumple" | "alerta" | "critico";
@@ -150,13 +163,13 @@ export default function SGPPanel({ data, periodo, municipio }: SGPPanelProps) {
         <KPI label="Distribución DNP" value={formatCOP(data.totalDistribuido)} />
         <KPI
           label="Presupuestado"
-          value={formatCOP(data.totalPresupuestado)}
-          subtext={`${((data.totalPresupuestado / data.totalDistribuido) * 100).toFixed(1)}% de distribución`}
+          value={formatMaybeCOP(data.totalPresupuestado)}
+          subtext={formatDistributionPct(data.totalPresupuestado, data.totalDistribuido)}
         />
         <KPI
           label="Recaudado"
           value={formatCOP(data.totalRecaudado)}
-          subtext={`${((data.totalRecaudado / data.totalDistribuido) * 100).toFixed(1)}% de distribución`}
+          subtext={formatDistributionPct(data.totalRecaudado, data.totalDistribuido)}
         />
         <KPI
           label="Ejecutado"
@@ -164,6 +177,12 @@ export default function SGPPanel({ data, periodo, municipio }: SGPPanelProps) {
           subtext={`${data.pctEjecucionGlobal.toFixed(1)}% ejecución global`}
         />
       </div>
+
+      {!data.hasProgramacionData && (
+        <div className="mb-8 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+          El presupuesto SGP queda en N/D hasta cargar el archivo CHIP <span className="font-semibold">PROG_ING</span>.
+        </div>
+      )}
 
       {/* Bar chart: Distribution vs Execution */}
       {chartData.length > 0 && (
@@ -243,7 +262,7 @@ export default function SGPPanel({ data, periodo, municipio }: SGPPanelProps) {
                     {formatCOP(c.distribucionDNP)}
                   </td>
                   <td className="py-2 pr-4 text-right text-[var(--gray-300)]">
-                    {formatCOP(c.presupuestado)}
+                    {formatMaybeCOP(c.presupuestado)}
                   </td>
                   <td className="py-2 pr-4 text-right text-[var(--gray-300)]">
                     {formatCOP(c.recaudado)}
@@ -283,7 +302,7 @@ export default function SGPPanel({ data, periodo, municipio }: SGPPanelProps) {
                   {formatCOP(data.totalDistribuido)}
                 </td>
                 <td className="py-2 pr-4 text-right">
-                  {formatCOP(data.totalPresupuestado)}
+                  {formatMaybeCOP(data.totalPresupuestado)}
                 </td>
                 <td className="py-2 pr-4 text-right">
                   {formatCOP(data.totalRecaudado)}

@@ -19,14 +19,13 @@
 import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
-  getProgramacionIngresoCode,
-  isLeafCuipoCode,
   parseCuipoAmount,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
-  type CuipoProgIngresos,
   type CuipoProgGastos,
 } from "@/lib/datos-gov-cuipo";
+import type { CuipoProgIngresosRow } from "@/lib/chip-parser";
+import { sumProgramacionUploadByPrefixes } from "@/lib/cuipo-processor";
 import { evaluateLey617 } from "@/lib/validaciones/ley617";
 
 // ---------------------------------------------------------------------------
@@ -192,9 +191,10 @@ export async function calculateIDF(
   chipCode: string,
   periodo: string,
   cgnSaldos?: { activos: number; pasivos: number } | null,
+  progIngresosUpload?: CuipoProgIngresosRow[] | null,
 ): Promise<IDFResult> {
   // Fetch all required CUIPO data in parallel
-  const [ejecIngresos, ejecGastos, progIngresos, progGastos, ley617Result] =
+  const [ejecIngresos, ejecGastos, progGastos, ley617Result] =
     await Promise.all([
       sodaCuipoQuery<CuipoEjecIngresos>({
         dataset: CUIPO_DATASETS.EJEC_INGRESOS,
@@ -207,12 +207,6 @@ export async function calculateIDF(
         where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND nom_vigencia_del_gasto='VIGENCIA ACTUAL'`,
         limit: 50000,
         order: "cuenta ASC",
-      }),
-      sodaCuipoQuery<CuipoProgIngresos>({
-        dataset: CUIPO_DATASETS.PROG_INGRESOS,
-        where: `codigo_entidad='${chipCode}' AND periodo='${periodo}'`,
-        limit: 50000,
-        order: "ambito_codigo ASC",
       }),
       sodaCuipoQuery<CuipoProgGastos>({
         dataset: CUIPO_DATASETS.PROG_GASTOS,
@@ -313,19 +307,14 @@ export async function calculateIDF(
   // ---------------------------------------------------------------------------
   // Aggregate programming data (leaf rows only)
   // ---------------------------------------------------------------------------
-  const allProgIngCuentas = new Set(
-    progIngresos.map((r) => getProgramacionIngresoCode(r))
-  );
   const allProgGasCuentas = new Set(progGastos.map((r) => r.cuenta || ""));
 
-  let presupuestoInicialPropios = 0;
-  for (const row of progIngresos) {
-    const cuenta = getProgramacionIngresoCode(row);
-    if (!isLeafCuipoCode(cuenta, allProgIngCuentas)) continue;
-    if (isIngresoPropioForProgramming(cuenta)) {
-      presupuestoInicialPropios += parseCuipoAmount(row.presupuesto_inicial);
-    }
-  }
+  const programacionPropios = sumProgramacionUploadByPrefixes(
+    progIngresosUpload,
+    ["1.1.01", "1.1.03"],
+    "presupuestoInicial"
+  );
+  const presupuestoInicialPropios = programacionPropios.total ?? 0;
 
   let apropiacionDefinitivaTotal = 0;
   for (const row of progGastos) {
@@ -432,7 +421,9 @@ export async function calculateIDF(
     ingresosPropiosRecaudo,
     presupuestoInicialPropios
   );
-  const progCapScore = presupuestoInicialPropios > 0 ? normalizeProgramming(progCapRatio) : null;
+  const progCapScore = programacionPropios.hasData
+    ? (presupuestoInicialPropios > 0 ? normalizeProgramming(progCapRatio) : 0)
+    : null;
 
   // 2. Ejecucion de compromisos
   const ejecCompRatio = safeDivide(
@@ -453,9 +444,11 @@ export async function calculateIDF(
       name: "Capacidad de programacion de ingresos",
       value: Math.round(progCapRatio * 10000) / 100,
       score: progCapScore,
-      interpretation: presupuestoInicialPropios > 0
+      interpretation: !programacionPropios.hasData
+        ? "No disponible — requiere archivo CHIP PROG_ING"
+        : presupuestoInicialPropios > 0
         ? interpretProgramacion(progCapRatio)
-        : "No disponible \u2014 requiere presupuesto de ingresos (upload CUIPO PROG_ING)",
+        : "Presupuesto inicial de ingresos propios reportado en 0 en el archivo CHIP",
     },
     {
       name: "Ejecucion de compromisos",

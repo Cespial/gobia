@@ -22,9 +22,9 @@ import type { Municipio } from "@/data/municipios";
 import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
 import type { FUTCierreData, CGNSaldosData, MapaInversionesData, CuipoData } from "@/lib/chip-parser";
 import { buildEquilibrioFromCuipo } from "@/lib/cuipo-processor";
-import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
+import { evaluateSGP, type SGPEvaluationResult } from "@/lib/validaciones/sgp";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
-import type { IDFResult } from "@/lib/validaciones/idf";
+import { calculateIDF, type IDFResult } from "@/lib/validaciones/idf";
 import type { Ley617Certification } from "@/lib/datos-gov-cuipo";
 import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fiscal";
 import type { CGAResult } from "@/lib/validaciones/cga";
@@ -172,10 +172,8 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
 
   // Refs to avoid stale closures in runAll
   const futCierreRef = useRef(futCierre);
-  const cgnSaldosRef = useRef(cgnSaldos);
   const mapaDataRef = useRef(mapaData);
   useEffect(() => { futCierreRef.current = futCierre; }, [futCierre]);
-  useEffect(() => { cgnSaldosRef.current = cgnSaldos; }, [cgnSaldos]);
   useEffect(() => { mapaDataRef.current = mapaData; }, [mapaData]);
 
   // Auto-load fixtures if available for this municipality
@@ -219,7 +217,11 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         try {
           const { parseCuipoFiles } = await import("@/lib/chip-parser");
           const cuipo = parseCuipoFiles(validCuipo);
-          if (cuipo.ejecIngresos.length > 0 || cuipo.ejecGastos.length > 0) {
+          if (
+            cuipo.ejecIngresos.length > 0 ||
+            cuipo.ejecGastos.length > 0 ||
+            cuipo.progIngresos.length > 0
+          ) {
             setCuipoData(cuipo);
           }
         } catch { /* CUIPO fixtures not available */ }
@@ -284,8 +286,11 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
 
     // Read latest values via refs to avoid stale closures
     const currentFutCierre = futCierreRef.current;
-    const currentCgnSaldos = cgnSaldosRef.current;
     const currentMapaData = mapaDataRef.current;
+    const progIngresosUpload = cuipoData?.progIngresos ?? null;
+    const hasCuipoExecutionUpload = !!cuipoData && (
+      cuipoData.ejecIngresos.length > 0 || cuipoData.ejecGastos.length > 0
+    );
 
     // Mark upload-dependent validations
     const needsUpload = !currentFutCierre;
@@ -293,29 +298,49 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       ...prev,
       "cierre-cuipo": { status: needsUpload ? "upload_needed" : "pendiente", label: "Requiere FUT Cierre" },
       cga: { status: needsUpload ? "upload_needed" : "pendiente", label: "Requiere FUT Cierre" },
-      eficiencia: { status: !currentCgnSaldos ? "upload_needed" : "pendiente", label: "Requiere CGN Saldos" },
+      eficiencia: { status: !cgnSaldos ? "upload_needed" : "pendiente", label: "Requiere CGN Saldos" },
       mapa: { status: !currentMapaData ? "upload_needed" : "loading", label: !currentMapaData ? "Requiere Mapa de Inversiones" : "Calculando..." },
     }));
 
     // 1. Equilibrio
-    const eqData = await runValidation("equilibrio", "equilibrio");
-    if (eqData) {
-      setEquilibrioData(eqData.equilibrio);
-      const totalGastos = eqData.equilibrio.totalCompromisos ?? eqData.equilibrio.totalGastos ?? 0;
-      const diff = Math.abs(eqData.equilibrio.totalIngresos - totalGastos);
-      const tol = eqData.equilibrio.totalIngresos * 0.01;
+    let nextEquilibrio: EquilibrioData | null = null;
+    if (hasCuipoExecutionUpload && cuipoData) {
+      const uploadEquilibrio = buildEquilibrioFromCuipo(cuipoData);
+      nextEquilibrio = uploadEquilibrio;
+      setEquilibrioData(uploadEquilibrio);
+      const totalGastos = uploadEquilibrio.totalCompromisos ?? uploadEquilibrio.totalGastos ?? 0;
+      const diff = Math.abs(uploadEquilibrio.totalIngresos - totalGastos);
+      const tol = uploadEquilibrio.totalIngresos * 0.01;
       setResults((prev) => ({
         ...prev,
         equilibrio: {
           status: diff <= tol ? "cumple" : "no_cumple",
-          label: "Equilibrio Presupuestal",
-          detail: `Ingresos ${formatCOP(eqData.equilibrio.totalIngresos)} vs Gastos ${formatCOP(totalGastos)} — ${eqData.equilibrio.pctEjecucion.toFixed(1)}%`,
+          label: "Equilibrio Presupuestal (CUIPO archivo)",
+          detail: `Ingresos ${formatCOP(uploadEquilibrio.totalIngresos)} vs Gastos ${formatCOP(totalGastos)} — ${uploadEquilibrio.pctEjecucion.toFixed(1)}%`,
         },
       }));
+    } else {
+      const eqData = await runValidation("equilibrio", "equilibrio");
+      if (eqData) {
+        nextEquilibrio = eqData.equilibrio;
+        setEquilibrioData(eqData.equilibrio);
+        const totalGastos = eqData.equilibrio.totalCompromisos ?? eqData.equilibrio.totalGastos ?? 0;
+        const diff = Math.abs(eqData.equilibrio.totalIngresos - totalGastos);
+        const tol = eqData.equilibrio.totalIngresos * 0.01;
+        setResults((prev) => ({
+          ...prev,
+          equilibrio: {
+            status: diff <= tol ? "cumple" : "no_cumple",
+            label: "Equilibrio Presupuestal",
+            detail: `Ingresos ${formatCOP(eqData.equilibrio.totalIngresos)} vs Gastos ${formatCOP(totalGastos)} — ${eqData.equilibrio.pctEjecucion.toFixed(1)}%`,
+          },
+        }));
+      }
+    }
 
-      // Cierre vs CUIPO (if FUT is already loaded)
-      if (currentFutCierre && eqData?.equilibrio) {
-        const cierreResult = evaluateCierreVsCuipo(currentFutCierre, eqData.equilibrio.porFuente);
+    // Cierre vs CUIPO (if FUT is already loaded)
+    if (currentFutCierre && nextEquilibrio) {
+        const cierreResult = evaluateCierreVsCuipo(currentFutCierre, nextEquilibrio.porFuente);
         setCierreVsCuipoData(cierreResult);
         const diffCount = cierreResult.cruces.filter(
           (c) => c.consolidacion !== null &&
@@ -331,24 +356,33 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
               : `${diffCount} diferencia(s) encontrada(s)`,
           },
         }));
-      }
     }
 
     // 2. SGP
-    const sgpResult = await runValidation(
-      "sgp",
-      "sgp",
-      `&dane=${municipio.code}&dept=${municipio.deptCode}`
-    );
-    if (sgpResult) {
-      setSgpData(sgpResult.sgp);
+    setResults((prev) => ({ ...prev, sgp: { status: "loading", label: "Calculando..." } }));
+    try {
+      const sgpResult = await evaluateSGP(
+        municipio.chipCode,
+        municipio.code,
+        municipio.deptCode,
+        periodo,
+        progIngresosUpload
+      );
+      setSgpData(sgpResult);
       setResults((prev) => ({
         ...prev,
         sgp: {
-          status: sgpResult.sgp.status,
+          status: sgpResult.status,
           label: "Evaluación SGP",
-          detail: `Ejecutado ${sgpResult.sgp.pctEjecucionGlobal.toFixed(1)}% del SGP distribuido (${sgpResult.sgp.componentes.length} componentes)`,
+          detail: sgpResult.hasProgramacionData
+            ? `Ejecutado ${sgpResult.pctEjecucionGlobal.toFixed(1)}% del SGP distribuido (${sgpResult.componentes.length} componentes)`
+            : `Ejecutado ${sgpResult.pctEjecucionGlobal.toFixed(1)}% del SGP distribuido — presupuesto N/D hasta cargar PROG_ING`,
         },
+      }));
+    } catch {
+      setResults((prev) => ({
+        ...prev,
+        sgp: { status: "error", label: "Error evaluando SGP" },
       }));
     }
 
@@ -375,16 +409,27 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     }
 
     // 4. IDF
-    const idfResult = await runValidation("idf", "idf");
-    if (idfResult) {
-      setIdfData(idfResult.idf);
+    setResults((prev) => ({ ...prev, idf: { status: "loading", label: "Calculando..." } }));
+    try {
+      const idfResult = await calculateIDF(
+        municipio.chipCode,
+        periodo,
+        cgnSaldos ? { activos: cgnSaldos.activos, pasivos: cgnSaldos.pasivos } : null,
+        progIngresosUpload
+      );
+      setIdfData(idfResult);
       setResults((prev) => ({
         ...prev,
         idf: {
-          status: idfResult.idf.status,
+          status: idfResult.status,
           label: "IDF",
-          detail: `${idfResult.idf.ranking}: ${idfResult.idf.idfTotal.toFixed(1)}/100`,
+          detail: `${idfResult.ranking}: ${idfResult.idfTotal.toFixed(1)}/100`,
         },
+      }));
+    } catch {
+      setResults((prev) => ({
+        ...prev,
+        idf: { status: "error", label: "Error calculando IDF" },
       }));
     }
 
@@ -392,7 +437,12 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     setResults((prev) => ({ ...prev, agua: { status: "loading", label: "Calculando..." } }));
     try {
       const aguaResult = await evaluateAguaPotable(
-        municipio.chipCode, municipio.code, municipio.deptCode, periodo, municipio.sgpTotal
+        municipio.chipCode,
+        municipio.code,
+        municipio.deptCode,
+        periodo,
+        municipio.sgpTotal,
+        progIngresosUpload
       );
       setAguaData(aguaResult);
       setResults((prev) => ({
@@ -400,7 +450,9 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         agua: {
           status: aguaResult.status,
           label: "Evaluacion Agua Potable",
-          detail: `${aguaResult.subValidaciones.filter(s => s.status === "cumple").length}/${aguaResult.subValidaciones.length} sub-validaciones cumplen`,
+          detail: aguaResult.hasProgramacionData
+            ? `${aguaResult.subValidaciones.filter(s => s.status === "cumple").length}/${aguaResult.subValidaciones.length} sub-validaciones cumplen`
+            : "Asignacion de recursos pendiente hasta cargar PROG_ING",
         },
       }));
     } catch {
@@ -442,8 +494,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         },
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodo, municipio, runValidation]);
+  }, [periodo, municipio, runValidation, cgnSaldos, cuipoData]);
 
   useEffect(() => {
     if (periodo) runAll();
@@ -547,35 +598,6 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     return () => { cancelled = true; };
   }, [futCierre, futCierre2024, equilibrioData, periodo, municipio.chipCode]);
 
-  // Re-run IDF when CGN Saldos data becomes available (endeudamiento indicator)
-  useEffect(() => {
-    if (!cgnSaldos || !periodo || !municipio.chipCode) return;
-    let cancelled = false;
-    const rerunIDF = async () => {
-      try {
-        const { calculateIDF } = await import("@/lib/validaciones/idf");
-        const result = await calculateIDF(
-          municipio.chipCode, periodo,
-          { activos: cgnSaldos.activos, pasivos: cgnSaldos.pasivos }
-        );
-        if (cancelled) return;
-        setIdfData(result);
-        setResults(prev => ({
-          ...prev,
-          idf: {
-            status: result.status,
-            label: "Desempeño Fiscal (IDF)",
-            detail: `IDF: ${result.idfTotal.toFixed(1)} — ${result.ranking}`,
-          },
-        }));
-      } catch (err) {
-        if (!cancelled) console.error("IDF re-evaluation failed:", err);
-      }
-    };
-    rerunIDF();
-    return () => { cancelled = true; };
-  }, [cgnSaldos, periodo, municipio.chipCode]);
-
   // Run Mapa de Inversiones validation whenever mapa upload or period changes
   useEffect(() => {
     if (!periodo || !municipio.chipCode) return;
@@ -625,28 +647,6 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     runMapa();
     return () => { cancelled = true; };
   }, [mapaData, periodo, municipio.chipCode]);
-
-  // Re-compute equilibrio when CUIPO files are uploaded (client-side processing)
-  useEffect(() => {
-    if (!cuipoData) return;
-    if (cuipoData.ejecIngresos.length === 0 && cuipoData.ejecGastos.length === 0) return;
-
-    const equilibrio = buildEquilibrioFromCuipo(cuipoData);
-    setEquilibrioData(equilibrio);
-
-    const totalGastos = equilibrio.totalCompromisos;
-    const diff = Math.abs(equilibrio.totalIngresos - totalGastos);
-    const tol = equilibrio.totalIngresos * 0.01;
-
-    setResults((prev) => ({
-      ...prev,
-      equilibrio: {
-        status: diff <= tol ? "cumple" : "no_cumple",
-        label: "Equilibrio Presupuestal (CUIPO archivo)",
-        detail: `Ingresos ${formatCOP(equilibrio.totalIngresos)} vs Gastos ${formatCOP(totalGastos)} — ${equilibrio.pctEjecucion.toFixed(1)}%`,
-      },
-    }));
-  }, [cuipoData]);
 
   // -----------------------------------------------------------------------
   // Count summary

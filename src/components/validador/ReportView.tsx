@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { FileDown, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import type { Municipio } from "@/data/municipios";
-import { parseFUTCierre, parseCGNSaldos } from "@/lib/chip-parser";
+import { parseFUTCierre, parseCGNSaldos, parseCuipoFiles } from "@/lib/chip-parser";
 import { evaluateCierreVsCuipo } from "@/lib/validaciones/cierre-vs-cuipo";
 import { evaluateEficienciaFiscal } from "@/lib/validaciones/eficiencia-fiscal";
 import { evaluateAguaPotable } from "@/lib/validaciones/agua-potable";
+import { evaluateSGP } from "@/lib/validaciones/sgp";
+import { calculateIDF } from "@/lib/validaciones/idf";
 
 function formatCOP(value: number): string {
   if (Math.abs(value) >= 1e9) return `$${(value / 1e9).toFixed(2)}MM`;
@@ -28,7 +30,6 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState("");
   const [validations, setValidations] = useState<ValidationSummary[]>([]);
-  const [rawData, setRawData] = useState<any>(null);
 
   useEffect(() => {
     async function fetchAll() {
@@ -42,17 +43,57 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
         const p = periodos[0];
         setPeriodo(p);
 
-        const [eq, sgp, ley, leyOf, idf] = await Promise.all([
+        const [eq, ley, leyOf] = await Promise.all([
           fetch(`/api/plataforma/cuipo?action=equilibrio&chip=${chip}&periodo=${p}`).then(r => r.json()).catch(() => null),
-          fetch(`/api/plataforma/cuipo?action=sgp&chip=${chip}&periodo=${p}&dane=${municipio.code}&dept=${municipio.deptCode}`).then(r => r.json()).catch(() => null),
           fetch(`/api/plataforma/cuipo?action=ley617&chip=${chip}&periodo=${p}`).then(r => r.json()).catch(() => null),
           fetch(`/api/plataforma/cuipo?action=ley617oficial&chip=${chip}`).then(r => r.json()).catch(() => null),
-          fetch(`/api/plataforma/cuipo?action=idf&chip=${chip}&periodo=${p}`).then(r => r.json()).catch(() => null),
         ]);
 
-        setRawData({ eq, sgp, ley, leyOf, idf });
-
         const results: ValidationSummary[] = [];
+
+        async function loadFixture(path: string): Promise<ArrayBuffer | null> {
+          try { const r = await fetch(path); return r.ok ? r.arrayBuffer() : null; } catch { return null; }
+        }
+
+        const code = municipio.code;
+        const cuipoNames = [
+          "cuipo_prog_ing", "cuipo_ejec_ing",
+          "cuipo_prog_gas", "cuipo_ejec_gas",
+        ];
+        const [futBuf25, futBuf24, cgnBuf4, cgnBuf1, ...cuipoBufs] = await Promise.all([
+          loadFixture(`/fixtures/${code}/fut_cierre_2025.xlsx`),
+          loadFixture(`/fixtures/${code}/fut_cierre_2024.xlsx`),
+          loadFixture(`/fixtures/${code}/cgn_saldos_IV.xlsx`),
+          loadFixture(`/fixtures/${code}/cgn_saldos_I.xlsx`),
+          ...cuipoNames.map((name) => loadFixture(`/fixtures/${code}/${name}.xlsx`)),
+        ]);
+
+        const futData25 = futBuf25 ? parseFUTCierre(futBuf25) : null;
+        const futData24 = futBuf24 ? parseFUTCierre(futBuf24) : null;
+        const cgnData4 = cgnBuf4 ? parseCGNSaldos(cgnBuf4) : null;
+        const cgnData1 = cgnBuf1 ? parseCGNSaldos(cgnBuf1) : null;
+        const validCuipo = cuipoBufs
+          .map((buf, i) => buf ? { name: `${cuipoNames[i]}.xlsx`, buffer: buf } : null)
+          .filter((item): item is { name: string; buffer: ArrayBuffer } => item !== null);
+        const cuipoData = validCuipo.length > 0 ? parseCuipoFiles(validCuipo) : null;
+        const progIngresosUpload = cuipoData?.progIngresos ?? null;
+        const [sgp, idf, aguaResult] = await Promise.all([
+          evaluateSGP(chip, municipio.code, municipio.deptCode, p, progIngresosUpload).catch(() => null),
+          calculateIDF(
+            chip,
+            p,
+            cgnData4 ? { activos: cgnData4.activos, pasivos: cgnData4.pasivos } : null,
+            progIngresosUpload
+          ).catch(() => null),
+          evaluateAguaPotable(
+            chip,
+            municipio.code,
+            municipio.deptCode,
+            p,
+            municipio.sgpTotal,
+            progIngresosUpload
+          ).catch(() => null),
+        ]);
 
         // Equilibrio
         if (eq?.ok) {
@@ -72,12 +113,14 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
         }
 
         // SGP
-        if (sgp?.ok) {
-          const s = sgp.sgp;
+        if (sgp) {
+          const s = sgp;
           results.push({
             name: "Evaluación SGP",
             status: s.status,
-            detail: `${s.pctEjecucionGlobal.toFixed(1)}% ejecutado — ${s.componentes.length} componentes`,
+            detail: s.hasProgramacionData
+              ? `${s.pctEjecucionGlobal.toFixed(1)}% ejecutado — ${s.componentes.length} componentes`
+              : `${s.pctEjecucionGlobal.toFixed(1)}% ejecutado — presupuesto N/D hasta cargar PROG_ING`,
             metrics: s.componentes.map((c: any) => ({
               label: c.concepto,
               value: `${c.pctEjecucion.toFixed(1)}% (${c.status})`,
@@ -120,8 +163,8 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
         }
 
         // IDF
-        if (idf?.ok) {
-          const i = idf.idf;
+        if (idf) {
+          const i = idf;
           results.push({
             name: "Desempeño Fiscal (IDF)",
             status: i.status,
@@ -136,23 +179,6 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
             ],
           });
         }
-
-        // Load fixtures for file-dependent validations
-        async function loadFixture(path: string): Promise<ArrayBuffer | null> {
-          try { const r = await fetch(path); return r.ok ? r.arrayBuffer() : null; } catch { return null; }
-        }
-        const code = municipio.code;
-        const [futBuf25, futBuf24, cgnBuf4, cgnBuf1] = await Promise.all([
-          loadFixture(`/fixtures/${code}/fut_cierre_2025.xlsx`),
-          loadFixture(`/fixtures/${code}/fut_cierre_2024.xlsx`),
-          loadFixture(`/fixtures/${code}/cgn_saldos_IV.xlsx`),
-          loadFixture(`/fixtures/${code}/cgn_saldos_I.xlsx`),
-        ]);
-
-        const futData25 = futBuf25 ? parseFUTCierre(futBuf25) : null;
-        const futData24 = futBuf24 ? parseFUTCierre(futBuf24) : null;
-        const cgnData4 = cgnBuf4 ? parseCGNSaldos(cgnBuf4) : null;
-        const cgnData1 = cgnBuf1 ? parseCGNSaldos(cgnBuf1) : null;
 
         // Cierre FUT vs CUIPO
         if (futData25 && futData25.rows.length > 0 && eq?.ok) {
@@ -225,18 +251,19 @@ export default function ReportView({ municipio }: { municipio: Municipio }) {
         }
 
         // Agua Potable
-        try {
-          const aguaResult = await evaluateAguaPotable(chip, municipio.code, municipio.deptCode, p, municipio.sgpTotal);
+        if (aguaResult) {
           results.push({
             name: "Evaluación Agua Potable",
             status: aguaResult.status,
-            detail: `${aguaResult.subValidaciones.filter((s: any) => s.status === "cumple").length}/${aguaResult.subValidaciones.length} sub-validaciones cumplen`,
+            detail: aguaResult.hasProgramacionData
+              ? `${aguaResult.subValidaciones.filter((s: any) => s.status === "cumple").length}/${aguaResult.subValidaciones.length} sub-validaciones cumplen`
+              : "Asignación de recursos pendiente hasta cargar PROG_ING",
             metrics: aguaResult.subValidaciones.map((s: any) => ({
               label: s.nombre,
               value: s.porcentaje !== null ? `${s.porcentaje.toFixed(1)}% (${s.status})` : s.status,
             })),
           });
-        } catch { /* skip agua if fails */ }
+        }
 
         setValidations(results);
       } catch (err) {

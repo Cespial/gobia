@@ -11,6 +11,10 @@ function formatCOP(value: number): string {
   return `$${Math.round(value).toLocaleString("es-CO")}`;
 }
 
+function formatMaybeCOP(value: number | null): string {
+  return value === null ? "N/D" : formatCOP(value);
+}
+
 type Status = "cumple" | "no_cumple" | "pendiente";
 
 function statusColors(s: Status) {
@@ -69,10 +73,10 @@ function SubValidacionCard({ sv }: { sv: AguaPotableSubValidacion }) {
             className="text-base font-bold text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            {formatCOP(sv.valor1)}
+            {formatMaybeCOP(sv.valor1)}
           </div>
         </div>
-        {sv.valor2 !== 0 || sv.valor2Label !== "Umbral minimo" ? (
+        {sv.valor2Label !== "Umbral minimo" ? (
           <div>
             <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-[var(--gray-500)]">
               {sv.valor2Label}
@@ -81,7 +85,7 @@ function SubValidacionCard({ sv }: { sv: AguaPotableSubValidacion }) {
               className="text-base font-bold text-white"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              {formatCOP(sv.valor2)}
+              {formatMaybeCOP(sv.valor2)}
             </div>
           </div>
         ) : (
@@ -205,13 +209,19 @@ export default function AguaPotablePanel({ data }: AguaPotablePanelProps) {
             className="text-xl font-bold text-white"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            {formatCOP(data.presupuestoDefinitivo)}
+            {formatMaybeCOP(data.presupuestoDefinitivo)}
           </div>
           <div className="mt-1 text-xs text-[var(--gray-400)]">
-            Total recaudo APSB registrado en CUIPO
+            Presupuesto programado en el archivo CHIP PROG_ING
           </div>
         </div>
       </div>
+
+      {!data.hasProgramacionData && (
+        <div className="mb-6 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+          La asignación de recursos queda pendiente hasta cargar el archivo CHIP <span className="font-semibold">PROG_ING</span>.
+        </div>
+      )}
 
       {/* Sub-validation cards */}
       <div className="mb-6">

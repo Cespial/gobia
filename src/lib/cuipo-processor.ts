@@ -6,7 +6,7 @@
  * users upload CHIP files directly.
  */
 
-import type { CuipoData } from './chip-parser';
+import type { CuipoData, CuipoProgIngresosRow } from "./chip-parser";
 import { FUENTES_CONSOLIDACION } from '@/data/fuentes-consolidacion';
 
 // ---------------------------------------------------------------------------
@@ -109,6 +109,76 @@ function getConsolidacionByName(nombre: string): number | null {
  * This replicates the logic in the API route (src/app/api/plataforma/cuipo/route.ts)
  * but uses client-side parsed data instead of API responses.
  */
+export function normalizeProgramacionUploadCode(cuenta: string): string {
+  return cuenta.trim().replace(/\.+$/, "");
+}
+
+export function isLeafProgramacionUploadCode(
+  cuenta: string,
+  allCuentas: Set<string>
+): boolean {
+  const normalized = normalizeProgramacionUploadCode(cuenta);
+  if (!normalized) return false;
+
+  const prefix = `${normalized}.`;
+  for (const c of allCuentas) {
+    if (c !== normalized && c.startsWith(prefix)) return false;
+  }
+
+  return true;
+}
+
+export function getLeafProgramacionUploadRows(
+  rows: CuipoProgIngresosRow[] | null | undefined
+): CuipoProgIngresosRow[] {
+  if (!rows || rows.length === 0) return [];
+
+  const allCuentas = new Set(
+    rows
+      .map((row) => normalizeProgramacionUploadCode(row.cuenta))
+      .filter(Boolean)
+  );
+
+  return rows.filter((row) =>
+    isLeafProgramacionUploadCode(row.cuenta, allCuentas)
+  );
+}
+
+export function sumProgramacionUploadByPrefixes(
+  rows: CuipoProgIngresosRow[] | null | undefined,
+  prefixes: string[],
+  field: "presupuestoInicial" | "presupuestoDefinitivo"
+): { total: number | null; hasData: boolean; matchedRows: number } {
+  if (!rows || rows.length === 0 || prefixes.length === 0) {
+    return { total: null, hasData: false, matchedRows: 0 };
+  }
+
+  const normalizedPrefixes = prefixes
+    .map((prefix) => normalizeProgramacionUploadCode(prefix))
+    .filter(Boolean);
+
+  let total = 0;
+  let matchedRows = 0;
+
+  for (const row of getLeafProgramacionUploadRows(rows)) {
+    const cuenta = normalizeProgramacionUploadCode(row.cuenta);
+    if (
+      normalizedPrefixes.some(
+        (prefix) => cuenta === prefix || cuenta.startsWith(`${prefix}.`)
+      )
+    ) {
+      total += row[field] ?? 0;
+      matchedRows++;
+    }
+  }
+
+  return {
+    total: matchedRows > 0 ? total : null,
+    hasData: matchedRows > 0,
+    matchedRows,
+  };
+}
+
 export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCuipo {
   // Aggregate income by fuente name
   const fuenteMap = new Map<
@@ -223,16 +293,32 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
   const totalCxpVigAnterior = porFuente.reduce((s, f) => s + f.cxpVigAnterior, 0);
   const totalValidador = porFuente.reduce((s, f) => s + f.validador, 0);
 
-  // Programming totals (from prog_ing / prog_gas files)
-  // For prog_ing, the total row typically has cuenta "1" (total ingresos)
-  const progIngTotal = cuipoData.progIngresos.find(r => r.cuenta === '1' || r.cuenta === '1.');
-  const pptoInicialIngresos = progIngTotal?.presupuestoInicial ?? 0;
-  const pptoDefinitivoIngresos = progIngTotal?.presupuestoDefinitivo ?? 0;
+  // Programming totals (from uploaded prog_ing / prog_gas leaf rows)
+  const progIngInicial = sumProgramacionUploadByPrefixes(
+    cuipoData.progIngresos,
+    ["1"],
+    "presupuestoInicial"
+  );
+  const progIngDefinitivo = sumProgramacionUploadByPrefixes(
+    cuipoData.progIngresos,
+    ["1"],
+    "presupuestoDefinitivo"
+  );
+  const progGasInicial = sumProgramacionUploadByPrefixes(
+    cuipoData.progGastos,
+    ["2"],
+    "presupuestoInicial"
+  );
+  const progGasDefinitivo = sumProgramacionUploadByPrefixes(
+    cuipoData.progGastos,
+    ["2"],
+    "presupuestoDefinitivo"
+  );
 
-  // For prog_gas, total row has cuenta "2" (total gastos)
-  const progGasTotal = cuipoData.progGastos.find(r => r.cuenta === '2' || r.cuenta === '2.');
-  const pptoInicialGastos = progGasTotal?.presupuestoInicial ?? 0;
-  const pptoDefinitivoGastos = progGasTotal?.presupuestoDefinitivo ?? 0;
+  const pptoInicialIngresos = progIngInicial.total ?? 0;
+  const pptoDefinitivoIngresos = progIngDefinitivo.total ?? 0;
+  const pptoInicialGastos = progGasInicial.total ?? 0;
+  const pptoDefinitivoGastos = progGasDefinitivo.total ?? 0;
 
   const equilibrioInicial = pptoInicialIngresos > 0 ? pptoInicialIngresos - pptoInicialGastos : 0;
   const equilibrioDefinitivo = pptoDefinitivoIngresos > 0 ? pptoDefinitivoIngresos - pptoDefinitivoGastos : 0;

@@ -14,14 +14,12 @@
 import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
-  getProgramacionIngresoCode,
-  isLeafCuipoCode,
   parsePeriodo,
-  parseCuipoAmount,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
-  type CuipoProgIngresos,
 } from "@/lib/datos-gov-cuipo";
+import type { CuipoProgIngresosRow } from "@/lib/chip-parser";
+import { sumProgramacionUploadByPrefixes } from "@/lib/cuipo-processor";
 import {
   fetchSGPResumen,
   SGP_CONCEPTOS,
@@ -34,9 +32,9 @@ import {
 
 export interface AguaPotableSubValidacion {
   nombre: string;
-  valor1: number;
+  valor1: number | null;
   valor1Label: string;
-  valor2: number;
+  valor2: number | null;
   valor2Label: string;
   porcentaje: number | null;
   umbral: number | null; // e.g., 0.75 for 75%
@@ -47,7 +45,8 @@ export interface AguaPotableResult {
   municipio: string;
   codigoDane: string;
   distribucionSICODIS: number;
-  presupuestoDefinitivo: number;
+  presupuestoDefinitivo: number | null;
+  hasProgramacionData: boolean;
   subValidaciones: AguaPotableSubValidacion[];
   subsidiosDetalle: {
     acueducto: number;
@@ -84,6 +83,7 @@ export async function evaluateAguaPotable(
   deptCode: string,
   periodo: string,
   sgpTotal?: number,
+  progIngresosUpload?: CuipoProgIngresosRow[] | null,
 ): Promise<AguaPotableResult> {
   const { year } = parsePeriodo(periodo);
 
@@ -93,7 +93,6 @@ export async function evaluateAguaPotable(
   const [
     sicodisData,
     ejecIngresosApsb,
-    progIngresosApsb,
     ejecGastosApsb,
     ejecGastosSubsidios,
     ejecIngresosContribuciones,
@@ -110,14 +109,6 @@ export async function evaluateAguaPotable(
       where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND cuenta='1.1.02.06.001.05'`,
       limit: 10,
       order: "cuenta ASC",
-    }),
-
-    // Income programming for SGP Agua Potable account (PROG_INGRESOS uses ambito_codigo)
-    sodaCuipoQuery<CuipoProgIngresos>({
-      dataset: CUIPO_DATASETS.PROG_INGRESOS,
-      where: `codigo_entidad='${chipCode}' AND periodo='${periodo}' AND ambito_codigo like '1.1.02.06.001.05%'`,
-      limit: 500,
-      order: "ambito_codigo ASC",
     }),
 
     // Expense execution for Agua Potable funding source, VIGENCIA ACTUAL
@@ -174,19 +165,15 @@ export async function evaluateAguaPotable(
   }
 
   // -------------------------------------------------------------------------
-  // 3. Extract presupuesto definitivo from PROG_INGRESOS leaf rows
+  // 3. Extract presupuesto definitivo only from uploaded CHIP PROG_ING
   // -------------------------------------------------------------------------
-  let presupuestoDefinitivo = 0;
-  const progIngresoCodes = new Set(
-    progIngresosApsb.map((row) => getProgramacionIngresoCode(row))
+  const programacionApsb = sumProgramacionUploadByPrefixes(
+    progIngresosUpload,
+    ["1.1.02.06.001.05"],
+    "presupuestoDefinitivo"
   );
-  for (const row of progIngresosApsb) {
-    const cuenta = getProgramacionIngresoCode(row);
-    if (!isLeafCuipoCode(cuenta, progIngresoCodes)) continue;
-    presupuestoDefinitivo += parseCuipoAmount(row.presupuesto_definitivo);
-  }
-
-  const hasProgramacionApsb = progIngresosApsb.length > 0;
+  const presupuestoDefinitivo = programacionApsb.total;
+  const hasProgramacionApsb = programacionApsb.hasData;
 
   let recaudoApsb = 0;
   for (const row of ejecIngresosApsb) {
@@ -254,17 +241,23 @@ export async function evaluateAguaPotable(
   const subValidaciones: AguaPotableSubValidacion[] = [];
 
   // Sub 1: Asignacion de Recursos
-  const pctAsignacion = safeRatio(presupuestoDefinitivo, distribucionSICODIS);
+  const pctAsignacion =
+    presupuestoDefinitivo !== null
+      ? safeRatio(presupuestoDefinitivo, distribucionSICODIS)
+      : null;
   subValidaciones.push({
     nombre: "Asignacion de Recursos",
     valor1: presupuestoDefinitivo,
     valor1Label: "Presupuesto Definitivo SGP APSB",
     valor2: distribucionSICODIS,
     valor2Label: "Distribucion SICODIS",
-    porcentaje: safePct(presupuestoDefinitivo, distribucionSICODIS),
+    porcentaje:
+      presupuestoDefinitivo !== null
+        ? safePct(presupuestoDefinitivo, distribucionSICODIS)
+        : null,
     umbral: null, // No fixed threshold — presupuesto >= distribucion
     status:
-      distribucionSICODIS === 0 || !hasProgramacionApsb
+      distribucionSICODIS === 0 || !hasProgramacionApsb || presupuestoDefinitivo === null
         ? "pendiente"
         : presupuestoDefinitivo >= distribucionSICODIS
           ? "cumple"
@@ -355,6 +348,7 @@ export async function evaluateAguaPotable(
     codigoDane: daneCode,
     distribucionSICODIS,
     presupuestoDefinitivo,
+    hasProgramacionData: hasProgramacionApsb,
     subValidaciones,
     subsidiosDetalle: {
       acueducto: subsidioAcueducto,

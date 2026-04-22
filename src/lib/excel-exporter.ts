@@ -415,6 +415,41 @@ function writeKV(
   }
 }
 
+function writeKVNullableNumber(
+  ws: XLSX.WorkSheet,
+  row: number,
+  label: string,
+  value: number | null | undefined,
+  colSpan: number = 2,
+  emptyLabel: string = "N/D"
+): void {
+  writeText(ws, row, 0, label, labelStyle);
+  if (typeof value === "number") {
+    writeNum(ws, row, 1, value, valueNumStyle);
+  } else {
+    writeText(ws, row, 1, emptyLabel, valueTextStyle);
+  }
+  for (let c = 2; c < colSpan; c++) {
+    writeText(ws, row, c, "", dataStyle);
+  }
+}
+
+function writeNullableNumCell(
+  ws: XLSX.WorkSheet,
+  r: number,
+  c: number,
+  value: number | null | undefined,
+  numCellStyle: Record<string, unknown>,
+  textCellStyle: Record<string, unknown>,
+  emptyLabel: string = "N/D"
+): void {
+  if (typeof value === "number") {
+    writeNum(ws, r, c, value, numCellStyle);
+  } else {
+    writeText(ws, r, c, emptyLabel, textCellStyle);
+  }
+}
+
 /** Write a key-value pair where the value is a percentage */
 function writeKVPct(
   ws: XLSX.WorkSheet,
@@ -1144,7 +1179,16 @@ function addAguaSheet(wb: XLSX.WorkBook, data: AguaPotableResult): void {
   r++;
 
   writeKV(ws, r++, "Distribucion SICODIS:", data.distribucionSICODIS, detailCols);
-  writeKV(ws, r++, "Presupuesto Definitivo:", data.presupuestoDefinitivo, detailCols);
+  writeKVNullableNumber(ws, r++, "Presupuesto Definitivo:", data.presupuestoDefinitivo, detailCols);
+  writeKV(
+    ws,
+    r++,
+    "Nota presupuesto:",
+    data.hasProgramacionData
+      ? "Presupuesto calculado desde el archivo CHIP PROG_ING cargado."
+      : "Presupuesto N/D: la API PROG_INGRESOS no se usa como fuente monetaria; cargue el archivo CHIP PROG_ING.",
+    detailCols
+  );
   writeEmptyRow(ws, r++, detailCols);
 
   // Sub-validaciones table
@@ -1170,9 +1214,9 @@ function addAguaSheet(wb: XLSX.WorkBook, data: AguaPotableResult): void {
 
     writeText(ws, r, 0, s.nombre, ds);
     writeText(ws, r, 1, s.valor1Label, ds);
-    writeNum(ws, r, 2, s.valor1, ns);
+    writeNullableNumCell(ws, r, 2, s.valor1, ns, ds);
     writeText(ws, r, 3, s.valor2Label, ds);
-    writeNum(ws, r, 4, s.valor2, ns);
+    writeNullableNumCell(ws, r, 4, s.valor2, ns, ds);
     writeCell(ws, r, 5, s.porcentaje ?? "", s.porcentaje !== null ? ps : ds);
     writeCell(ws, r, 6, s.umbral ?? "", s.umbral !== null ? ps : ds);
     writeText(ws, r, 7, s.status.toUpperCase(), statusStyle(s.status.toUpperCase()));
@@ -1227,10 +1271,19 @@ function addSGPSheet(wb: XLSX.WorkBook, data: SGPEvaluationResult): void {
   r++;
 
   writeKV(ws, r++, "Total Distribuido (DNP):", data.totalDistribuido, detailCols);
-  writeKV(ws, r++, "Total Presupuestado:", data.totalPresupuestado, detailCols);
+  writeKVNullableNumber(ws, r++, "Total Presupuestado:", data.totalPresupuestado, detailCols);
   writeKV(ws, r++, "Total Recaudado:", data.totalRecaudado, detailCols);
   writeKV(ws, r++, "Total Ejecutado:", data.totalEjecutado, detailCols);
   writeKVPct(ws, r++, "% Ejecucion Global:", data.pctEjecucionGlobal / 100, detailCols);
+  writeKV(
+    ws,
+    r++,
+    "Nota presupuesto:",
+    data.hasProgramacionData
+      ? "Presupuesto calculado desde el archivo CHIP PROG_ING cargado."
+      : "Presupuesto N/D: la API PROG_INGRESOS no se usa como fuente monetaria; cargue el archivo CHIP PROG_ING.",
+    detailCols
+  );
   writeEmptyRow(ws, r++, detailCols);
 
   // Componentes table
@@ -1257,10 +1310,16 @@ function addSGPSheet(wb: XLSX.WorkBook, data: SGPEvaluationResult): void {
 
     writeText(ws, r, 0, c.concepto, ds);
     writeNum(ws, r, 1, c.distribucionDNP, ns);
-    writeNum(ws, r, 2, c.presupuestado, ns);
+    writeNullableNumCell(ws, r, 2, c.presupuestado, ns, ds);
     writeNum(ws, r, 3, c.recaudado, ns);
     writeNum(ws, r, 4, c.ejecutado, ns);
-    writeNum(ws, r, 5, c.pctPresupuesto / 100, ps);
+    writeCell(
+      ws,
+      r,
+      5,
+      c.pctPresupuesto !== null ? c.pctPresupuesto / 100 : "",
+      c.pctPresupuesto !== null ? ps : ds
+    );
     writeNum(ws, r, 6, c.pctRecaudo / 100, ps);
     writeNum(ws, r, 7, c.pctEjecucion / 100, ps);
     writeText(ws, r, 8, c.status.toUpperCase(), statusStyle(c.status.toUpperCase()));
@@ -1375,6 +1434,13 @@ function addIDFSheet(wb: XLSX.WorkBook, data: IDFResult): void {
   writeKV(ws, r++, "Ranking:", data.ranking, detailCols);
   writeKV(ws, r++, "Score Resultados Fiscales (80%):", data.scoreResultados, detailCols);
   writeKV(ws, r++, "Score Gestion Financiera (20%):", data.scoreGestion, detailCols);
+  writeKV(
+    ws,
+    r++,
+    "Nota programacion:",
+    "La capacidad de programacion de ingresos solo usa el archivo CHIP PROG_ING; la API PROG_INGRESOS no se usa como fuente monetaria.",
+    detailCols
+  );
   writeEmptyRow(ws, r++, detailCols);
 
   // Resultados Fiscales
