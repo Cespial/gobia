@@ -240,6 +240,11 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
         const res = await fetch(
           `/api/plataforma/cuipo?action=periodos&chip=${municipio.chipCode}`
         );
+        if (res.status === 401) {
+          // Session expired or invalid — redirect to login
+          window.location.href = "/plataforma/login";
+          return;
+        }
         const data = await res.json();
         if (data.ok && data.periodos.length > 0) {
           setPeriodos(data.periodos);
