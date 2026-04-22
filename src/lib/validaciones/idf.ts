@@ -431,7 +431,7 @@ export async function calculateIDF(
     ingresosPropiosRecaudo,
     presupuestoInicialPropios
   );
-  const progCapScore = normalizeProgramming(progCapRatio);
+  const progCapScore = presupuestoInicialPropios > 0 ? normalizeProgramming(progCapRatio) : null;
 
   // 2. Ejecucion de compromisos
   const ejecCompRatio = safeDivide(
@@ -452,7 +452,9 @@ export async function calculateIDF(
       name: "Capacidad de programacion de ingresos",
       value: Math.round(progCapRatio * 10000) / 100,
       score: progCapScore,
-      interpretation: interpretProgramacion(progCapRatio),
+      interpretation: presupuestoInicialPropios > 0
+        ? interpretProgramacion(progCapRatio)
+        : "No disponible \u2014 requiere presupuesto de ingresos (upload CUIPO PROG_ING)",
     },
     {
       name: "Ejecucion de compromisos",

@@ -505,6 +505,19 @@ function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
   writeKV(ws, r++, "Fecha de exportacion:", new Date().toISOString().split("T")[0], cols);
   writeEmptyRow(ws, r++, cols);
 
+  // Period note
+  const periodNoteStyle = {
+    font: { sz: 9, name: "Calibri", italic: true, color: { rgb: SEPIA } },
+    border: thinBorder,
+    alignment: { horizontal: "left" as const, wrapText: true },
+  };
+  writeText(ws, r, 0, "Nota: Datos del periodo T3 (Sep 2025). Para cierre anual (T4/Dic), cargar archivos CUIPO desde CHIP.", periodNoteStyle);
+  for (let c = 1; c < cols; c++) writeText(ws, r, c, "", dataStyle);
+  if (!ws["!merges"]) ws["!merges"] = [];
+  ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: cols - 1 } });
+  r++;
+  writeEmptyRow(ws, r++, cols);
+
   // Module summary table header
   writeHeaderRow(ws, r++, ["MODULO", "ESTADO", "OBSERVACION"]);
 
@@ -704,6 +717,19 @@ function addEquilibrioSheet(wb: XLSX.WorkBook, data: EquilibrioData): void {
     r++;
   }
 
+  // Note about Presupuesto de Ingresos
+  writeEmptyRow(ws, r++, detailCols);
+  const eqNoteStyle = {
+    font: { sz: 9, name: "Calibri", italic: true, color: { rgb: SEPIA } },
+    border: thinBorder,
+    alignment: { horizontal: "left" as const, wrapText: true },
+  };
+  writeText(ws, r, 0, "NOTA: Presupuesto de Ingresos = 0 porque el dataset PROG_INGRESOS de datos.gov.co tiene schema no estandar. Con upload CUIPO CHIP, estos valores se completan.", eqNoteStyle);
+  for (let c = 1; c < detailCols; c++) writeText(ws, r, c, "", dataStyle);
+  if (!ws["!merges"]) ws["!merges"] = [];
+  ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: detailCols - 1 } });
+  r++;
+
   setRange(ws, r - 1, detailCols - 1);
   ws["!cols"] = [
     { wch: 18 }, // Codigo
@@ -832,6 +858,13 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
   }
   if (data.deduccionCalculada !== undefined) {
     writeKV(ws, r++, "  Deduccion Calculada (3%):", data.deduccionCalculada, detailCols);
+  }
+  // If reported and calculated differ significantly, add explanation note
+  if (data.deduccionReportada !== undefined && data.deduccionCalculada !== undefined) {
+    const diff = Math.abs((data.deduccionReportada ?? 0) - (data.deduccionCalculada ?? 0));
+    if (diff > 1000) {
+      writeSectionRow(ws, r++, "NOTA: La deduccion reportada difiere de la calculada (3%). Esto indica que el municipio reporta menos destinaciones especificas de las que el calculo automatico estima. Se usa la deduccion REPORTADA porque refleja lo que el municipio declaro.", detailCols);
+    }
   }
   writeKV(ws, r++, "ICLD Neto:", data.icldNeto, detailCols);
   writeKV(ws, r++, "Acciones de Mejora:", data.accionesMejora, detailCols);
@@ -1593,6 +1626,32 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
   ];
   for (const formula of allFormulas) {
     writeText(ws, r, 0, formula, formulaRefStyle);
+    writeText(ws, r, 1, "", dataStyle);
+    writeText(ws, r, 2, "", dataStyle);
+    if (!ws["!merges"]) ws["!merges"] = [];
+    ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: cols - 1 } });
+    r++;
+  }
+
+  writeEmptyRow(ws, r++, cols);
+
+  // Supuestos y Limitaciones section
+  writeSectionRow(ws, r++, "SUPUESTOS Y LIMITACIONES", cols);
+  const supuestosStyle = {
+    font: { sz: 9, name: "Calibri", color: { rgb: INK } },
+    border: thinBorder,
+    alignment: { horizontal: "left" as const, wrapText: true },
+  };
+  const supuestos = [
+    "1. Periodo: Los datos corresponden al periodo reportado en datos.gov.co. Si el periodo es T3 (Sep), las cifras representan ~75% de la ejecucion anual. Para datos de cierre anual (T4/Dic), cargar archivos CUIPO directamente desde CHIP.",
+    "2. Presupuesto de Ingresos: El dataset PROG_INGRESOS de datos.gov.co tiene schema no estandar. Los valores de presupuesto inicial y definitivo de ingresos solo estan disponibles cuando se cargan archivos CUIPO CHIP.",
+    "3. Deduccion de fondos: Se usa la deduccion REPORTADA por el municipio (fuente 1.2.3.4.02). Si no se reporta, se calcula automaticamente como 3% del ICLD. La diferencia entre reportada y calculada es un hallazgo para el municipio.",
+    "4. Leaf rows: Solo se suman filas con fuente de financiacion asignada (leaf rows). Las filas de agregacion (parent rows) se excluyen para evitar doble conteo.",
+    "5. CGA y Eficiencia Fiscal: Requieren carga de archivos FUT Cierre y CGN Saldos respectivamente. Sin estos archivos, los modulos aparecen como PENDIENTE.",
+    "6. IDF Endeudamiento y Programacion: Indicadores que requieren datos no disponibles via API se excluyen del promedio (score = N/D), no afectando el calculo total.",
+  ];
+  for (const supuesto of supuestos) {
+    writeText(ws, r, 0, supuesto, supuestosStyle);
     writeText(ws, r, 1, "", dataStyle);
     writeText(ws, r, 2, "", dataStyle);
     if (!ws["!merges"]) ws["!merges"] = [];
