@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * CUIPO local — lector de archivos .xlsb / .xlsx descargados de CHIP CGN.
  *

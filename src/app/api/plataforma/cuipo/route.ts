@@ -306,9 +306,38 @@ export async function GET(request: NextRequest) {
             ? sourceParam
             : "auto";
 
+        // El lector local se carga dinámicamente (sólo server-side, fs/path/os).
+        // Para "auto", primero verificamos si existe archivo del periodo.
+        let localFetchers: Parameters<typeof evaluateLey617>[3] extends infer O
+          ? O extends { localFetchers?: infer F }
+            ? F
+            : undefined
+          : undefined = undefined;
+        if (dataSource === "local" || dataSource === "auto") {
+          try {
+            const localMod = await import("@/lib/cuipo-local-xlsb");
+            const hasLocal = localMod.hasLocalCuipo(periodo);
+            if (hasLocal || dataSource === "local") {
+              localFetchers = {
+                fetchIngresos: localMod.fetchEjecucionIngresosLocal,
+                fetchGastos: localMod.fetchGastosPorSeccionLocal,
+              };
+            }
+          } catch (err) {
+            // Si el módulo no carga (entorno edge/serverless sin fs), seguimos con API
+            if (dataSource === "local") {
+              return NextResponse.json(
+                { ok: false, error: `dataSource=local no disponible: ${err}` },
+                { status: 500 }
+              );
+            }
+          }
+        }
+
         const ley617 = await evaluateLey617(chipCode, periodo, categoria, {
           fondosPorId: Object.keys(fondosPorId).length ? fondosPorId : undefined,
           dataSource,
+          localFetchers,
         });
         return NextResponse.json({ ok: true, ley617 });
       }

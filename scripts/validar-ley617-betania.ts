@@ -8,6 +8,10 @@
  */
 
 import { evaluateLey617 } from "@/lib/validaciones/ley617";
+import {
+  fetchEjecucionIngresosLocal,
+  fetchGastosPorSeccionLocal,
+} from "@/lib/cuipo-local-xlsb";
 
 async function main() {
   const dane = process.argv[2] || "05091";
@@ -17,6 +21,10 @@ async function main() {
 
   const result = await evaluateLey617(dane, periodo, undefined, {
     dataSource: "local",
+    localFetchers: {
+      fetchIngresos: fetchEjecucionIngresosLocal,
+      fetchGastos: fetchGastosPorSeccionLocal,
+    },
   });
 
   const fmt = (n: number) =>

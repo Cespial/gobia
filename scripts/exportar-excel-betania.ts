@@ -4,6 +4,10 @@
  */
 import { evaluateLey617 } from "@/lib/validaciones/ley617";
 import { exportValidacionesToExcel } from "@/lib/excel-exporter";
+import {
+  fetchEjecucionIngresosLocal,
+  fetchGastosPorSeccionLocal,
+} from "@/lib/cuipo-local-xlsb";
 import { execSync } from "child_process";
 import { resolve } from "path";
 
@@ -14,6 +18,10 @@ async function main() {
   console.log(`Calculando Ley 617 para DANE ${dane} · periodo ${periodo} (LOCAL)...`);
   const ley617 = await evaluateLey617(dane, periodo, undefined, {
     dataSource: "local",
+    localFetchers: {
+      fetchIngresos: fetchEjecucionIngresosLocal,
+      fetchGastos: fetchGastosPorSeccionLocal,
+    },
   });
 
   console.log(`  ICLD Bruto:           ${ley617.icldBruto.toLocaleString("es-CO")}`);

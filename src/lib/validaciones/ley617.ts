@@ -25,13 +25,16 @@ import {
   fetchEjecucionIngresos,
   fetchGastosPorSeccion,
   chipToDaneCode,
+  type CuipoEjecIngresos,
+  type CuipoEjecGastos,
 } from "@/lib/datos-gov-cuipo";
 
-import {
-  fetchEjecucionIngresosLocal,
-  fetchGastosPorSeccionLocal,
-  hasLocalCuipo,
-} from "@/lib/cuipo-local-xlsb";
+// El lector de archivos locales (`cuipo-local-xlsb`) usa fs/path/os y NO
+// puede empaquetarse en el bundle del cliente. En vez de importarlo aquí
+// (lo que arrastra fs/path/os a chunks del browser), exponemos un slot
+// `localFetchers` en `Ley617Options` que el caller server-side construye
+// vía `import("@/lib/cuipo-local-xlsb")`. El cliente nunca pasa fetchers
+// locales y por tanto cuipo-local-xlsb nunca llega al bundle del browser.
 
 import {
   isICLDCuenta,
@@ -242,6 +245,17 @@ export interface Ley617Options {
   fondosOverride?: FondoDeduccionICLD[];
   fondosPorId?: Record<string, { porcentaje?: number; customLabel?: string }>;
   dataSource?: "auto" | "local" | "api";
+  /**
+   * Slot opcional para que el caller (server-side) inyecte el lector local
+   * de archivos CUIPO `.xlsb`. Cuando se pasa y `dataSource` es "local" o
+   * "auto", `evaluateLey617` lo usa en vez del API datos.gov.co. El cliente
+   * nunca pasa este slot — así `cuipo-local-xlsb` no llega al bundle del
+   * browser.
+   */
+  localFetchers?: {
+    fetchIngresos: (dane: string, periodo: string) => Promise<CuipoEjecIngresos[]>;
+    fetchGastos: (dane: string, periodo: string) => Promise<CuipoEjecGastos[]>;
+  };
 }
 
 export async function evaluateLey617(
@@ -274,9 +288,18 @@ export async function evaluateLey617(
   // - "local"/"api": fuerza
   // -------------------------------------------------------------------------
   const dataSource = options.dataSource ?? "auto";
+
+  // Si el caller (server-side) inyectó fetchers locales y el dataSource es
+  // local o auto, los usamos. En cliente nunca llegan fetchers locales,
+  // así que siempre cae a API.
   const useLocal =
-    dataSource === "local" ||
-    (dataSource === "auto" && hasLocalCuipo(periodo));
+    !!options.localFetchers &&
+    (dataSource === "local" || dataSource === "auto");
+  if (dataSource === "local" && !options.localFetchers) {
+    throw new Error(
+      "dataSource=local requiere `localFetchers` (sólo disponible server-side)"
+    );
+  }
 
   // Para el archivo local los archivos están indexados por DANE (5 dígitos),
   // no por CHIP completo. `chipToDaneCode` toma los últimos 5 dígitos del
@@ -284,10 +307,10 @@ export async function evaluateLey617(
   const daneCode = chipToDaneCode(chipCode);
 
   // Fetch CUIPO data in parallel
-  const [ingresosRows, gastosPorSeccion] = useLocal
+  const [ingresosRows, gastosPorSeccion] = useLocal && options.localFetchers
     ? await Promise.all([
-        fetchEjecucionIngresosLocal(daneCode, periodo),
-        fetchGastosPorSeccionLocal(daneCode, periodo),
+        options.localFetchers.fetchIngresos(daneCode, periodo),
+        options.localFetchers.fetchGastos(daneCode, periodo),
       ])
     : await Promise.all([
         fetchEjecucionIngresos(chipCode, periodo),
