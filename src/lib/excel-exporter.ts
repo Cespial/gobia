@@ -975,24 +975,102 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
   writeEmptyRow(ws, r++, detailCols);
 
   writeKV(ws, r++, "ICLD Bruto:", data.icldBruto, detailCols);
+  // Capturamos la fila del ICLD Validado para referenciarla en las fórmulas
+  // de la tabla editable de fondos (más abajo). Cada celda valor se calcula
+  // como `% × ICLD_Validado` y Excel la recompone cuando el usuario edita el %.
+  const icldValidadoRow = r;
   writeKV(ws, r++, "ICLD Validado:", data.icldValidado, detailCols);
   writeKV(ws, r++, "Deduccion Fondos (usada):", data.deduccionFondos, detailCols);
-  if (data.deduccionReportada !== undefined) {
-    writeKV(ws, r++, "  Deduccion Reportada (datos CUIPO):", data.deduccionReportada, detailCols);
-  }
-  if (data.deduccionCalculada !== undefined) {
-    writeKV(ws, r++, "  Deduccion Calculada (3%):", data.deduccionCalculada, detailCols);
-  }
-  // If reported and calculated differ significantly, add explanation note
-  if (data.deduccionReportada !== undefined && data.deduccionCalculada !== undefined) {
-    const diff = Math.abs((data.deduccionReportada ?? 0) - (data.deduccionCalculada ?? 0));
-    if (diff > 1000) {
-      writeSectionRow(ws, r++, "NOTA: La deduccion reportada difiere de la calculada (3%). Esto indica que el municipio reporta menos destinaciones especificas de las que el calculo automatico estima. Se usa la deduccion REPORTADA porque refleja lo que el municipio declaro.", detailCols);
-    }
-  }
   writeKV(ws, r++, "ICLD Neto:", data.icldNeto, detailCols);
   writeKV(ws, r++, "Acciones de Mejora:", data.accionesMejora, detailCols);
   writeEmptyRow(ws, r++, detailCols);
+
+  // -------------------------------------------------------------------------
+  // Tabla editable: Deducción Calculada (Fondos)
+  // El usuario edita los porcentajes en la columna B y la columna C se
+  // recalcula automáticamente con la fórmula `=Bn*B{icldValidadoRow}`.
+  // El total de la fila inferior suma tanto los % como los valores.
+  // -------------------------------------------------------------------------
+  if (data.fondosDeduccion && data.fondosDeduccion.length > 0) {
+    writeSectionRow(ws, r++, "DEDUCCION CALCULADA — TABLA EDITABLE DE FONDOS", detailCols);
+    writeHeaderRow(ws, r++, [
+      "Destinacion especifica",
+      "% ICLD",
+      "Valor",
+      "", "", "", "", "", "",
+    ]);
+
+    const icldValidadoCellRef = cellRef(icldValidadoRow, 1); // p.ej. "B7"
+    const fondoFirstRow = r;
+
+    for (let i = 0; i < data.fondosDeduccion.length; i++) {
+      const f = data.fondosDeduccion[i];
+      const isAlt = i % 2 === 1;
+      const ns = isAlt ? altRowNumStyle : numStyle;
+      const ds = isAlt ? altRowStyle : dataStyle;
+      const pctEditableStyle = {
+        ...(isAlt ? altRowNumStyle : numStyle),
+        numFmt: "0.00%",
+        // Resaltado sutil para que se note que es editable
+        fill: { patternType: "solid", fgColor: { rgb: "FFFCEB" } },
+      };
+
+      // Nombre del fondo (con label custom para "Otros, ¿cuál?")
+      const labelText = f.custom && f.customLabel
+        ? `${f.nombre} — ${f.customLabel}`
+        : f.nombre;
+      writeText(ws, r, 0, labelText, ds);
+
+      // Celda editable de porcentaje (default 0 o porcentaje del catálogo)
+      writeNum(ws, r, 1, f.porcentaje ?? 0, pctEditableStyle);
+
+      // Valor = % × ICLD Validado (fórmula Excel)
+      const pctRef = cellRef(r, 1);
+      ws[cellRef(r, 2)] = {
+        t: "n",
+        f: `${pctRef}*${icldValidadoCellRef}`,
+        v: (f.porcentaje ?? 0) * data.icldValidado,
+        s: ns,
+      };
+
+      // Resto de columnas en blanco para mantener el grid
+      for (let c = 3; c < detailCols; c++) writeText(ws, r, c, "", ds);
+      r++;
+    }
+
+    // Fila total
+    const fondoLastRow = r - 1;
+    const totalLabelStyle = { ...labelStyle, font: { ...labelStyle.font, bold: true } };
+    const totalNumStyle = { ...numStyle, font: { ...numStyle.font, bold: true } };
+    const totalPctStyle = { ...numStyle, font: { ...numStyle.font, bold: true }, numFmt: "0.00%" };
+
+    writeText(ws, r, 0, "TOTAL DEDUCCION CALCULADA", totalLabelStyle);
+    ws[cellRef(r, 1)] = {
+      t: "n",
+      f: `SUM(${cellRef(fondoFirstRow, 1)}:${cellRef(fondoLastRow, 1)})`,
+      v: 0,
+      s: totalPctStyle,
+    };
+    ws[cellRef(r, 2)] = {
+      t: "n",
+      f: `SUM(${cellRef(fondoFirstRow, 2)}:${cellRef(fondoLastRow, 2)})`,
+      v: 0,
+      s: totalNumStyle,
+    };
+    for (let c = 3; c < detailCols; c++) writeText(ws, r, c, "", dataStyle);
+    r++;
+
+    writeText(
+      ws,
+      r,
+      0,
+      "Edita los porcentajes en la columna B; los valores se recalculan automaticamente.",
+      { font: { sz: 8, italic: true, color: { rgb: SEPIA } }, border: thinBorder },
+    );
+    for (let c = 1; c < detailCols; c++) writeText(ws, r, c, "", dataStyle);
+    r++;
+    writeEmptyRow(ws, r++, detailCols);
+  }
 
   writeKV(ws, r++, "Gastos Funcionamiento Total:", data.gastosFuncionamientoTotal, detailCols);
   writeKV(ws, r++, "Gastos Deducidos:", data.gastosDeducidos, detailCols);

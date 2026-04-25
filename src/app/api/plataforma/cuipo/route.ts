@@ -283,7 +283,33 @@ export async function GET(request: NextRequest) {
           ? parseInt(categoriaParam, 10)
           : undefined;
 
-        const ley617 = await evaluateLey617(chipCode, periodo, categoria);
+        // Overrides de porcentajes de fondos vía query string:
+        //   &fondos=contingencias:0.01,gestion_riesgo:0.01,otros:0.005
+        // Cada par es "<id>:<fraccion 0-1>". Los fondos no listados quedan en 0%.
+        const fondosParam = searchParams.get("fondos");
+        const fondosPorId: Record<string, { porcentaje: number }> = {};
+        if (fondosParam) {
+          for (const pair of fondosParam.split(",")) {
+            const [id, val] = pair.split(":").map((s) => s.trim());
+            const pct = parseFloat(val);
+            if (id && Number.isFinite(pct)) {
+              fondosPorId[id] = { porcentaje: pct };
+            }
+          }
+        }
+
+        // Origen de datos:
+        //   ?source=local|api|auto (default auto: local si existe archivo, si no api)
+        const sourceParam = (searchParams.get("source") || "").toLowerCase();
+        const dataSource: "local" | "api" | "auto" =
+          sourceParam === "local" || sourceParam === "api"
+            ? sourceParam
+            : "auto";
+
+        const ley617 = await evaluateLey617(chipCode, periodo, categoria, {
+          fondosPorId: Object.keys(fondosPorId).length ? fondosPorId : undefined,
+          dataSource,
+        });
         return NextResponse.json({ ok: true, ley617 });
       }
 

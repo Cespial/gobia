@@ -132,17 +132,33 @@ export function isICLDCuentaConCondiciones(
     // Extract the fuente code prefix for comparison (e.g., "1.2.1.0.00")
     const expectedCode = entry.fuente.split(" ")[0].trim();
     const actualCode = fuente.split(" ")[0].trim();
-    if (actualCode !== expectedCode) {
-      errores.push(`Fuente incorrecta: esperada "${entry.fuente}", recibida "${fuente}"`);
+    // ICLD rubros aceptan dos fuentes equivalentes (Art. 78 Ley 715 / asimilación SGP-LD):
+    //   - 1.2.1.0.00  Ingresos Corrientes de Libre Destinación
+    //   - 1.2.4.3.04  SGP Propósito General de Libre Destinación
+    const fuentesValidas = new Set([expectedCode, "1.2.1.0.00", "1.2.4.3.04"]);
+    if (!fuentesValidas.has(actualCode)) {
+      errores.push(
+        `Fuente incorrecta: esperada "1.2.1.0.00" o "1.2.4.3.04" (SGP-LD), recibida "${fuente}"`
+      );
     }
   }
 
-  if (tipoNorma !== undefined && tipoNorma !== entry.tipoNorma) {
-    errores.push(`Tipo norma incorrecto: esperado "${entry.tipoNorma}", recibido "${tipoNorma}"`);
+  // tipoNorma debe CONTENER "NO APLICA". Los archivos CUIPO traen "NO APLICA",
+  // mientras que el catálogo usa "0.0 - NO APLICA" (incluye el código). Cualquier
+  // string que contenga "NO APLICA" se acepta como válido.
+  if (tipoNorma !== undefined) {
+    const upper = tipoNorma.toUpperCase().trim();
+    if (upper && !upper.includes("NO APLICA")) {
+      errores.push(`Tipo norma incorrecto: debe contener "NO APLICA", recibido "${tipoNorma}"`);
+    }
   }
 
-  if (fechaNorma !== undefined && fechaNorma !== entry.fechaNorma) {
-    errores.push(`Fecha norma incorrecta: esperada "${entry.fechaNorma}", recibida "${fechaNorma}"`);
+  // fechaNorma se acepta como "NO APLICA", "NA" o "N/A" (variantes equivalentes).
+  if (fechaNorma !== undefined) {
+    const upper = fechaNorma.toUpperCase().trim();
+    if (upper && !["NO APLICA", "NA", "N/A"].includes(upper)) {
+      errores.push(`Fecha norma incorrecta: debe ser "NO APLICA", recibida "${fechaNorma}"`);
+    }
   }
 
   return { valida: errores.length === 0, errores };
@@ -380,16 +396,129 @@ export const GF_SECCIONES_VALIDAS = [
 // ---------------------------------------------------------------------------
 
 /**
- * Legal deductions from ICLD as percentage.
- * Total: 3% deducted from (ICLD + SGP LD - cancelaciones)
+ * Catálogo de destinaciones específicas que se descuentan del ICLD Validado.
+ * Cada porcentaje es editable por el usuario en el panel del validador.
+ * Default = 0% (la entidad debe declarar manualmente cuánto aparta a cada fondo).
+ *
+ * `id` es un slug estable usado para enviar/recibir overrides en el API.
  */
-export const FONDOS_DEDUCCION_LEGAL = [
-  { nombre: "Fondo de Gestión del Riesgo", porcentaje: 0.01 },
-  { nombre: "Fondo de Conservación de los Recursos Hídricos", porcentaje: 0.01 },
-  { nombre: "Fondo de Contingencias", porcentaje: 0.01 },
-] as const;
+export interface FondoDeduccionICLD {
+  id: string;
+  nombre: string;
+  porcentaje: number;       // fracción 0-1 — modo "manual" (override del usuario)
+  editable: boolean;
+  custom?: boolean;
+  customLabel?: string;
+  /**
+   * Prefijos de cuenta CUIPO de gastos que componen este fondo (modo Opción B).
+   * La deducción se calcula como Σ compromisos en cuentas que empiezan por
+   * cualquiera de estos prefijos, financiados con ICLD o SGP-LD.
+   * Una cuenta hace match con el prefijo más largo (greedy) para evitar
+   * doble conteo entre fondos.
+   */
+  cuentasGasto?: string[];
+}
 
-export const TOTAL_DEDUCCION_FONDOS = 0.03; // 3%
+export const FONDOS_DEDUCCION_DEFAULT: FondoDeduccionICLD[] = [
+  {
+    id: "contingencias",
+    nombre: "Fondo de Contingencias",
+    porcentaje: 0,
+    editable: true,
+    cuentasGasto: [],
+  },
+  {
+    id: "gestion_riesgo",
+    nombre: "Fondo de Gestión y Atención del Riesgo y de Desastres",
+    porcentaje: 0,
+    editable: true,
+    cuentasGasto: [],
+  },
+  {
+    id: "emprendimiento_muj",
+    nombre: "Fondo de Emprendimiento para las Mujeres",
+    porcentaje: 0,
+    editable: true,
+    cuentasGasto: [],
+  },
+  {
+    id: "provincias",
+    nombre: "Aporte Provincias o Esquemas Asociativos",
+    porcentaje: 0,
+    editable: true,
+    cuentasGasto: [],
+  },
+  {
+    id: "pensiones_terr",
+    nombre: "Fondo de Pensiones Territorial",
+    porcentaje: 0,
+    editable: true,
+    // Aportes a Seguridad Social en Pensiones (cuenta 2.1.1.01.02.001 — todos
+    // los aportes patronales pensionales; y la subcuenta específica
+    // 2.1.1.01.02.020.01 de aportes pensionales por contratistas/ocasionales).
+    // El subgrupo 2.1.1.01.02.020 NO se incluye en bloque porque también contiene
+    // aportes a salud (.020.02), cajas (.020.04) y riesgos (.020.05) que NO son
+    // del Fondo de Pensiones Territorial. Se agregan también las mesadas y
+    // cuotas partes pensionales del Concejo/Personería: 2.1.3.07.02.*
+    cuentasGasto: [
+      "2.1.1.01.02.001",
+      "2.1.1.01.02.020.01",
+      "2.1.3.07.02",
+    ],
+  },
+  {
+    id: "otros",
+    nombre: "Otros, ¿cuál?",
+    porcentaje: 0,
+    editable: true,
+    custom: true,
+    customLabel: "",
+    cuentasGasto: [],
+  },
+];
+
+/**
+ * Devuelve el id del fondo cuyo prefijo de cuenta es el más largo entre los
+ * que matchean la cuenta dada. Esto evita doble conteo cuando dos fondos
+ * podrían reclamar la misma cuenta.
+ */
+export function fondoParaCuenta(
+  cuenta: string,
+  fondos: FondoDeduccionICLD[] = FONDOS_DEDUCCION_DEFAULT,
+): FondoDeduccionICLD | undefined {
+  const trimmed = cuenta.trim();
+  let best: FondoDeduccionICLD | undefined;
+  let bestLen = -1;
+  for (const f of fondos) {
+    for (const prefix of f.cuentasGasto || []) {
+      if (
+        (trimmed === prefix || trimmed.startsWith(prefix + ".")) &&
+        prefix.length > bestLen
+      ) {
+        best = f;
+        bestLen = prefix.length;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Suma los porcentajes editados por el usuario para obtener la fracción total
+ * que se descuenta del ICLD Validado. Si no hay overrides, devuelve la suma
+ * del catálogo default (0% inicialmente).
+ */
+export function calcularPorcentajeFondos(
+  fondos: FondoDeduccionICLD[] = FONDOS_DEDUCCION_DEFAULT
+): number {
+  return fondos.reduce((acc, f) => acc + (Number.isFinite(f.porcentaje) ? f.porcentaje : 0), 0);
+}
+
+/**
+ * @deprecated Mantener por compatibilidad. Antes era 3% fijo (1+1+1);
+ * ahora la deducción se compone editando el catálogo `FONDOS_DEDUCCION_DEFAULT`.
+ */
+export const TOTAL_DEDUCCION_FONDOS = 0;
 
 // ---------------------------------------------------------------------------
 // Concejo Limits (Art. 10 Ley 617/2000)

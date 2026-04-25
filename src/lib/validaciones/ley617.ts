@@ -24,14 +24,20 @@
 import {
   fetchEjecucionIngresos,
   fetchGastosPorSeccion,
+  chipToDaneCode,
 } from "@/lib/datos-gov-cuipo";
 
 import {
-  isICLDFuente,
+  fetchEjecucionIngresosLocal,
+  fetchGastosPorSeccionLocal,
+  hasLocalCuipo,
+} from "@/lib/cuipo-local-xlsb";
+
+import {
   isICLDCuenta,
+  isICLDCuentaConCondiciones,
   isGastoDeducible617ConCondiciones,
   GASTOS_DEDUCIBLES_617,
-  TOTAL_DEDUCCION_FONDOS,
   GF_FUENTES_VALIDAS,
   LIMITES_ADMIN_CENTRAL,
   LIMITES_PERSONERIA_SMLMV,
@@ -39,6 +45,10 @@ import {
   calcularLimiteConcejoAnual,
   CONCEJALES_POR_CATEGORIA,
   SESIONES_ORDINARIAS_DEFECTO,
+  FONDOS_DEDUCCION_DEFAULT,
+  calcularPorcentajeFondos,
+  fondoParaCuenta,
+  type FondoDeduccionICLD,
 } from "@/data/icld-rubros-validos";
 
 import { checkTipoNorma, checkFechaNorma } from "@/data/alertas-icld";
@@ -89,8 +99,33 @@ export interface Ley617Result {
   deduccionFondos: number;
   /** Deduction read from actual CUIPO data (destinación específica fuentes) */
   deduccionReportada: number;
-  /** 3% automatic calculation from icldValidado */
+  /** Suma de (% × ICLD Validado) sobre los fondos editables del catálogo */
   deduccionCalculada: number;
+  /** Porcentaje total aplicado para deduccionCalculada (suma de fondos) */
+  porcentajeFondosTotal: number;
+  /** Catálogo de fondos con porcentajes efectivamente usados (defaults o overrides) */
+  fondosDeduccion: FondoDeduccionICLD[];
+  /** Origen de los datos CUIPO: "local" (archivo .xlsb) o "api" (datos.gov.co) */
+  dataSource: "local" | "api";
+  /** Σ recaudo de rubros whitelist que fallan condiciones de fuente/norma. = deduccionFondos */
+  deduccionFondosPorNorma: number;
+  /** Detalle por rubro de deduccionFondosPorNorma con la razón del fallo */
+  deduccionFondosPorNormaDetalle: {
+    cuenta: string;
+    nombre: string;
+    fuente: string;
+    valor: number;
+    razon: string;
+  }[];
+  /** Σ compromisos en cuentas de gasto mapeadas a los 6 fondos (auxiliar — no usado como deducción) */
+  deduccionFondosCompromisos: number;
+  /** Desglose auxiliar por fondo de los compromisos */
+  deduccionFondosBreakdown: {
+    fondoId: string;
+    fondoNombre: string;
+    valor: number;
+    detalle: { cuenta: string; nombre: string; fuente: string; valor: number }[];
+  }[];
   /** Detail of each reported deduction fuente */
   deduccionReportadaDetalle: { codigoFuente: string; nombreFuente: string; valor: number }[];
   /** icldValidado - deduccionFondos — the denominator for ratio calculations */
@@ -138,8 +173,11 @@ function isAdminCentral(seccionName: string): boolean {
 
 /**
  * Check if a funding source name corresponds to Rendimientos Financieros (RF).
- * These should be excluded from ICLD bruto because they are not vigencia actual income.
+ * Conservada para uso futuro (alertas / desagregaciones). El cálculo de ICLD
+ * Bruto/Validado ya no la usa: la whitelist de 55 cuentas garantiza por sí
+ * sola que el rubro sea de libre destinación.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isRendimientosFinancieros(nombreFuente: string): boolean {
   const upper = (nombreFuente || "").toUpperCase().trim();
   return (
@@ -151,8 +189,9 @@ function isRendimientosFinancieros(nombreFuente: string): boolean {
 
 /**
  * Check if a funding source name corresponds to Recursos del Balance (RB).
- * These should be excluded from ICLD bruto because they are prior-year resources.
+ * Conservada para uso futuro. La whitelist de 55 cuentas ya excluye RB por sí.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function isRecursosDelBalance(nombreFuente: string): boolean {
   const upper = (nombreFuente || "").toUpperCase().trim();
   return (
@@ -186,21 +225,74 @@ const FUENTES_DEDUCCION_ICLD = [
 // Main evaluation
 // ---------------------------------------------------------------------------
 
+/**
+ * Overrides opcionales del catálogo de fondos editables.
+ * `fondosOverride` reemplaza el catálogo completo (espera la lista con porcentajes).
+ * `fondosPorId` permite parchear sólo algunos fondos por su id (más conveniente
+ * cuando el cliente sólo quiere setear algunos valores).
+ *
+ * `dataSource` controla el origen de los datos CUIPO:
+ *   - "auto" (default): usa archivo local si existe (`hasLocalCuipo(periodo)`),
+ *     de lo contrario cae al API datos.gov.co.
+ *   - "local": fuerza el uso de archivos `.xlsb`/`.xlsx` desde
+ *     `process.env.CUIPO_LOCAL_PATH` (default `~/Downloads`).
+ *   - "api": fuerza el uso del API datos.gov.co.
+ */
+export interface Ley617Options {
+  fondosOverride?: FondoDeduccionICLD[];
+  fondosPorId?: Record<string, { porcentaje?: number; customLabel?: string }>;
+  dataSource?: "auto" | "local" | "api";
+}
+
 export async function evaluateLey617(
   chipCode: string,
   periodo: string,
-  categoriaMunicipal?: number
+  categoriaMunicipal?: number,
+  options: Ley617Options = {}
 ): Promise<Ley617Result> {
   const categoria = categoriaMunicipal ?? 6;
   const limiteGlobal = getGlobalLimit(categoria);
 
+  // Construye el catálogo efectivo de fondos a partir del default + overrides
+  const fondosBase = options.fondosOverride ?? FONDOS_DEDUCCION_DEFAULT;
+  const fondosDeduccion: FondoDeduccionICLD[] = fondosBase.map((f) => {
+    const patch = options.fondosPorId?.[f.id];
+    if (!patch) return { ...f };
+    return {
+      ...f,
+      porcentaje: patch.porcentaje !== undefined
+        ? Math.max(0, Math.min(1, patch.porcentaje))   // clamp 0..100%
+        : f.porcentaje,
+      customLabel: patch.customLabel ?? f.customLabel,
+    };
+  });
+  const porcentajeFondosTotal = calcularPorcentajeFondos(fondosDeduccion);
+
+  // -------------------------------------------------------------------------
+  // Selección de fuente de datos (local .xlsb vs API datos.gov.co)
+  // - "auto": usa local si hay archivo, si no API
+  // - "local"/"api": fuerza
+  // -------------------------------------------------------------------------
+  const dataSource = options.dataSource ?? "auto";
+  const useLocal =
+    dataSource === "local" ||
+    (dataSource === "auto" && hasLocalCuipo(periodo));
+
+  // Para el archivo local los archivos están indexados por DANE (5 dígitos),
+  // no por CHIP completo. `chipToDaneCode` toma los últimos 5 dígitos del
+  // código CHIP para coincidir.
+  const daneCode = chipToDaneCode(chipCode);
+
   // Fetch CUIPO data in parallel
-  // Using fetchEjecucionIngresos (full rows with `cuenta`) instead of
-  // fetchIngresosPorFuente (which only returns aggregates without `cuenta`)
-  const [ingresosRows, gastosPorSeccion] = await Promise.all([
-    fetchEjecucionIngresos(chipCode, periodo),
-    fetchGastosPorSeccion(chipCode, periodo),
-  ]);
+  const [ingresosRows, gastosPorSeccion] = useLocal
+    ? await Promise.all([
+        fetchEjecucionIngresosLocal(daneCode, periodo),
+        fetchGastosPorSeccionLocal(daneCode, periodo),
+      ])
+    : await Promise.all([
+        fetchEjecucionIngresos(chipCode, periodo),
+        fetchGastosPorSeccion(chipCode, periodo),
+      ]);
 
   // -------------------------------------------------------------------------
   // 0. Leaf-row detection: filter out parent/aggregation rows to prevent
@@ -230,48 +322,127 @@ export async function evaluateLey617(
   let deduccionReportada = 0;
   const deduccionReportadaDetalle: { codigoFuente: string; nombreFuente: string; valor: number }[] = [];
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Deducción Fondos (POR NORMA — modo principal):
+  //   Σ recaudo de filas cuya cuenta está en la whitelist de 55 rubros
+  //   ICLD pero que fallan alguna de las 3 condiciones:
+  //     - fuente ∈ {1.2.1.0.00 ICLD, 1.2.4.3.04 SGP-LD}
+  //     - tipoNorma  contiene "NO APLICA"
+  //     - fechaNorma = "NO APLICA"  (también número de norma)
+  //   Es decir: rubros que parecen ICLD por la cuenta, pero tienen una
+  //   destinación específica por norma (acuerdo, ley, etc.) que los saca
+  //   del ICLD efectivo. Equivale a `icldBruto - icldValidado`.
+  // ──────────────────────────────────────────────────────────────────────
+  let deduccionFondosPorNorma = 0;
+  const deduccionFondosPorNormaDetalle: {
+    cuenta: string;
+    nombre: string;
+    fuente: string;
+    valor: number;
+    razon: string;
+  }[] = [];
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Deducción Fondos (COMPROMISOS — Opción B, métrica auxiliar):
+  //   Σ compromisos en cuentas de gasto mapeadas a los 6 fondos del
+  //   catálogo, financiados con ICLD/SGP-LD. Sirve como referencia
+  //   cruzada (cuánto efectivamente fluye a fondos vía gasto), pero NO
+  //   se usa como deducción principal.
+  // ──────────────────────────────────────────────────────────────────────
+  let deduccionFondosCompromisos = 0;
+  const deduccionFondosBreakdown: Record<string, {
+    fondoId: string;
+    fondoNombre: string;
+    valor: number;
+    detalle: { cuenta: string; nombre: string; fuente: string; valor: number }[];
+  }> = {};
+  for (const f of fondosDeduccion) {
+    deduccionFondosBreakdown[f.id] = {
+      fondoId: f.id,
+      fondoNombre: f.nombre,
+      valor: 0,
+      detalle: [],
+    };
+  }
+
   for (const row of ingresosLeaf) {
     const fuenteNombre = row.nom_fuentes_financiacion || "";
     const fuenteCodigo = (row.cod_fuentes_financiacion || "").split(" ")[0].trim();
+    const cuenta = (row.cuenta || "").trim();
+    const recaudo = parseFloat(row.total_recaudo || "0");
 
-    // C2: Check if this is a destinación específica fuente carved from ICLD
-    if (FUENTES_DEDUCCION_ICLD.includes(fuenteCodigo)) {
-      const recaudo = parseFloat(row.total_recaudo || "0");
-      if (recaudo > 0) {
-        deduccionReportada += recaudo;
-        // Aggregate by fuente code
-        const existing = deduccionReportadaDetalle.find(
-          (d) => d.codigoFuente === fuenteCodigo
-        );
-        if (existing) {
-          existing.valor += recaudo;
-        } else {
-          deduccionReportadaDetalle.push({
-            codigoFuente: fuenteCodigo,
-            nombreFuente: fuenteNombre,
-            valor: recaudo,
-          });
-        }
+    // ──────────────────────────────────────────────────────────────────────
+    // Deducción reportada — recaudo en fuentes de destinación específica
+    // (carved del ICLD por norma, p.ej. Ley 99/93 ambiental). Se acumula
+    // independientemente del filtro de bruto.
+    // ──────────────────────────────────────────────────────────────────────
+    if (FUENTES_DEDUCCION_ICLD.includes(fuenteCodigo) && recaudo > 0) {
+      deduccionReportada += recaudo;
+      const existing = deduccionReportadaDetalle.find(
+        (d) => d.codigoFuente === fuenteCodigo
+      );
+      if (existing) {
+        existing.valor += recaudo;
+      } else {
+        deduccionReportadaDetalle.push({
+          codigoFuente: fuenteCodigo,
+          nombreFuente: fuenteNombre,
+          valor: recaudo,
+        });
       }
     }
 
-    // C1: Only ICLD fuentes count for ICLD bruto
-    const fuenteIsICLD = isICLDFuente(fuenteNombre);
-    if (!fuenteIsICLD) continue;
+    // ──────────────────────────────────────────────────────────────────────
+    // Lectura de campos de norma (vienen sólo en uploads CUIPO directos;
+    // el API datos.gov.co no los expone)
+    // ──────────────────────────────────────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowAny = row as unknown as Record<string, any>;
+    const tipoNormaRow = typeof rowAny.tipo_norma === "string"
+      ? (rowAny.tipo_norma as string)
+      : (typeof rowAny.tipoNorma === "string" ? (rowAny.tipoNorma as string) : undefined);
+    const fechaNormaRow = typeof rowAny.fecha_norma === "string"
+      ? (rowAny.fecha_norma as string)
+      : (typeof rowAny.fechaNorma === "string" ? (rowAny.fechaNorma as string) : undefined);
 
-    // Exclude Rendimientos Financieros (RF) and Recursos del Balance (RB)
-    // from ICLD — only vigencia actual income should count
-    if (isRendimientosFinancieros(fuenteNombre) || isRecursosDelBalance(fuenteNombre)) {
-      continue;
-    }
-
-    const recaudo = parseFloat(row.total_recaudo || "0");
+    // ──────────────────────────────────────────────────────────────────────
+    // ICLD Bruto — única condición: la cuenta es uno de los 55 códigos
+    // CUIPO de la whitelist (`ICLD_CUENTAS_VALIDAS`). No se filtra por
+    // fuente ni se excluyen RF/RB; la whitelist ya garantiza que sólo
+    // entran rubros que por naturaleza son de libre destinación.
+    // ──────────────────────────────────────────────────────────────────────
+    if (!isICLDCuenta(cuenta)) continue;
     icldBruto += recaudo;
 
-    // Only count toward validated ICLD if account code is also valid
-    const esValido = isICLDCuenta(row.cuenta);
+    // ──────────────────────────────────────────────────────────────────────
+    // ICLD Validado — bruto + 3 condiciones de Johan (TAREAS.xlsx):
+    //   ① fuente ∈ {1.2.1.0.00 ICLD, 1.2.4.3.04 SGP-LD}
+    //   ② tipoNorma  contiene "NO APLICA"
+    //   ③ fechaNorma = "NO APLICA"
+    // ──────────────────────────────────────────────────────────────────────
+    const validacion = isICLDCuentaConCondiciones(
+      cuenta,
+      fuenteCodigo,
+      tipoNormaRow,
+      fechaNormaRow
+    );
+    const esValido = validacion.valida;
     if (esValido) {
       icldValidado += recaudo;
+    } else if (recaudo > 0) {
+      // Falló alguna condición → entra a la deducción de fondos por norma.
+      // Razón: rubro está en la whitelist (cuenta válida ICLD), pero ya sea
+      // la fuente NO es ICLD/SGP-LD, o algún campo de norma (tipo, fecha,
+      // número) NO contiene "NO APLICA" — i.e. tiene una destinación
+      // específica que la saca del ICLD efectivo.
+      deduccionFondosPorNorma += recaudo;
+      deduccionFondosPorNormaDetalle.push({
+        cuenta,
+        nombre: row.nombre_cuenta || cuenta,
+        fuente: fuenteNombre,
+        valor: recaudo,
+        razon: validacion.errores.join("; "),
+      });
     }
 
     // Collect per-rubro ICLD detail for Excel export
@@ -296,8 +467,8 @@ export async function evaluateLey617(
   for (const row of ingresosLeaf) {
     const fuenteCodigo = (row.cod_fuentes_financiacion || "").split(" ")[0].trim();
     const fuenteNombre = row.nom_fuentes_financiacion || "";
-    const fuenteIsICLD = isICLDFuente(fuenteNombre);
-    if (!fuenteIsICLD) continue;
+    // Las alertas se evalúan sobre cuentas ICLD válidas (mismo criterio que el bruto)
+    if (!isICLDCuenta((row.cuenta || "").trim())) continue;
 
     const recaudo = parseFloat(row.total_recaudo || "0");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -332,11 +503,11 @@ export async function evaluateLey617(
     }
   }
 
-  // C2: Use reported deductions from data; fall back to 3% calculated if no data
-  const deduccionCalculada = icldValidado * TOTAL_DEDUCCION_FONDOS;
-  // Use the reported value when available, otherwise use the calculated 3%
-  const deduccionFondos = deduccionReportada > 0 ? deduccionReportada : deduccionCalculada;
-  const icldNeto = icldValidado - deduccionFondos;
+  // Deducción Calculada (modo manual %) = Σ (% por fondo) × ICLD Validado.
+  // Sólo se usa como fallback cuando la deducción por compromisos es 0.
+  const deduccionCalculada = icldValidado * porcentajeFondosTotal;
+  // NOTA: la deducción real (Opción B) y `icldNeto` se calculan más abajo,
+  // después de iterar gastos para acumular `deduccionFondosCompromisos`.
 
   // -------------------------------------------------------------------------
   // 2. Aggregate operating expenses (cuenta starts with "2.1") by section,
@@ -400,8 +571,40 @@ export async function evaluateLey617(
       });
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Deducción Fondos (Opción B) — atribuye este compromiso al fondo cuyo
+    // prefijo de cuenta es el más largo que matchea la cuenta actual.
+    // Sólo cuenta si el gasto se financió con ICLD/SGP-LD (mismo filtro
+    // que ya aplicó arriba). El resultado se acumula independiente de la
+    // sección presupuestal.
+    // ──────────────────────────────────────────────────────────────────────
+    if (compromisos > 0) {
+      const fondo = fondoParaCuenta(cuenta.trim(), fondosDeduccion);
+      if (fondo) {
+        deduccionFondosCompromisos += compromisos;
+        const bucket = deduccionFondosBreakdown[fondo.id];
+        bucket.valor += compromisos;
+        bucket.detalle.push({
+          cuenta: cuenta.trim(),
+          nombre: row.nombre_cuenta || cuenta,
+          fuente: fuenteCodigo,
+          valor: compromisos,
+        });
+      }
+    }
+
     seccionMap.set(seccionName, existing);
   }
+
+  // -------------------------------------------------------------------------
+  // 2.5. Deducción Fondos (USADA) — modo principal: POR NORMA
+  //   = Σ recaudo de rubros en whitelist que NO cumplen las condiciones
+  //     de fuente o norma. Equivale a `icldBruto - icldValidado`.
+  //   Las otras métricas (compromisos B, reportada, calculada %) se
+  //   exponen como auxiliares en el resultado pero NO impactan icldNeto.
+  // -------------------------------------------------------------------------
+  const deduccionFondos = deduccionFondosPorNorma;
+  const icldNeto = icldValidado - deduccionFondos;
 
   // -------------------------------------------------------------------------
   // 3. Build per-section results
@@ -515,12 +718,19 @@ export async function evaluateLey617(
   return {
     // Backward compat: icldTotal = icldNeto (so Ley617Panel still works)
     icldTotal: icldNeto,
+    dataSource: useLocal ? "local" : "api",
     // New detailed ICLD fields
     icldBruto,
     icldValidado,
     deduccionFondos,
     deduccionReportada,
     deduccionCalculada,
+    porcentajeFondosTotal,
+    fondosDeduccion,
+    deduccionFondosPorNorma,
+    deduccionFondosPorNormaDetalle,
+    deduccionFondosCompromisos,
+    deduccionFondosBreakdown: Object.values(deduccionFondosBreakdown),
     deduccionReportadaDetalle,
     icldNeto,
     accionesMejora,
