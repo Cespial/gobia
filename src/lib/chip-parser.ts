@@ -449,7 +449,8 @@ export function detectCuipoFileType(buffer: ArrayBuffer): CuipoFileType {
     if (text.includes('COMPROMISOS') && text.includes('OBLIGACIONES')) {
       return 'ejec_gas';
     }
-    if (text.includes('PRESUPUESTO INICIAL') && text.includes('PRESUPUESTO DEFINITIVO')) {
+    if ((text.includes('PRESUPUESTO INICIAL') && text.includes('PRESUPUESTO DEFINITIVO')) ||
+        (text.includes('APROPIACION INICIAL') && text.includes('APROPIACION DEFINITIVA'))) {
       // Distinguish prog_ing vs prog_gas by looking for gastos-specific columns
       if (text.includes('VIGENCIA') || text.includes('SECCION') || text.includes('BPIN')) {
         return 'prog_gas';
