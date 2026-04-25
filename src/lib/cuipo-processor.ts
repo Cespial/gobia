@@ -299,14 +299,22 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
   const progIngTotal = cuipoData.progIngresos?.find(
     (r) => r.cuenta.trim() === "1" || r.cuenta.trim() === "1 "
   );
-  const progGasTotal = cuipoData.progGastos?.find(
+  // Prog gastos: SUM the first 3 "2" parent rows (Admin + Concejo + Personería).
+  // The CHIP file has cuenta="2" rows for: VIGENCIA ACTUAL (3 secciones) +
+  // CUENTAS POR PAGAR (1) + RESERVAS (1). We only want VIGENCIA ACTUAL.
+  // Since the parser doesn't preserve vigencia, we take the first 3 "2" rows
+  // (which are always VIGENCIA ACTUAL before CXP and RESERVAS).
+  const progGasRows2 = (cuipoData.progGastos ?? []).filter(
     (r) => r.cuenta.trim() === "2" || r.cuenta.trim() === "2 "
   );
+  const progGasVA = progGasRows2.slice(0, 3); // First 3 = VA (Admin, Concejo, Personería)
+  const pptoInicialGastosSum = progGasVA.reduce((s, r) => s + (r.presupuestoInicial ?? 0), 0);
+  const pptoDefinitivoGastosSum = progGasVA.reduce((s, r) => s + (r.presupuestoDefinitivo ?? 0), 0);
 
   const pptoInicialIngresos = progIngTotal?.presupuestoInicial ?? 0;
   const pptoDefinitivoIngresos = progIngTotal?.presupuestoDefinitivo ?? 0;
-  const pptoInicialGastos = progGasTotal?.presupuestoInicial ?? 0;
-  const pptoDefinitivoGastos = progGasTotal?.presupuestoDefinitivo ?? 0;
+  const pptoInicialGastos = pptoInicialGastosSum;
+  const pptoDefinitivoGastos = pptoDefinitivoGastosSum;
 
   const equilibrioInicial = pptoInicialIngresos > 0 ? pptoInicialIngresos - pptoInicialGastos : 0;
   const equilibrioDefinitivo = pptoDefinitivoIngresos > 0 ? pptoDefinitivoIngresos - pptoDefinitivoGastos : 0;
