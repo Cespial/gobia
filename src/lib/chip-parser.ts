@@ -42,7 +42,10 @@ export interface FUTCierreData {
   vigencia: string; // "2024" or "2025"
 }
 
-export function parseFUTCierre(buffer: ArrayBuffer): FUTCierreData {
+export function parseFUTCierre(
+  buffer: ArrayBuffer,
+  vigenciaOverride?: string,
+): FUTCierreData {
   const workbook = XLSX.read(buffer, { type: 'array' });
   // Try to find the right sheet
   const sheetName = workbook.SheetNames.find(n =>
@@ -100,7 +103,7 @@ export function parseFUTCierre(buffer: ArrayBuffer): FUTCierreData {
 
   // Try to detect vigencia from sheet name
   const yearMatch = sheetName.match(/(\d{4})/);
-  const vigencia = yearMatch ? yearMatch[1] : 'unknown';
+  const vigencia = vigenciaOverride ?? (yearMatch ? yearMatch[1] : 'unknown');
 
   return { rows, total, vigencia };
 }
@@ -137,7 +140,10 @@ export interface CGNSaldosData {
   unidad: "miles" | "pesos"; // detected from header: "(Miles)" vs "(Pesos)"
 }
 
-export function parseCGNSaldos(buffer: ArrayBuffer): CGNSaldosData {
+export function parseCGNSaldos(
+  buffer: ArrayBuffer,
+  trimestreOverride?: CGNSaldosData["trimestre"],
+): CGNSaldosData {
   const workbook = XLSX.read(buffer, { type: 'array' });
   const sheetName = workbook.SheetNames.find(n =>
     n.toUpperCase().includes('SALDO') || n.toUpperCase().includes('CGN')
@@ -198,7 +204,7 @@ export function parseCGNSaldos(buffer: ArrayBuffer): CGNSaldosData {
   // Detect trimester from sheet name
   const triMap: Record<string, string> = { 'I': 'I', 'II': 'II', 'III': 'III', 'IV': 'IV', '1': 'I', '2': 'II', '3': 'III', '4': 'IV' };
   const trimMatch = sheetName.match(/(\d+|I{1,3}V?)\s*$/i);
-  const trimestre = trimMatch ? (triMap[trimMatch[1].toUpperCase()] || 'IV') : 'IV';
+  const trimestre = trimestreOverride ?? (trimMatch ? (triMap[trimMatch[1].toUpperCase()] || 'IV') : 'IV');
 
   return { rows, activos, pasivos, patrimonio, ingresos, gastos, trimestre, unidad };
 }

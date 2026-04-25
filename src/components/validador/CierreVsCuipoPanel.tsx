@@ -4,7 +4,7 @@ import { CheckCircle2, XCircle, Upload } from "lucide-react";
 import type { CierreVsCuipoResult } from "@/lib/validaciones/cierre-vs-cuipo";
 
 function formatCOP(value: number): string {
-  if (Math.abs(value) >= 1e6) { const m = value / 1e6; return `$${Math.abs(m) >= 1000 ? m.toFixed(0) : m.toFixed(1)}M`; }
+  if (Math.abs(value) >= 1e6) { const m = value / 1e6; return `$${Math.abs(m) >= 1000 ? Math.round(m).toLocaleString("es-CO") : m.toFixed(1)}M`; }
   if (Math.abs(value) >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
   return `$${Math.round(value).toLocaleString("es-CO")}`;
 }

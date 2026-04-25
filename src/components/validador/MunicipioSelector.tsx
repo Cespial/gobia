@@ -7,7 +7,7 @@ import { MUNICIPIOS, DEPARTAMENTOS, type Municipio } from "@/data/municipios";
 
 function formatCOP(value: number): string {
   
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
+  if (value >= 1e6) { const m = value / 1e6; return `$${m >= 1000 ? Math.round(m).toLocaleString("es-CO") : m.toFixed(0)}M`; }
   return `$${value.toLocaleString("es-CO")}`;
 }
 
@@ -74,9 +74,9 @@ export default function MunicipioSelector() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           placeholder="Buscar municipio por nombre, departamento o código DANE..."
-          className="w-full rounded-xl border border-[var(--gray-700)] bg-[var(--gray-800)] py-4 pl-12 pr-4 text-white placeholder-[var(--gray-500)] outline-none transition-all focus:border-[var(--ochre)] focus:ring-1 focus:ring-[var(--ochre)]/30"
+          className="w-full rounded-xl border border-[var(--gray-700)] bg-[var(--gray-800)] py-4 pl-12 pr-4 text-white placeholder-[var(--gray-500)] outline-none transition-all focus:border-[var(--ochre)] focus:ring-1 focus:ring-[var(--ochre)]/30 sm:pr-32"
         />
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 rounded-md bg-[var(--gray-700)] px-2 py-0.5 text-xs text-[var(--gray-400)]">
+        <span className="absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md bg-[var(--gray-700)] px-2 py-0.5 text-xs text-[var(--gray-400)] sm:inline-flex">
           {MUNICIPIOS.length} municipios
         </span>
       </div>

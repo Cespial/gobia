@@ -18,6 +18,7 @@ import type { AguaPotableResult } from "@/lib/validaciones/agua-potable";
 import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fiscal";
 import type { CierreVsCuipoResult } from "@/lib/validaciones/cierre-vs-cuipo";
 import type { MapaInversionesResult } from "@/lib/validaciones/mapa-inversiones";
+import type { ValidationInputSource, ValidationRun, ValidationModuleStatus } from "@/lib/validation-run";
 
 // ---------------------------------------------------------------------------
 // Local type mirroring ValidadorDashboard's EquilibrioData
@@ -245,7 +246,7 @@ const altRowCenterStyle = {
 
 function statusStyle(status: string) {
   const s = (status || "").toUpperCase().trim();
-  if (["CUMPLE", "SI", "OK", "CORRECTO"].includes(s)) {
+  if (["CUMPLE", "SI", "OK", "CORRECTO", "USADO"].includes(s)) {
     return {
       font: { bold: true, color: { rgb: GREEN_TEXT }, sz: 9, name: "Calibri" },
       fill: { fgColor: { rgb: GREEN_BG } },
@@ -261,7 +262,7 @@ function statusStyle(status: string) {
       border: thinBorder,
     };
   }
-  if (["PARCIAL", "ALERTA", "PENDIENTE"].includes(s)) {
+  if (["PARCIAL", "ALERTA", "PENDIENTE", "REQUIERE INSUMO", "EXCLUIDO", "FALTANTE"].includes(s)) {
     return {
       font: {
         bold: true,
@@ -485,6 +486,7 @@ function writeEmptyRow(
 export interface ExportData {
   municipio: { name: string; code: string; chipCode: string };
   periodo: string;
+  validationRun?: ValidationRun | null;
   equilibrio?: EquilibrioData | null;
   cierreVsCuipo?: CierreVsCuipoResult | null;
   ley617?: Ley617Result | null;
@@ -494,6 +496,52 @@ export interface ExportData {
   eficiencia?: EficienciaFiscalResult | null;
   idf?: IDFResult | null;
   mapaInversiones?: MapaInversionesResult | null;
+}
+
+function validationStatusLabel(status: ValidationModuleStatus): string {
+  if (status === "cumple") return "CUMPLE";
+  if (status === "no_cumple") return "NO CUMPLE";
+  if (status === "upload_needed") return "REQUIERE INSUMO";
+  if (status === "pendiente") return "PENDIENTE";
+  if (status === "error") return "ERROR";
+  if (status === "loading") return "CALCULANDO";
+  return "PARCIAL";
+}
+
+function traceSourceLabel(source: string): string {
+  if (source === "api") return "API publica";
+  if (source === "fixture") return "Demo precargado";
+  if (source === "uploaded") return "Archivo cargado";
+  return "Faltante";
+}
+
+function traceRunModeLabel(mode: ValidationRun["runMode"]): string {
+  if (mode === "demo_fixture") return "Demo precargado";
+  if (mode === "mixed") return "Mixta";
+  return "API publica";
+}
+
+function traceInputStatusLabel(status: ValidationInputSource["status"]): string {
+  if (status === "available") return "USADO";
+  if (status === "partial") return "PARCIAL";
+  if (status === "excluded") return "EXCLUIDO";
+  return "FALTANTE";
+}
+
+function tracePeriodLabel(periodo: string): string {
+  if (periodo === "20251201") return "T4 2025 Demo / Cierre anual";
+  const trimester = ({ "03": "T1", "06": "T2", "09": "T3", "12": "T4" } as Record<string, string>)[periodo.slice(4, 6)];
+  return trimester ? `${trimester} ${periodo.slice(0, 4)}` : periodo;
+}
+
+function traceInputDetail(input: ValidationInputSource): string {
+  const details = [
+    input.excludedReason ?? input.detail,
+    input.expectedPeriod ? `Esperado: ${input.expectedPeriod}` : "",
+    input.actualPeriod ? `Detectado: ${input.actualPeriod}` : "",
+    input.rows !== undefined ? `Filas: ${input.rows}` : "",
+  ].filter(Boolean);
+  return details.join(" | ");
 }
 
 export function exportValidacionesToExcel(data: ExportData): void {
@@ -521,6 +569,8 @@ export function exportValidacionesToExcel(data: ExportData): void {
 
 function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
   const ws: XLSX.WorkSheet = {};
+  const run = data.validationRun ?? null;
+  const periodLabel = run?.coverage.periodLabel ?? tracePeriodLabel(data.periodo);
   const cols = 3;
   let r = 0;
 
@@ -536,7 +586,10 @@ function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
   writeText(ws, r, 0, "Codigo CHIP:", labelStyle);
   writeText(ws, r, 1, data.municipio.chipCode, { ...codeStyle, font: { ...codeStyle.font, sz: 10 } });
   writeText(ws, r++, 2, "", dataStyle);
-  writeKV(ws, r++, "Periodo:", data.periodo, cols);
+  writeKV(ws, r++, "Periodo:", `${periodLabel} (${data.periodo})`, cols);
+  if (run) {
+    writeKV(ws, r++, "Modo de corrida:", traceRunModeLabel(run.runMode), cols);
+  }
   writeKV(ws, r++, "Fecha de exportacion:", new Date().toISOString().split("T")[0], cols);
   writeEmptyRow(ws, r++, cols);
 
@@ -546,20 +599,56 @@ function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
     border: thinBorder,
     alignment: { horizontal: "left" as const, wrapText: true },
   };
-  writeText(ws, r, 0, "Nota: Datos del periodo T3 (Sep 2025). Para cierre anual (T4/Dic), cargar archivos CUIPO desde CHIP.", periodNoteStyle);
+  writeText(
+    ws,
+    r,
+    0,
+    run
+      ? `Nota: ${run.coverage.dataSourcesSummary} Los insumos excluidos o faltantes no se mezclan silenciosamente con el calculo.`
+      : `Nota: Datos del periodo ${periodLabel}. Para cierre anual (T4/Dic), cargar archivos CUIPO desde CHIP.`,
+    periodNoteStyle,
+  );
   for (let c = 1; c < cols; c++) writeText(ws, r, c, "", dataStyle);
   if (!ws["!merges"]) ws["!merges"] = [];
   ws["!merges"].push({ s: { r, c: 0 }, e: { r, c: cols - 1 } });
   r++;
   writeEmptyRow(ws, r++, cols);
 
+  if (run) {
+    writeSectionRow(ws, r++, "COBERTURA DE LA CORRIDA", cols);
+    writeKV(ws, r++, "Estado global:", `${run.summary.label} - ${run.summary.detail}`, cols);
+    writeKV(ws, r++, "Insumos:", `${run.coverage.availableInputs} usados, ${run.coverage.missingInputs} faltantes, ${run.coverage.excludedInputs} excluidos`, cols);
+    writeKV(ws, r++, "Validaciones:", `${run.coverage.completeModules} completas, ${run.coverage.partialModules} parciales, ${run.coverage.blockedModules} bloqueadas`, cols);
+    writeEmptyRow(ws, r++, cols);
+
+    if (run.warnings.length > 0) {
+      writeSectionRow(ws, r++, "ADVERTENCIAS AUDITABLES", cols);
+      writeHeaderRow(ws, r++, ["ADVERTENCIA", "SEVERIDAD", "DETALLE"]);
+      for (let i = 0; i < run.warnings.length; i++) {
+        const item = run.warnings[i];
+        const ds = i % 2 === 1 ? altRowStyle : dataStyle;
+        writeText(ws, r, 0, item.title, ds);
+        writeText(ws, r, 1, item.severity.toUpperCase(), statusStyle(item.severity === "info" ? "PENDIENTE" : "ALERTA"));
+        writeText(ws, r, 2, item.detail, ds);
+        r++;
+      }
+      writeEmptyRow(ws, r++, cols);
+    }
+  }
+
   // Module summary table header
   writeHeaderRow(ws, r++, ["MODULO", "ESTADO", "OBSERVACION"]);
 
   // Module rows
-  const modules: [string, string, string][] = [];
+  const modules: [string, string, string][] = run
+    ? run.modules.map((module) => [
+        module.label,
+        validationStatusLabel(module.status),
+        module.summary,
+      ])
+    : [];
 
-  if (data.equilibrio) {
+  if (!data.validationRun && data.equilibrio) {
     const diff = Math.abs(
       data.equilibrio.totalIngresos - (data.equilibrio.totalCompromisos || 0),
     );
@@ -569,56 +658,56 @@ function addResumenSheet(wb: XLSX.WorkBook, data: ExportData): void {
       `Diferencia: $${diff.toLocaleString("es-CO")}`,
     ]);
   }
-  if (data.cierreVsCuipo) {
+  if (!data.validationRun && data.cierreVsCuipo) {
     modules.push([
       "Cierre FUT vs CUIPO",
       data.cierreVsCuipo.status.toUpperCase(),
       `${data.cierreVsCuipo.cruces.length} cruces`,
     ]);
   }
-  if (data.ley617) {
+  if (!data.validationRun && data.ley617) {
     modules.push([
       "Ley 617 / SI.17",
       data.ley617.status.toUpperCase(),
       `Ratio: ${(data.ley617.ratioGlobal * 100).toFixed(2)}% / Limite: ${(data.ley617.limiteGlobal * 100).toFixed(0)}%`,
     ]);
   }
-  if (data.cga) {
+  if (!data.validationRun && data.cga) {
     modules.push([
       "Equilibrio CGA",
       data.cga.status.toUpperCase(),
       `${data.cga.checks.length} chequeos`,
     ]);
   }
-  if (data.agua) {
+  if (!data.validationRun && data.agua) {
     modules.push([
       "Agua Potable",
       data.agua.status.toUpperCase(),
       `${data.agua.subValidaciones.length} sub-validaciones`,
     ]);
   }
-  if (data.sgp) {
+  if (!data.validationRun && data.sgp) {
     modules.push([
       "SGP",
       data.sgp.status.toUpperCase(),
       `${data.sgp.componentes.length} componentes`,
     ]);
   }
-  if (data.eficiencia) {
+  if (!data.validationRun && data.eficiencia) {
     modules.push([
       "Eficiencia Fiscal",
       data.eficiencia.status.toUpperCase(),
       `${data.eficiencia.refrendaCount || 0} impuestos refrendados`,
     ]);
   }
-  if (data.idf) {
+  if (!data.validationRun && data.idf) {
     modules.push([
       "Desempeno Fiscal IDF",
       data.idf.status.toUpperCase(),
       `Score: ${data.idf.idfTotal.toFixed(1)} (${data.idf.ranking})`,
     ]);
   }
-  if (data.mapaInversiones) {
+  if (!data.validationRun && data.mapaInversiones) {
     modules.push([
       "Mapa de Inversiones",
       data.mapaInversiones.status.toUpperCase(),
@@ -1564,7 +1653,8 @@ function addMapaSheet(wb: XLSX.WorkBook, data: MapaInversionesResult): void {
 
 function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
   const ws: XLSX.WorkSheet = {};
-  const cols = 3;
+  const run = data.validationRun ?? null;
+  const cols = 5;
   let r = 0;
 
   writeTitle(ws, r++, "TRAZABILIDAD DE FUENTES DE DATOS", cols);
@@ -1573,77 +1663,119 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
   writeKV(ws, r++, "Municipio:", data.municipio.name, cols);
   writeText(ws, r, 0, "Codigo DANE:", labelStyle);
   writeText(ws, r, 1, data.municipio.code, { ...codeStyle, font: { ...codeStyle.font, sz: 10 } });
-  writeText(ws, r++, 2, "", dataStyle);
+  for (let c = 2; c < cols; c++) writeText(ws, r, c, "", dataStyle);
+  r++;
   writeText(ws, r, 0, "Codigo CHIP:", labelStyle);
   writeText(ws, r, 1, data.municipio.chipCode, { ...codeStyle, font: { ...codeStyle.font, sz: 10 } });
-  writeText(ws, r++, 2, "", dataStyle);
-  writeKV(ws, r++, "Periodo:", data.periodo, cols);
+  for (let c = 2; c < cols; c++) writeText(ws, r, c, "", dataStyle);
+  r++;
+  writeKV(ws, r++, "Periodo:", `${run?.coverage.periodLabel ?? tracePeriodLabel(data.periodo)} (${data.periodo})`, cols);
+  if (run) {
+    writeKV(ws, r++, "Modo de corrida:", traceRunModeLabel(run.runMode), cols);
+  }
   writeKV(ws, r++, "Fecha de exportacion:", new Date().toISOString().split("T")[0], cols);
   writeKV(ws, r++, "Hora de exportacion (UTC):", new Date().toISOString(), cols);
   writeEmptyRow(ws, r++, cols);
 
   // Data sources table
-  writeSectionRow(ws, r++, "FUENTES DE DATOS Y PARAMETROS API", cols);
-  writeHeaderRow(ws, r++, ["FUENTE", "DESCRIPCION / QUERY", "URL"]);
+  writeSectionRow(ws, r++, "FUENTES, COMPATIBILIDAD Y EXCLUSIONES", cols);
+  writeHeaderRow(ws, r++, ["INSUMO", "ESTADO", "ORIGEN", "PERIODO", "DETALLE / RAZON"]);
   const freezeRow = r;
 
   const dane = data.municipio.code;
   const chip = data.municipio.chipCode;
   const periodo = data.periodo;
 
-  const sources: [string, string, string][] = [
-    [
-      "CUIPO Ejecucion Ingresos",
-      `datos.gov.co - 9axr-9gnb | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
-      "https://www.datos.gov.co/resource/9axr-9gnb.json",
-    ],
-    [
-      "CUIPO Ejecucion Gastos",
-      `datos.gov.co - 4f7r-epif | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
-      "https://www.datos.gov.co/resource/4f7r-epif.json",
-    ],
-    [
-      "CUIPO Programacion Ingresos",
-      `datos.gov.co - e84r-mfgi | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
-      "https://www.datos.gov.co/resource/e84r-mfgi.json",
-    ],
-    [
-      "CUIPO Programacion Gastos",
-      `datos.gov.co - d9mu-h6ar | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
-      "https://www.datos.gov.co/resource/d9mu-h6ar.json",
-    ],
-    [
-      "SICODIS SGP",
-      `DNP API | codigo_dane='${dane}' periodo='${periodo}'`,
-      "https://sicodis.dnp.gov.co",
-    ],
-    [
-      "FUT Cierre Fiscal",
-      `CHIP upload | entidad='${chip}' vigencia='${periodo}'`,
-      "https://chip.gov.co",
-    ],
-    [
-      "CGN Saldos",
-      `CHIP upload | entidad='${chip}' vigencia='${periodo}'`,
-      "https://chip.gov.co",
-    ],
-  ];
+  const sources: [string, string, string, string, string][] = run
+    ? run.inputSources.map((input) => [
+        input.label,
+        traceInputStatusLabel(input.status),
+        traceSourceLabel(input.source),
+        input.actualPeriod || input.period || input.expectedPeriod || run.coverage.periodLabel,
+        traceInputDetail(input),
+      ])
+    : [
+        [
+          "CUIPO Ejecucion Ingresos",
+          "USADO",
+          "API publica",
+          tracePeriodLabel(periodo),
+          `datos.gov.co - 9axr-9gnb | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
+        ],
+        [
+          "CUIPO Ejecucion Gastos",
+          "USADO",
+          "API publica",
+          tracePeriodLabel(periodo),
+          `datos.gov.co - 4f7r-epif | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
+        ],
+        [
+          "CUIPO Programacion Ingresos",
+          "USADO",
+          "API publica",
+          tracePeriodLabel(periodo),
+          `datos.gov.co - e84r-mfgi | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
+        ],
+        [
+          "CUIPO Programacion Gastos",
+          "USADO",
+          "API publica",
+          tracePeriodLabel(periodo),
+          `datos.gov.co - d9mu-h6ar | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
+        ],
+        [
+          "SICODIS SGP",
+          "USADO",
+          "API publica",
+          tracePeriodLabel(periodo),
+          `DNP API | codigo_dane='${dane}' periodo='${periodo}'`,
+        ],
+        [
+          "FUT Cierre Fiscal",
+          "FALTANTE",
+          "Archivo cargado",
+          tracePeriodLabel(periodo),
+          `CHIP upload | entidad='${chip}' vigencia='${periodo}'`,
+        ],
+        [
+          "CGN Saldos",
+          "FALTANTE",
+          "Archivo cargado",
+          tracePeriodLabel(periodo),
+          `CHIP upload | entidad='${chip}' vigencia='${periodo}'`,
+        ],
+      ];
 
   for (let i = 0; i < sources.length; i++) {
-    const [fuente, desc, url] = sources[i];
+    const [fuente, estado, origen, periodoFuente, detalle] = sources[i];
     const isAlt = i % 2 === 1;
     const ds = isAlt ? altRowStyle : dataStyle;
 
     writeText(ws, r, 0, fuente, { ...ds, font: { ...ds.font, bold: true } });
-    writeText(ws, r, 1, desc, ds);
-    writeText(ws, r, 2, url, {
-      ...ds,
-      font: { ...ds.font, color: { rgb: SEPIA } },
-    });
+    writeText(ws, r, 1, estado, statusStyle(estado));
+    writeText(ws, r, 2, origen, ds);
+    writeText(ws, r, 3, periodoFuente, ds);
+    writeText(ws, r, 4, detalle, ds);
     r++;
   }
 
   writeEmptyRow(ws, r++, cols);
+
+  if (run?.warnings.length) {
+    writeSectionRow(ws, r++, "ADVERTENCIAS Y COBERTURA", cols);
+    writeHeaderRow(ws, r++, ["ADVERTENCIA", "SEVERIDAD", "REFERENCIA", "PERIODO", "DETALLE"]);
+    for (let i = 0; i < run.warnings.length; i++) {
+      const item = run.warnings[i];
+      const ds = i % 2 === 1 ? altRowStyle : dataStyle;
+      writeText(ws, r, 0, item.title, ds);
+      writeText(ws, r, 1, item.severity.toUpperCase(), statusStyle(item.severity === "info" ? "PENDIENTE" : "ALERTA"));
+      writeText(ws, r, 2, item.inputKey || item.moduleId || "corrida", ds);
+      writeText(ws, r, 3, run.coverage.periodLabel, ds);
+      writeText(ws, r, 4, item.detail, ds);
+      r++;
+    }
+    writeEmptyRow(ws, r++, cols);
+  }
 
   // Leaf-row detection note
   writeSectionRow(ws, r++, "NOTAS DE PROCESAMIENTO", cols);
@@ -1654,10 +1786,11 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
   };
   const processingNotes = [
     "Solo filas con fuente asignada (leaf rows). Filas de agregacion excluidas.",
-    `Periodo de datos: vigencia fiscal ${periodo}.`,
+    `Periodo de datos: ${run?.coverage.periodLabel ?? tracePeriodLabel(periodo)}.`,
+    run ? run.coverage.dataSourcesSummary : "",
     "Precision numerica: todos los valores con 2 decimales (#,##0.00) para auditabilidad.",
     "Los campos derivados (Reservas, CxP, Superavit, Saldo en Libros) se recalculan y verifican en la hoja Equilibrio.",
-  ];
+  ].filter(Boolean);
   for (const note of processingNotes) {
     writeText(ws, r, 0, note, noteStyle);
     writeText(ws, r, 1, "", dataStyle);
@@ -1709,7 +1842,9 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
     alignment: { horizontal: "left" as const, wrapText: true },
   };
   const supuestos = [
-    "1. Periodo: Los datos corresponden al periodo reportado en datos.gov.co. Si el periodo es T3 (Sep), las cifras representan ~75% de la ejecucion anual. Para datos de cierre anual (T4/Dic), cargar archivos CUIPO directamente desde CHIP.",
+    run
+      ? `1. Periodo: La corrida usa ${run.coverage.periodLabel}. Las fuentes incompatibles se listan como excluidas y no entran al calculo.`
+      : "1. Periodo: Los datos corresponden al periodo reportado en datos.gov.co. Para datos de cierre anual (T4/Dic), cargar archivos CUIPO directamente desde CHIP.",
     "2. Presupuesto de Ingresos: El dataset PROG_INGRESOS de datos.gov.co tiene schema no estandar. Los valores de presupuesto inicial y definitivo de ingresos solo estan disponibles cuando se cargan archivos CUIPO CHIP.",
     "3. Deduccion de fondos: Se usa la deduccion REPORTADA por el municipio (fuente 1.2.3.4.02). Si no se reporta, se calcula automaticamente como 3% del ICLD. La diferencia entre reportada y calculada es un hallazgo para el municipio.",
     "4. Leaf rows: Solo se suman filas con fuente de financiacion asignada (leaf rows). Las filas de agregacion (parent rows) se excluyen para evitar doble conteo.",
@@ -1726,7 +1861,7 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
   }
 
   setRange(ws, r - 1, cols - 1);
-  ws["!cols"] = [{ wch: 35 }, { wch: 55 }, { wch: 55 }];
+  ws["!cols"] = [{ wch: 34 }, { wch: 18 }, { wch: 20 }, { wch: 24 }, { wch: 70 }];
   freezeRows(ws, freezeRow);
   XLSX.utils.book_append_sheet(wb, ws, "Trazabilidad");
 }

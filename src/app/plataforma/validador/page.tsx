@@ -19,7 +19,7 @@ export default function ValidadorPage() {
       </div>
 
       {/* Stats */}
-      <div className="mx-auto mb-12 grid max-w-3xl grid-cols-3 gap-4">
+      <div className="mx-auto mb-12 grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-3">
         {[
           {
             icon: Shield,
@@ -31,13 +31,13 @@ export default function ValidadorPage() {
             icon: Database,
             label: "Fuentes de datos",
             value: "6",
-            desc: "CUIPO, SICODIS, FUT, CGN, SECOP, Deuda",
+            desc: "CUIPO, SICODIS, FUT, CGN, DNP",
           },
           {
             icon: Zap,
-            label: "Automatización",
-            value: "100%",
-            desc: "Sin Excel, sin pegado manual",
+            label: "Flujo guiado",
+            value: "IA",
+            desc: "Carga, valida y exporta evidencia",
           },
         ].map((s) => (
           <div

@@ -6,6 +6,7 @@ import ReportView from "@/components/validador/ReportView";
 
 interface Props {
   params: Promise<{ codigoMunicipio: string }>;
+  searchParams?: Promise<{ periodo?: string }>;
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -16,8 +17,14 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function ReportePage({ params }: Props) {
+export default async function ReportePage({ params, searchParams }: Props) {
   const { codigoMunicipio } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const requestedPeriodo =
+    typeof resolvedSearchParams.periodo === "string" &&
+    /^\d{8}$/.test(resolvedSearchParams.periodo)
+      ? resolvedSearchParams.periodo
+      : undefined;
   const municipio = MUNICIPIO_BY_CODE.get(codigoMunicipio);
   if (!municipio) notFound();
 
@@ -33,7 +40,7 @@ export default async function ReportePage({ params }: Props) {
         </Link>
       </div>
 
-      <ReportView municipio={municipio} />
+      <ReportView municipio={municipio} periodo={requestedPeriodo} />
     </div>
   );
 }
