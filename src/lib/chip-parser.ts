@@ -213,10 +213,11 @@ function toNum(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0;
   if (typeof val === 'number') return isNaN(val) ? 0 : val;
   let s = String(val).trim();
-  // Colombian format: "5405287257,00" (comma = decimal, no dots as thousands)
-  // If string ends with ,XX (comma + 1-2 digits), treat comma as decimal separator
+  // Colombian format: "1.234.567,89" (dots = thousands, comma = decimal)
+  // Also handles: "5405287257,00" (comma = decimal, no dots)
   if (/,\d{1,2}$/.test(s)) {
-    s = s.replace(',', '.');
+    // Has comma-decimal: strip dots (thousands), replace comma with period
+    s = s.replace(/\./g, '').replace(',', '.');
   } else {
     // Otherwise treat commas as thousands separators
     s = s.replace(/,/g, '');

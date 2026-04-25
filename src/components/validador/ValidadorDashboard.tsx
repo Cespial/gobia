@@ -329,10 +329,13 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error calculando validaciones";
       setRunError(message);
-      setResults((prev) => ({
-        ...prev,
-        equilibrio: { status: "error", label: message },
-      }));
+      setResults((prev) => {
+        const errorResults: Record<string, ValidationResult> = {};
+        for (const key of Object.keys(prev)) {
+          errorResults[key] = { status: "error", label: message };
+        }
+        return errorResults;
+      });
     }
   }, [
     periodo,

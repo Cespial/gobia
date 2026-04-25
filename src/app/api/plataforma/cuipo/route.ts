@@ -44,8 +44,14 @@ export async function GET(request: NextRequest) {
   const action = searchParams.get("action");
   const chipCode = searchParams.get("chip");
 
-  if (!chipCode) {
-    return NextResponse.json({ ok: false, error: "Falta parámetro chip" }, { status: 400 });
+  if (!chipCode || !/^\d{5,12}$/.test(chipCode)) {
+    return NextResponse.json({ ok: false, error: "Parámetro chip inválido" }, { status: 400 });
+  }
+
+  // Validate periodo format if present (used by multiple actions)
+  const periodo = searchParams.get("periodo");
+  if (periodo && !/^\d{6,8}$/.test(periodo)) {
+    return NextResponse.json({ ok: false, error: "Parámetro periodo inválido" }, { status: 400 });
   }
 
   try {

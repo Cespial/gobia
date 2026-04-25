@@ -1384,7 +1384,7 @@ function addAguaSheet(wb: XLSX.WorkBook, data: AguaPotableResult): void {
     writeNullableNumCell(ws, r, 2, s.valor1, ns, ds);
     writeText(ws, r, 3, s.valor2Label, ds);
     writeNullableNumCell(ws, r, 4, s.valor2, ns, ds);
-    writeCell(ws, r, 5, s.porcentaje ?? "", s.porcentaje !== null ? ps : ds);
+    writeCell(ws, r, 5, s.porcentaje !== null ? s.porcentaje / 100 : "", s.porcentaje !== null ? ps : ds);
     writeCell(ws, r, 6, s.umbral ?? "", s.umbral !== null ? ps : ds);
     writeText(ws, r, 7, s.status.toUpperCase(), statusStyle(s.status.toUpperCase()));
     r++;
@@ -1563,7 +1563,7 @@ function addEficienciaSheet(
     writeCell(ws, r, 3, t.cgnTotal ?? "", ns);
     writeText(ws, r, 4, t.cgnFormula ?? "", ds);
     writeCell(ws, r, 5, t.difference ?? "", ns);
-    writeCell(ws, r, 6, t.variancePct ?? "", t.variancePct !== null ? ps : ds);
+    writeCell(ws, r, 6, t.variancePct !== null ? t.variancePct / 100 : "", t.variancePct !== null ? ps : ds);
     writeCell(ws, r, 7, t.valorRefrendado ?? "", ns);
     const refrendaText =
       t.refrenda === null ? "N/D" : t.refrenda ? "SI" : "NO";

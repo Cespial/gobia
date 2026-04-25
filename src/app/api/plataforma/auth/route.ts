@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { timingSafeEqual } from "node:crypto";
 import {
   PLATAFORMA_AUTH_COOKIE_NAME,
   createPlataformaSessionToken,
@@ -22,7 +23,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (password === expected) {
+  const pwBuf = Buffer.from(String(password));
+  const expBuf = Buffer.from(expected);
+  const match = pwBuf.length === expBuf.length && timingSafeEqual(pwBuf, expBuf);
+
+  if (match) {
     const cookieStore = await cookies();
     cookieStore.set(
       PLATAFORMA_AUTH_COOKIE_NAME,

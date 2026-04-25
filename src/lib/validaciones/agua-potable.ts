@@ -177,7 +177,7 @@ export async function evaluateAguaPotable(
 
   let recaudoApsb = 0;
   for (const row of ejecIngresosApsb) {
-    recaudoApsb = parseFloat(row.total_recaudo || "0");
+    recaudoApsb += parseFloat(row.total_recaudo || "0");
   }
 
   // -------------------------------------------------------------------------
