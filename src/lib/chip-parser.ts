@@ -388,6 +388,7 @@ export interface CuipoGastosRow {
   cuenta: string;
   nombre: string;
   fuente: string;
+  codigoFuente: string;
   bpin: string;
   compromisos: number;
   obligaciones: number;
@@ -402,13 +403,18 @@ export interface CuipoProgIngresosRow {
   presupuestoDefinitivo: number;
 }
 
+export interface CuipoProgGastosRow extends CuipoProgIngresosRow {
+  vigencia: string;
+  seccion: string;
+}
+
 export type CuipoFileType = 'ejec_ing' | 'ejec_gas' | 'prog_ing' | 'prog_gas' | 'unknown';
 
 export interface CuipoData {
   ejecIngresos: CuipoIngresosRow[];
   ejecGastos: CuipoGastosRow[];
   progIngresos: CuipoProgIngresosRow[];
-  progGastos: CuipoProgIngresosRow[];
+  progGastos: CuipoProgGastosRow[];
   periodo: string;
   entidad: string;
 }
@@ -563,6 +569,7 @@ export function parseCuipoEjecGastos(buffer: ArrayBuffer): CuipoGastosRow[] {
   let colCuenta = -1;
   let colNombre = -1;
   let colFuente = -1;
+  let colCodFuente = -1;
   let colBpin = -1;
   let colCompromisos = -1;
   let colObligaciones = -1;
@@ -583,6 +590,7 @@ export function parseCuipoEjecGastos(buffer: ArrayBuffer): CuipoGastosRow[] {
       if (cell.includes('SECCION') || cell.includes('SECCIÓN')) colSeccion = j;
       if (cell === 'NOMBRE' || cell === 'CONCEPTO') colNombre = j;
       if (cell.includes('FUENTES DE FINANC') || cell === 'FUENTE' || cell === 'FUENTES') colFuente = j;
+      if (cell.includes('CODIGO DE LA FUENTE') || cell.includes('COD_FUENTE') || cell.includes('CÓDIGO FUENTE')) colCodFuente = j;
       if (cell === 'BPIN' || cell.includes('CODIGO BPIN')) colBpin = j;
       if (cell.includes('COMPROMISOS')) colCompromisos = j;
       if (cell.includes('OBLIGACIONES')) colObligaciones = j;
@@ -621,6 +629,7 @@ export function parseCuipoEjecGastos(buffer: ArrayBuffer): CuipoGastosRow[] {
       cuenta,
       nombre: colNombre >= 0 ? String(row[colNombre] || '').trim() : '',
       fuente,
+      codigoFuente: colCodFuente >= 0 ? String(row[colCodFuente] || '').trim() : '',
       bpin: colBpin >= 0 ? String(row[colBpin] || '').trim() : '',
       compromisos: colCompromisos >= 0 ? toCuipoNum(row[colCompromisos]) : 0,
       obligaciones: colObligaciones >= 0 ? toCuipoNum(row[colObligaciones]) : 0,
@@ -688,6 +697,76 @@ export function parseCuipoProgIngresos(buffer: ArrayBuffer): CuipoProgIngresosRo
 }
 
 /**
+ * Parse CUIPO Programación de Gastos file.
+ * Same structure as prog_ing but includes VIGENCIA GASTO and SECCION columns.
+ * Returns ALL rows with vigencia/seccion filled down.
+ */
+export function parseCuipoProgGastos(buffer: ArrayBuffer): CuipoProgGastosRow[] {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
+
+  let headerIdx = -1;
+  let colVigencia = -1;
+  let colSeccion = -1;
+  let colCuenta = -1;
+  let colNombre = -1;
+  let colInicial = -1;
+  let colDefinitivo = -1;
+
+  for (let i = 0; i < Math.min(jsonData.length, 15); i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '').toUpperCase().trim();
+
+      if (cell === 'CODIGO' || cell === 'CÓDIGO') {
+        colCuenta = j;
+        headerIdx = i;
+      }
+      if (cell === 'NOMBRE' || cell === 'CONCEPTO') colNombre = j;
+      if (cell.includes('VIGENCIA') && cell.includes('GASTO')) colVigencia = j;
+      if (cell.includes('SECCION') || cell.includes('SECCIÓN')) colSeccion = j;
+      if (cell.includes('PRESUPUESTO INICIAL') || cell.includes('APROPIACION INICIAL') || cell.includes('PPTO INICIAL')) colInicial = j;
+      if (cell.includes('PRESUPUESTO DEFINITIVO') || cell.includes('APROPIACION DEFINITIVA') || cell.includes('PPTO DEFINITIVO')) colDefinitivo = j;
+    }
+    if (headerIdx >= 0) break;
+  }
+
+  if (headerIdx < 0) return [];
+
+  const rows: CuipoProgGastosRow[] = [];
+  let lastVigencia = '';
+  let lastSeccion = '';
+
+  for (let i = headerIdx + 1; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // Fill-down vigencia and seccion
+    const rawVigencia = colVigencia >= 0 ? String(row[colVigencia] || '').trim() : '';
+    const rawSeccion = colSeccion >= 0 ? String(row[colSeccion] || '').trim() : '';
+    if (rawVigencia) lastVigencia = rawVigencia;
+    if (rawSeccion) lastSeccion = rawSeccion;
+
+    const cuenta = colCuenta >= 0 ? String(row[colCuenta] || '').trim() : '';
+    if (!cuenta) continue;
+
+    rows.push({
+      cuenta,
+      nombre: colNombre >= 0 ? String(row[colNombre] || '').trim() : '',
+      vigencia: lastVigencia,
+      seccion: lastSeccion,
+      presupuestoInicial: colInicial >= 0 ? toCuipoNum(row[colInicial]) : 0,
+      presupuestoDefinitivo: colDefinitivo >= 0 ? toCuipoNum(row[colDefinitivo]) : 0,
+    });
+  }
+
+  return rows;
+}
+
+/**
  * Parse multiple CUIPO files, auto-detecting types and combining results.
  */
 export function parseCuipoFiles(buffers: { name: string; buffer: ArrayBuffer }[]): CuipoData {
@@ -715,7 +794,7 @@ export function parseCuipoFiles(buffers: { name: string; buffer: ArrayBuffer }[]
         result.progIngresos = parseCuipoProgIngresos(buffer);
         break;
       case 'prog_gas':
-        result.progGastos = parseCuipoProgIngresos(buffer); // Same structure
+        result.progGastos = parseCuipoProgGastos(buffer);
         break;
     }
   }

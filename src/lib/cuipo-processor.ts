@@ -7,7 +7,7 @@
  */
 
 import type { CuipoData, CuipoProgIngresosRow } from "./chip-parser";
-import { FUENTES_CONSOLIDACION } from '@/data/fuentes-consolidacion';
+import { FUENTES_CONSOLIDACION, getConsolidacion } from '@/data/fuentes-consolidacion';
 
 // ---------------------------------------------------------------------------
 // Types (must match the EquilibrioData shape in ValidadorDashboard)
@@ -197,9 +197,19 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
     }
   >();
 
-  const emptyFuente = (nombre: string) => ({
+  /**
+   * Derive the aggregation key for a fuente row.
+   * Prefer codigoFuente (exact CUIPO code) when available; fall back to
+   * uppercase name so rows from different files still merge correctly.
+   */
+  function fuenteKey(codigoFuente: string | undefined, nombre: string): string {
+    const code = (codigoFuente ?? '').trim();
+    return code || nombre.toUpperCase().trim();
+  }
+
+  const emptyFuente = (nombre: string, codigoFuente?: string) => ({
     nombre,
-    codigo: matchFuenteToCode(nombre) || nombre,
+    codigo: (codigoFuente ?? '').trim() || matchFuenteToCode(nombre) || nombre,
     recaudo: 0,
     compromisos_va: 0,
     obligaciones_va: 0,
@@ -212,20 +222,20 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
 
   // Process income rows (leaf rows only — already filtered by parser)
   for (const row of cuipoData.ejecIngresos) {
-    const key = row.fuente.toUpperCase().trim();
+    const key = fuenteKey(row.codigoFuente, row.fuente);
     if (!key) continue;
 
-    const existing = fuenteMap.get(key) || emptyFuente(row.fuente);
+    const existing = fuenteMap.get(key) || emptyFuente(row.fuente, row.codigoFuente);
     existing.recaudo += row.totalRecaudo;
     fuenteMap.set(key, existing);
   }
 
   // Process expense rows (leaf rows only — already filtered by parser)
   for (const row of cuipoData.ejecGastos) {
-    const key = row.fuente.toUpperCase().trim();
+    const key = fuenteKey(row.codigoFuente, row.fuente);
     if (!key) continue;
 
-    const existing = fuenteMap.get(key) || emptyFuente(row.fuente);
+    const existing = fuenteMap.get(key) || emptyFuente(row.fuente, row.codigoFuente);
 
     const vigencia = row.vigencia.toUpperCase();
 
@@ -264,7 +274,7 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
     return {
       codigo: f.codigo,
       nombre: f.nombre,
-      consolidacion: getConsolidacionByName(f.nombre),
+      consolidacion: getConsolidacion(f.codigo) ?? getConsolidacionByName(f.nombre),
       recaudo: f.recaudo,
       compromisos: f.compromisos_va,
       obligaciones: f.obligaciones_va,
@@ -299,17 +309,21 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
   const progIngTotal = cuipoData.progIngresos?.find(
     (r) => r.cuenta.trim() === "1" || r.cuenta.trim() === "1 "
   );
-  // Prog gastos: SUM the first 3 "2" parent rows (Admin + Concejo + Personería).
-  // The CHIP file has cuenta="2" rows for: VIGENCIA ACTUAL (3 secciones) +
-  // CUENTAS POR PAGAR (1) + RESERVAS (1). We only want VIGENCIA ACTUAL.
-  // Since the parser doesn't preserve vigencia, we take the first 3 "2" rows
-  // (which are always VIGENCIA ACTUAL before CXP and RESERVAS).
+  // Prog gastos: SUM the "2" parent rows that belong to VIGENCIA ACTUAL.
+  // The parser now extracts the vigencia column, so we filter explicitly
+  // instead of relying on positional .slice(0,3).
   const progGasRows2 = (cuipoData.progGastos ?? []).filter(
-    (r) => r.cuenta.trim() === "2" || r.cuenta.trim() === "2 "
+    (r) => {
+      const cuenta = r.cuenta.trim();
+      if (cuenta !== "2" && cuenta !== "2 ") return false;
+      // Filter by vigencia column (extracted by parseCuipoProgGastos)
+      const vig = (r.vigencia ?? '').toUpperCase();
+      // Include if VIGENCIA ACTUAL or if vigencia is empty (fallback for legacy data)
+      return !vig || vig.includes('VIGENCIA ACTUAL');
+    }
   );
-  const progGasVA = progGasRows2.slice(0, 3); // First 3 = VA (Admin, Concejo, Personería)
-  const pptoInicialGastosSum = progGasVA.reduce((s, r) => s + (r.presupuestoInicial ?? 0), 0);
-  const pptoDefinitivoGastosSum = progGasVA.reduce((s, r) => s + (r.presupuestoDefinitivo ?? 0), 0);
+  const pptoInicialGastosSum = progGasRows2.reduce((s, r) => s + (r.presupuestoInicial ?? 0), 0);
+  const pptoDefinitivoGastosSum = progGasRows2.reduce((s, r) => s + (r.presupuestoDefinitivo ?? 0), 0);
 
   const pptoInicialIngresos = progIngTotal?.presupuestoInicial ?? 0;
   const pptoDefinitivoIngresos = progIngTotal?.presupuestoDefinitivo ?? 0;
