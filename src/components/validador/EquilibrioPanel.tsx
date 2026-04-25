@@ -420,6 +420,32 @@ export default function EquilibrioPanel({
         </div>
       )}
 
+      {/* Fórmulas de cálculo */}
+      <div className="mb-8 rounded-xl border border-[var(--gray-800)] bg-[var(--gray-900)]/60 p-4">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--gray-500)]">
+          Fórmulas de cálculo — Equilibrio Presupuestal
+        </h3>
+        <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { label: "Reservas Presupuestales", formula: "Compromisos − Obligaciones (Vigencia Actual)" },
+            { label: "Cuentas por Pagar", formula: "Obligaciones − Pagos (Vigencia Actual)" },
+            { label: "Superávit / Déficit", formula: "Total Recaudo (Ingresos) − Total Compromisos" },
+            { label: "Validador", formula: "Compromisos − Pagos − Reservas − CxP (debe ser = 0)" },
+            { label: "Saldo en Libros", formula: "Superávit + Reservas + CxP + Reservas Vig. Ant. + CxP Vig. Ant." },
+            { label: "% Ejecución", formula: "Total Compromisos / Presupuesto Definitivo Gastos × 100" },
+          ].map((f) => (
+            <div key={f.label} className="rounded-lg border border-[var(--gray-800)] bg-[var(--gray-800)]/40 px-3 py-2">
+              <div className="font-semibold text-[var(--ochre)]">{f.label}</div>
+              <div className="mt-0.5 font-mono text-[10px] text-[var(--gray-400)]">{f.formula}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[10px] text-[var(--gray-500)]">
+          Solo se suman filas con fuente de financiación asignada (leaf rows). Las filas de agregación se excluyen para evitar doble conteo.
+          El saldo en libros puede ser negativo cuando el superávit es negativo (déficit presupuestal).
+        </p>
+      </div>
+
       {/* D3: Toggle vista detallada / consolidada */}
       <div className="mb-4 flex items-center gap-3">
         <button
