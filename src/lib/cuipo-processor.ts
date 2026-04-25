@@ -293,32 +293,20 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
   const totalCxpVigAnterior = porFuente.reduce((s, f) => s + f.cxpVigAnterior, 0);
   const totalValidador = porFuente.reduce((s, f) => s + f.validador, 0);
 
-  // Programming totals (from uploaded prog_ing / prog_gas leaf rows)
-  const progIngInicial = sumProgramacionUploadByPrefixes(
-    cuipoData.progIngresos,
-    ["1"],
-    "presupuestoInicial"
+  // Programming totals — use the PARENT row (cuenta="1" or "2") directly
+  // because CHIP prog files have duplicate leaf rows (with and without
+  // detalle sectorial), causing 2x inflation if summed.
+  const progIngTotal = cuipoData.progIngresos?.find(
+    (r) => r.cuenta.trim() === "1" || r.cuenta.trim() === "1 "
   );
-  const progIngDefinitivo = sumProgramacionUploadByPrefixes(
-    cuipoData.progIngresos,
-    ["1"],
-    "presupuestoDefinitivo"
-  );
-  const progGasInicial = sumProgramacionUploadByPrefixes(
-    cuipoData.progGastos,
-    ["2"],
-    "presupuestoInicial"
-  );
-  const progGasDefinitivo = sumProgramacionUploadByPrefixes(
-    cuipoData.progGastos,
-    ["2"],
-    "presupuestoDefinitivo"
+  const progGasTotal = cuipoData.progGastos?.find(
+    (r) => r.cuenta.trim() === "2" || r.cuenta.trim() === "2 "
   );
 
-  const pptoInicialIngresos = progIngInicial.total ?? 0;
-  const pptoDefinitivoIngresos = progIngDefinitivo.total ?? 0;
-  const pptoInicialGastos = progGasInicial.total ?? 0;
-  const pptoDefinitivoGastos = progGasDefinitivo.total ?? 0;
+  const pptoInicialIngresos = progIngTotal?.presupuestoInicial ?? 0;
+  const pptoDefinitivoIngresos = progIngTotal?.presupuestoDefinitivo ?? 0;
+  const pptoInicialGastos = progGasTotal?.presupuestoInicial ?? 0;
+  const pptoDefinitivoGastos = progGasTotal?.presupuestoDefinitivo ?? 0;
 
   const equilibrioInicial = pptoInicialIngresos > 0 ? pptoInicialIngresos - pptoInicialGastos : 0;
   const equilibrioDefinitivo = pptoDefinitivoIngresos > 0 ? pptoDefinitivoIngresos - pptoDefinitivoGastos : 0;
