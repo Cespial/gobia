@@ -13,6 +13,10 @@ function getAuthSecret(): string | null {
   const secret = process.env.PLATAFORMA_AUTH_SECRET?.trim();
   if (secret) return secret;
 
+  // En producción exigimos el secreto dedicado: rotar PLATAFORMA_PASSWORD no debe
+  // invalidar sesiones, y la clave de firma debe vivir separada del password.
+  if (process.env.NODE_ENV === "production") return null;
+
   return getPlataformaPassword();
 }
 
