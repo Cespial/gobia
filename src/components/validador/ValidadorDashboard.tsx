@@ -58,6 +58,7 @@ const VALIDACIONES = [
   { id: "eficiencia", icon: Receipt, label: "Eficiencia Fiscal" },
   { id: "agua", icon: Database, label: "Evaluación Agua Potable" },
   { id: "mapa", icon: MapPin, label: "Mapa de Inversiones (PDM)" },
+  { id: "deuda_publica", label: "Deuda Publica", icon: Landmark },
 ];
 
 function StatusBadge({ status }: { status: ValidationResult["status"] }) {
@@ -366,6 +367,7 @@ export default function ValidadorDashboard({ municipio }: { municipio: Municipio
       eficiencia: validationRun.data.eficiencia,
       idf: validationRun.data.idf,
       mapaInversiones: validationRun.data.mapaInversiones,
+      deudaPublica: validationRun.data.deudaPublica,
       validationRun,
     });
   }, [validationRun]);

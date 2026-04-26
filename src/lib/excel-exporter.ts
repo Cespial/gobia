@@ -18,6 +18,7 @@ import type { AguaPotableResult } from "@/lib/validaciones/agua-potable";
 import type { EficienciaFiscalResult } from "@/lib/validaciones/eficiencia-fiscal";
 import type { CierreVsCuipoResult } from "@/lib/validaciones/cierre-vs-cuipo";
 import type { MapaInversionesResult } from "@/lib/validaciones/mapa-inversiones";
+import type { DeudaPublicaResult } from "@/lib/validaciones/deuda-publica";
 import type { ValidationInputSource, ValidationRun, ValidationModuleStatus } from "@/lib/validation-run";
 
 // ---------------------------------------------------------------------------
@@ -496,6 +497,7 @@ export interface ExportData {
   eficiencia?: EficienciaFiscalResult | null;
   idf?: IDFResult | null;
   mapaInversiones?: MapaInversionesResult | null;
+  deudaPublica?: DeudaPublicaResult | null;
 }
 
 function validationStatusLabel(status: ValidationModuleStatus): string {
@@ -557,6 +559,7 @@ export function exportValidacionesToExcel(data: ExportData): void {
   if (data.eficiencia) addEficienciaSheet(wb, data.eficiencia);
   if (data.idf) addIDFSheet(wb, data.idf);
   if (data.mapaInversiones) addMapaSheet(wb, data.mapaInversiones);
+  if (data.deudaPublica) addDeudaPublicaSheet(wb, data.deudaPublica);
   addTrazabilidadSheet(wb, data);
 
   const fileName = `validador-${data.municipio.code}-${data.periodo}.xlsx`;
@@ -1761,6 +1764,120 @@ function addMapaSheet(wb: XLSX.WorkBook, data: MapaInversionesResult): void {
   ];
   freezeRows(ws, freezeRow);
   XLSX.utils.book_append_sheet(wb, ws, "8. Mapa Inversiones");
+}
+
+// ---------------------------------------------------------------------------
+// 9. Deuda Publica (Ley 358/1997)
+// ---------------------------------------------------------------------------
+
+function addDeudaPublicaSheet(wb: XLSX.WorkBook, data: DeudaPublicaResult): void {
+  const ws: XLSX.WorkSheet = {};
+  const cols = 4;
+  let r = 0;
+
+  writeTitle(ws, r++, "DEUDA PUBLICA — LEY 358/1997", cols);
+  writeEmptyRow(ws, r++, cols);
+
+  // Status global
+  const statusLabel =
+    data.statusGlobal === "cumple" ? "CUMPLE" :
+    data.statusGlobal === "no_aplica" ? "SIN DEUDA FINANCIERA" :
+    "NO CUMPLE";
+  writeText(ws, r, 0, "Estado global:", labelStyle);
+  writeText(ws, r, 1, statusLabel, statusStyle(statusLabel));
+  for (let c = 2; c < cols; c++) writeText(ws, r, c, "", dataStyle);
+  r++;
+
+  writeText(ws, r, 0, "Capacidad Autonoma:", labelStyle);
+  writeText(ws, r, 1, data.capacidadAutonoma ? "Si" : "No", statusStyle(data.capacidadAutonoma ? "SI" : "NO"));
+  for (let c = 2; c < cols; c++) writeText(ws, r, c, "", dataStyle);
+  r++;
+  writeEmptyRow(ws, r++, cols);
+
+  // Key metrics
+  writeSectionRow(ws, r++, "INDICADORES FISCALES", cols);
+  writeKV(ws, r++, "Saldo Deuda (CGN 2.2 + 2.3):", data.saldoDeuda, cols);
+  writeKV(ws, r++, "Servicio Deuda (int + amort):", data.servicioDeuda, cols);
+  writeKV(ws, r++, "Ingresos Corrientes (ICLD proxy):", data.ingresosCorrientes, cols);
+  writeKV(ws, r++, "Ahorro Operacional:", data.ahorroOperacional, cols);
+  writeEmptyRow(ws, r++, cols);
+
+  // Ratios table
+  writeSectionRow(ws, r++, "VERIFICACION LEY 358", cols);
+  writeHeaderRow(ws, r++, ["Indicador", "Ratio Calculado", "Umbral Legal", "Estado"]);
+  const freezeRow = r;
+
+  // Sostenibilidad row
+  writeText(ws, r, 0, "Sostenibilidad (Saldo Deuda / Ing. Corrientes)", dataStyle);
+  if (data.ratioSostenibilidad !== null) {
+    writeNum(ws, r, 1, data.ratioSostenibilidad, pctStyle);
+  } else {
+    writeText(ws, r, 1, "N/D", dataCenterStyle);
+  }
+  writeNum(ws, r, 2, data.umbralSostenibilidad, pctStyle);
+  writeText(ws, r, 3,
+    data.statusSostenibilidad === "cumple" ? "CUMPLE" :
+    data.statusSostenibilidad === "no_aplica" ? "N/A" : "NO CUMPLE",
+    statusStyle(
+      data.statusSostenibilidad === "cumple" ? "CUMPLE" :
+      data.statusSostenibilidad === "no_aplica" ? "N/A" : "NO CUMPLE"
+    )
+  );
+  r++;
+
+  // Solvencia row
+  writeText(ws, r, 0, "Solvencia (Servicio Deuda / Ahorro Operacional)", altRowStyle);
+  if (data.ratioSolvencia !== null) {
+    writeNum(ws, r, 1, data.ratioSolvencia, altRowPctStyle);
+  } else {
+    writeText(ws, r, 1, "N/D", altRowCenterStyle);
+  }
+  writeNum(ws, r, 2, data.umbralSolvencia, altRowPctStyle);
+  writeText(ws, r, 3,
+    data.statusSolvencia === "cumple" ? "CUMPLE" :
+    data.statusSolvencia === "no_aplica" ? "N/A" : "NO CUMPLE",
+    statusStyle(
+      data.statusSolvencia === "cumple" ? "CUMPLE" :
+      data.statusSolvencia === "no_aplica" ? "N/A" : "NO CUMPLE"
+    )
+  );
+  r++;
+
+  writeEmptyRow(ws, r++, cols);
+
+  // Detalle deuda (if any)
+  if (data.detalleDeuda.length > 0) {
+    writeSectionRow(ws, r++, "DETALLE DE DEUDA FINANCIERA", cols);
+    writeHeaderRow(ws, r++, ["Codigo CGN", "Cuenta", "Saldo Final", ""]);
+    for (let i = 0; i < data.detalleDeuda.length; i++) {
+      const d = data.detalleDeuda[i];
+      const isAlt = i % 2 === 1;
+      const ns = isAlt ? altRowNumStyle : numStyle;
+      const ds = isAlt ? altRowStyle : dataStyle;
+      const cs = isAlt ? altRowCodeStyle : codeStyle;
+      writeText(ws, r, 0, d.codigo, cs);
+      writeText(ws, r, 1, d.nombre, ds);
+      writeNum(ws, r, 2, d.saldo, ns);
+      writeText(ws, r, 3, "", ds);
+      r++;
+    }
+    writeEmptyRow(ws, r++, cols);
+  }
+
+  // Notas
+  if (data.notas.length > 0) {
+    writeSectionRow(ws, r++, "NOTAS Y ADVERTENCIAS", cols);
+    for (const nota of data.notas) {
+      writeText(ws, r, 0, nota, dataStyle);
+      for (let c = 1; c < cols; c++) writeText(ws, r, c, "", dataStyle);
+      r++;
+    }
+  }
+
+  setRange(ws, r - 1, cols - 1);
+  ws["!cols"] = [{ wch: 44 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
+  freezeRows(ws, freezeRow);
+  XLSX.utils.book_append_sheet(wb, ws, "9. Deuda Publica");
 }
 
 // ---------------------------------------------------------------------------

@@ -28,6 +28,7 @@ import type { MapaInversionesResult } from "@/lib/validaciones/mapa-inversiones"
 import { evaluateMapaInversiones } from "@/lib/validaciones/mapa-inversiones";
 import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
 import { evaluateSGP } from "@/lib/validaciones/sgp";
+import { evaluateDeudaPublica, type DeudaPublicaResult } from "@/lib/validaciones/deuda-publica";
 
 export type ValidationModuleStatus =
   | "cumple"
@@ -98,6 +99,7 @@ export interface ValidationRunData {
   eficiencia: EficienciaFiscalResult | null;
   idf: IDFResult | null;
   mapaInversiones: MapaInversionesResult | null;
+  deudaPublica: DeudaPublicaResult | null;
   ley617Certifications: Ley617Certification[];
   futCierre: FUTCierreData | null;
   futCierre2024: FUTCierreData | null;
@@ -937,6 +939,17 @@ export async function buildValidationRun({
 
   const ley617 = ley617Data ?? null;
   const ley617Certifications = ley617OfficialData?.certifications ?? [];
+
+  const deudaPublica = inputs.cgnSaldos?.rows
+    ? evaluateDeudaPublica(
+        { activos: inputs.cgnSaldos.activos, pasivos: inputs.cgnSaldos.pasivos, rows: inputs.cgnSaldos.rows },
+        {
+          // Use ICLD (Ley 617) as proxy for ingresos corrientes; fall back to total ingresos
+          ingresosCorrientes: ley617?.icldTotal ?? equilibrio?.totalIngresos ?? 0,
+          gastosFuncionamiento: ley617?.gastosFuncionamientoTotal ?? 0,
+        }
+      )
+    : null;
   const cierreVsCuipo =
     inputs.futCierre && equilibrio
       ? evaluateCierreVsCuipo(
@@ -1324,6 +1337,65 @@ export async function buildValidationRun({
     }));
   }
 
+  modules.push(moduleResult({
+    id: "deuda_publica",
+    label: "Deuda Publica (Ley 358)",
+    status: !inputs.cgnSaldos ? "upload_needed" as const
+      : deudaPublica
+        ? deudaPublica.statusGlobal === "no_cumple" ? "no_cumple" as const : "cumple" as const
+        : "error" as const,
+    summary: deudaPublica
+      ? deudaPublica.statusGlobal === "cumple" ? "Cumple Ley 358"
+        : deudaPublica.statusGlobal === "no_aplica" ? "Sin deuda financiera"
+        : "No cumple Ley 358"
+      : !inputs.cgnSaldos ? "Requiere CGN Saldos"
+      : "Pendiente",
+    inputs: ["cgn_saldos_iv"],
+    metrics: deudaPublica
+      ? [
+          { label: "Saldo deuda", value: formatCOP(deudaPublica.saldoDeuda) },
+          { label: "Servicio deuda", value: formatCOP(deudaPublica.servicioDeuda) },
+          { label: "Sostenibilidad", value: deudaPublica.ratioSostenibilidad !== null ? `${(deudaPublica.ratioSostenibilidad * 100).toFixed(1)}% (lim 80%)` : "N/A" },
+          { label: "Solvencia", value: deudaPublica.ratioSolvencia !== null ? `${(deudaPublica.ratioSolvencia * 100).toFixed(1)}% (lim 40%)` : "N/A" },
+        ]
+      : [],
+    findings: deudaPublica?.statusGlobal === "no_cumple"
+      ? [
+          makeFinding(
+            "deuda_publica",
+            "Indicadores de deuda superan umbrales Ley 358",
+            [
+              deudaPublica?.statusSostenibilidad === "no_cumple"
+                ? `Sostenibilidad: ${deudaPublica?.ratioSostenibilidad !== null ? (deudaPublica.ratioSostenibilidad * 100).toFixed(1) : "N/D"}% > 80%.`
+                : null,
+              deudaPublica?.statusSolvencia === "no_cumple"
+                ? `Solvencia: ${deudaPublica?.ratioSolvencia !== null ? (deudaPublica.ratioSolvencia * 100).toFixed(1) : "N/D"}% > 40%.`
+                : null,
+            ].filter(Boolean).join(" "),
+            "high",
+            "Revisar estructura de deuda y plan de amortización.",
+            { impactAmount: deudaPublica?.saldoDeuda, actionTarget: "module:deuda_publica" },
+          ),
+        ]
+      : !inputs.cgnSaldos
+        ? [
+            makeFinding(
+              "deuda_publica",
+              "Validacion deuda bloqueada",
+              "No hay CGN Saldos IV para calcular indicadores Ley 358.",
+              "blocked",
+              "Cargar CGN Saldos IV.",
+              { priorityScore: 310, actionTarget: "input:cgn_saldos_iv" },
+            ),
+          ]
+        : [],
+    nextAction: !inputs.cgnSaldos
+      ? "Cargar CGN Saldos IV para habilitar validacion Ley 358."
+      : deudaPublica?.statusGlobal === "no_cumple"
+        ? "Revisar indicadores de sostenibilidad y solvencia."
+        : "Conservar soporte de calculo de deuda publica.",
+  }));
+
   const inputSources = reconcileCuipoInputSources(inputs.inputSources, {
     equilibrio,
     sgp,
@@ -1377,6 +1449,7 @@ export async function buildValidationRun({
       eficiencia,
       idf,
       mapaInversiones,
+      deudaPublica,
       ley617Certifications,
       futCierre: inputs.futCierre,
       futCierre2024: inputs.futCierre2024,
