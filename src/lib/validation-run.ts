@@ -23,6 +23,7 @@ import { evaluateEficienciaFiscal } from "@/lib/validaciones/eficiencia-fiscal";
 import type { IDFResult } from "@/lib/validaciones/idf";
 import { calculateIDF } from "@/lib/validaciones/idf";
 import type { Ley617Result } from "@/lib/validaciones/ley617";
+import { evaluateLey617 } from "@/lib/validaciones/ley617";
 import type { MapaInversionesResult } from "@/lib/validaciones/mapa-inversiones";
 import { evaluateMapaInversiones } from "@/lib/validaciones/mapa-inversiones";
 import type { SGPEvaluationResult } from "@/lib/validaciones/sgp";
@@ -880,9 +881,16 @@ export async function buildValidationRun({
         effectivePeriodo,
         progIngresosUpload,
       ).catch(() => null),
-      fetchApi<{ ok: true; ley617: Ley617Result }>("ley617", municipio.chipCode, {
-        periodo: effectivePeriodo,
-      }).catch(() => null),
+      evaluateLey617(
+        municipio.chipCode,
+        effectivePeriodo,
+        undefined,
+        {
+          cuipoData: inputs.cuipoData
+            ? { ejecIngresos: inputs.cuipoData.ejecIngresos, ejecGastos: inputs.cuipoData.ejecGastos }
+            : undefined,
+        }
+      ).catch(() => null),
       fetchApi<{ ok: true; certifications: Ley617Certification[] }>(
         "ley617oficial",
         municipio.chipCode,
@@ -927,7 +935,7 @@ export async function buildValidationRun({
       evaluateMapaInversiones(municipio.chipCode, effectivePeriodo, inputs.mapaData).catch(() => null),
     ]);
 
-  const ley617 = ley617Data?.ley617 ?? null;
+  const ley617 = ley617Data ?? null;
   const ley617Certifications = ley617OfficialData?.certifications ?? [];
   const cierreVsCuipo =
     inputs.futCierre && equilibrio

@@ -29,6 +29,8 @@ import {
   type CuipoEjecGastos,
 } from "@/lib/datos-gov-cuipo";
 
+import type { CuipoIngresosRow, CuipoGastosRow } from "@/lib/chip-parser";
+
 // El lector de archivos locales (`cuipo-local-xlsb`) usa fs/path/os y NO
 // puede empaquetarse en el bundle del cliente. En vez de importarlo aquí
 // (lo que arrastra fs/path/os a chunks del browser), exponemos un slot
@@ -256,6 +258,44 @@ export interface Ley617Options {
     fetchIngresos: (dane: string, periodo: string) => Promise<CuipoEjecIngresos[]>;
     fetchGastos: (dane: string, periodo: string) => Promise<CuipoEjecGastos[]>;
   };
+  cuipoData?: {
+    ejecIngresos: CuipoIngresosRow[];
+    ejecGastos: CuipoGastosRow[];
+  } | null;
+}
+
+/** Convert CHIP-parsed income rows to SODA API format for downstream processing */
+function chipIngToSoda(rows: CuipoIngresosRow[]): CuipoEjecIngresos[] {
+  return rows.map(r => ({
+    periodo: "", codigo_entidad: "", nombre_entidad: "", ambito_codigo: "",
+    cuenta: r.cuenta,
+    nombre_cuenta: r.nombre,
+    cod_fuentes_financiacion: r.codigoFuente,
+    nom_fuentes_financiacion: r.fuente,
+    total_recaudo: String(r.totalRecaudo),
+    recaudo_vac_ss: String(r.recaudoVACSS ?? 0),
+    recaudo_vac_cs: String(r.recaudoVACCS ?? 0),
+    recaudo_van_ss: String(r.recaudoVANSS ?? 0),
+    recaudo_van_cs: String(r.recaudoVANCS ?? 0),
+  }));
+}
+
+/** Convert CHIP-parsed expense rows to SODA API format for downstream processing */
+function chipGasToSoda(rows: CuipoGastosRow[]): CuipoEjecGastos[] {
+  return rows.map(r => ({
+    periodo: "", codigo_entidad: "", nombre_entidad: "", ambito_codigo: "", bpin: "",
+    cuenta: r.cuenta,
+    nombre_cuenta: r.nombre,
+    cod_vigencia_del_gasto: "",
+    nom_vigencia_del_gasto: r.vigencia,
+    cod_seccion_presupuestal: "",
+    nom_seccion_presupuestal: r.seccion,
+    cod_fuentes_financiacion: r.codigoFuente,
+    nom_fuentes_financiacion: r.fuente,
+    compromisos: String(r.compromisos),
+    obligaciones: String(r.obligaciones),
+    pagos: String(r.pagos),
+  }));
 }
 
 export async function evaluateLey617(
@@ -307,7 +347,11 @@ export async function evaluateLey617(
   const daneCode = chipToDaneCode(chipCode);
 
   // Fetch CUIPO data in parallel
-  const [ingresosRows, gastosPorSeccion] = useLocal && options.localFetchers
+  const useCuipoUpload = !!(options.cuipoData?.ejecIngresos?.length);
+
+  const [ingresosRows, gastosPorSeccion] = useCuipoUpload
+    ? [chipIngToSoda(options.cuipoData!.ejecIngresos), chipGasToSoda(options.cuipoData!.ejecGastos)]
+    : useLocal && options.localFetchers
     ? await Promise.all([
         options.localFetchers.fetchIngresos(daneCode, periodo),
         options.localFetchers.fetchGastos(daneCode, periodo),
@@ -738,10 +782,12 @@ export async function evaluateLey617(
   const globalCumple = ratioGlobal <= limiteGlobal;
   const allSectionsCumple = secciones.every((s) => s.status === "cumple");
 
+  const effectiveDataSource: "local" | "api" = useCuipoUpload ? "local" : useLocal ? "local" : "api";
+
   return {
     // Backward compat: icldTotal = icldNeto (so Ley617Panel still works)
     icldTotal: icldNeto,
-    dataSource: useLocal ? "local" : "api",
+    dataSource: effectiveDataSource,
     // New detailed ICLD fields
     icldBruto,
     icldValidado,
