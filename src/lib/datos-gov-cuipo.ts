@@ -400,6 +400,51 @@ export async function fetchLey617Certificacion(
 
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Canonical vigencia classification — single source of truth
+// ---------------------------------------------------------------------------
+
+export type VigenciaType = 'va' | 'reservas' | 'cxp';
+
+/**
+ * Classify a vigencia string into one of three categories.
+ * Checks CxP first (most specific), then Reservas, then VA as default.
+ * Blank/empty vigencia is classified as VA (common in CHIP file fill-down gaps).
+ */
+export function classifyVigencia(vigencia: string): VigenciaType {
+  const v = (vigencia || '').toUpperCase().trim();
+  if (v.includes('CUENTAS POR PAGAR')) return 'cxp';
+  if (v.includes('RESERVA')) return 'reservas';
+  return 'va';
+}
+
+// ---------------------------------------------------------------------------
+// Canonical leaf-row detection — prefix-matching algorithm
+// ---------------------------------------------------------------------------
+
+/**
+ * Filter rows to keep only leaf-level entries (no children in the dataset).
+ * A row is a leaf if no other row's cuenta starts with (this.cuenta + ".").
+ * This prevents double-counting parent aggregation rows.
+ */
+export function filterLeafRows<T>(
+  rows: T[],
+  getCuenta: (row: T) => string
+): T[] {
+  const allCuentas = new Set(
+    rows.map(r => getCuenta(r).trim()).filter(Boolean)
+  );
+  return rows.filter(r => {
+    const cuenta = getCuenta(r).trim();
+    if (!cuenta) return false;
+    const prefix = cuenta + '.';
+    for (const c of allCuentas) {
+      if (c !== cuenta && c.startsWith(prefix)) return false;
+    }
+    return true;
+  });
+}
+
 /** Fetch expense execution by section (Admin Central, Concejo, Personería) for Ley 617 */
 export async function fetchGastosPorSeccion(
   chipCode: string,

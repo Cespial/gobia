@@ -7,6 +7,8 @@ import {
   fetchLey617Certificacion,
   sodaCuipoQuery,
   CUIPO_DATASETS,
+  classifyVigencia,
+  filterLeafRows,
 } from "@/lib/datos-gov-cuipo";
 import { evaluateSGP } from "@/lib/validaciones/sgp";
 import { evaluateLey617 } from "@/lib/validaciones/ley617";
@@ -94,27 +96,8 @@ export async function GET(request: NextRequest) {
         // prevent double-counting (parent = sum of children).
         // A row is a "leaf" if no other row's cuenta starts with its cuenta + "."
         // ---------------------------------------------------------------
-        const ingCuentas = new Set(ingresosRaw.map(r => (r.cuenta || "").trim()));
-        const ingresos = ingresosRaw.filter(r => {
-          const cuenta = (r.cuenta || "").trim();
-          if (!cuenta) return true; // rows without cuenta pass through
-          const prefix = cuenta + ".";
-          for (const c of ingCuentas) {
-            if (c.startsWith(prefix)) return false;
-          }
-          return true;
-        });
-
-        const gasCuentas = new Set(gastosRaw.map(r => (r.cuenta || "").trim()));
-        const gastos = gastosRaw.filter(r => {
-          const cuenta = (r.cuenta || "").trim();
-          if (!cuenta) return true;
-          const prefix = cuenta + ".";
-          for (const c of gasCuentas) {
-            if (c.startsWith(prefix)) return false;
-          }
-          return true;
-        });
+        const ingresos = filterLeafRows(ingresosRaw, r => r.cuenta || "");
+        const gastos = filterLeafRows(gastosRaw, r => r.cuenta || "");
 
         // Build equilibrium by funding source, processing ALL vigencias
         const fuenteMap = new Map<
@@ -159,19 +142,19 @@ export async function GET(request: NextRequest) {
           const key = (row.cod_fuentes_financiacion || "").trim() || "SIN_FUENTE";
           const existing = fuenteMap.get(key) || emptyFuente(key, row.nom_fuentes_financiacion || "Sin clasificar");
 
-          const vigencia = (row.nom_vigencia_del_gasto || "").toUpperCase();
+          const vig = classifyVigencia(row.nom_vigencia_del_gasto || "");
           const compromisos = parseFloat(row.compromisos || "0");
           const obligaciones = parseFloat(row.obligaciones || "0");
           const pagos = parseFloat(row.pagos || "0");
 
-          if (vigencia === "VIGENCIA ACTUAL") {
+          if (vig === 'va') {
             existing.compromisos_va += compromisos;
             existing.obligaciones_va += obligaciones;
             existing.pagos_va += pagos;
-          } else if (vigencia.includes("RESERVA")) {
+          } else if (vig === 'reservas') {
             existing.compromisos_res += compromisos;
             existing.pagos_res += pagos;
-          } else if (vigencia.includes("CUENTAS POR PAGAR")) {
+          } else if (vig === 'cxp') {
             existing.compromisos_cxp += compromisos;
             existing.pagos_cxp += pagos;
           }

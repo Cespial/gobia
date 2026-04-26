@@ -8,6 +8,7 @@
 
 import type { CuipoData, CuipoProgIngresosRow } from "./chip-parser";
 import { FUENTES_CONSOLIDACION, getConsolidacion } from '@/data/fuentes-consolidacion';
+import { classifyVigencia } from "@/lib/datos-gov-cuipo";
 
 // ---------------------------------------------------------------------------
 // Types (must match the EquilibrioData shape in ValidadorDashboard)
@@ -237,23 +238,16 @@ export function buildEquilibrioFromCuipo(cuipoData: CuipoData): EquilibrioFromCu
 
     const existing = fuenteMap.get(key) || emptyFuente(row.fuente, row.codigoFuente);
 
-    const vigencia = row.vigencia.toUpperCase();
+    const vig = classifyVigencia(row.vigencia);
 
-    if (vigencia.includes('VIGENCIA ACTUAL') || vigencia === '' || vigencia.includes('ADMINISTRACION')) {
-      // If vigencia is blank or doesn't match reservas/cxp, treat as vigencia actual
-      if (!vigencia.includes('RESERVA') && !vigencia.includes('CUENTAS POR PAGAR')) {
-        existing.compromisos_va += row.compromisos;
-        existing.obligaciones_va += row.obligaciones;
-        existing.pagos_va += row.pagos;
-      }
-    }
-
-    if (vigencia.includes('RESERVA')) {
+    if (vig === 'va') {
+      existing.compromisos_va += row.compromisos;
+      existing.obligaciones_va += row.obligaciones;
+      existing.pagos_va += row.pagos;
+    } else if (vig === 'reservas') {
       existing.compromisos_res += row.compromisos;
       existing.pagos_res += row.pagos;
-    }
-
-    if (vigencia.includes('CUENTAS POR PAGAR')) {
+    } else if (vig === 'cxp') {
       existing.compromisos_cxp += row.compromisos;
       existing.pagos_cxp += row.pagos;
     }
