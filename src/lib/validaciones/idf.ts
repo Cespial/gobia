@@ -190,7 +190,7 @@ function isFormacionBrutaCapital(cuenta: string): boolean {
 export async function calculateIDF(
   chipCode: string,
   periodo: string,
-  cgnSaldos?: { activos: number; pasivos: number } | null,
+  cgnSaldos?: { activos: number; pasivos: number; rows?: { codigo: string; nombre: string; saldoFinal: number }[] } | null,
   progIngresosUpload?: CuipoProgIngresosRow[] | null,
 ): Promise<IDFResult> {
   // Fetch all required CUIPO data in parallel
@@ -338,10 +338,29 @@ export async function calculateIDF(
   const fbkRatio = safeDivide(formacionBrutaCapital, gastosInversion);
   const fbkScore = normalizeDirect(fbkRatio);
 
-  // 3. Endeudamiento LP — from CGN Saldos (balance sheet): Pasivos / Activos
-  const hasDeuda = !!cgnSaldos && cgnSaldos.activos > 0;
-  const deudaRatio = hasDeuda ? cgnSaldos!.pasivos / cgnSaldos!.activos : 0;
-  const deudaScore: number | null = hasDeuda ? normalizeInverse(deudaRatio) : null;
+  // 3. Endeudamiento LP — prefer specific debt accounts (2.2 + 2.3) from CGN rows
+  let deudaFinanciera = 0;
+  let deudaLabel = "Capacidad de endeudamiento";
+
+  if (cgnSaldos?.rows && cgnSaldos.rows.length > 0) {
+    for (const row of cgnSaldos.rows) {
+      const code = (row.codigo || "").trim();
+      if (code === "2.2" || code === "2.3") {
+        deudaFinanciera += row.saldoFinal ?? 0;
+      }
+    }
+    deudaLabel = "Endeudamiento (deuda financiera / ingresos corrientes)";
+  } else if (cgnSaldos) {
+    // Fallback: generic pasivos/activos
+    deudaFinanciera = cgnSaldos.pasivos;
+    deudaLabel = "Endeudamiento (pasivos / activos)";
+  }
+
+  const hasDeuda = deudaFinanciera > 0 && (cgnSaldos?.rows ? ingresosCorrientes > 0 : (cgnSaldos?.activos ?? 0) > 0);
+  const deudaRatio = hasDeuda
+    ? (cgnSaldos?.rows ? deudaFinanciera / ingresosCorrientes : deudaFinanciera / cgnSaldos!.activos)
+    : 0;
+  const deudaScore: number | null = cgnSaldos ? normalizeInverse(deudaRatio) : null;
 
   // 4. Ahorro corriente
   const ahorroCorrienteRatio = safeDivide(
@@ -386,14 +405,16 @@ export async function calculateIDF(
       interpretation: interpretFBK(fbkRatio),
     },
     {
-      name: "Capacidad de endeudamiento",
+      name: deudaLabel,
       value: Math.round(deudaRatio * 10000) / 100,
       score: deudaScore,
-      interpretation: hasDeuda
-        ? (deudaRatio > 0.5 ? "Alto endeudamiento relativo a activos"
-           : deudaRatio > 0.3 ? "Endeudamiento moderado"
-           : "Bajo endeudamiento, buena capacidad")
-        : "No disponible \u2014 requiere CGN Saldos",
+      interpretation: !cgnSaldos
+        ? "No disponible \u2014 requiere CGN Saldos"
+        : deudaFinanciera === 0
+        ? "Sin deuda financiera reportada (CGN 2.2 + 2.3 = 0)"
+        : deudaRatio > 0.5 ? "Alto endeudamiento relativo a ingresos"
+        : deudaRatio > 0.3 ? "Endeudamiento moderado"
+        : "Bajo endeudamiento, buena capacidad",
     },
     {
       name: "Ahorro corriente",

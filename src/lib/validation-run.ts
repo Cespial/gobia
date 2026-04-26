@@ -890,7 +890,7 @@ export async function buildValidationRun({
       calculateIDF(
         municipio.chipCode,
         effectivePeriodo,
-        inputs.cgnSaldos ? { activos: inputs.cgnSaldos.activos, pasivos: inputs.cgnSaldos.pasivos } : null,
+        inputs.cgnSaldos ? { activos: inputs.cgnSaldos.activos, pasivos: inputs.cgnSaldos.pasivos, rows: inputs.cgnSaldos.rows } : null,
         progIngresosUpload,
       ).catch(() => null),
       evaluateAguaPotable(
