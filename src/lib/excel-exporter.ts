@@ -1072,6 +1072,25 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
     writeEmptyRow(ws, r++, detailCols);
   }
 
+  // Deduccion por norma detail
+  if (data.deduccionFondosPorNormaDetalle && data.deduccionFondosPorNormaDetalle.length > 0) {
+    writeSectionRow(ws, r++, "DETALLE DEDUCCION POR CONDICIONES DE NORMA", detailCols);
+    writeHeaderRow(ws, r++, ["Cuenta", "Nombre", "Fuente", "Recaudo", "Motivo"]);
+    for (let i = 0; i < data.deduccionFondosPorNormaDetalle.length; i++) {
+      const d = data.deduccionFondosPorNormaDetalle[i];
+      const isAlt = i % 2 === 1;
+      const ns = isAlt ? altRowNumStyle : numStyle;
+      const ds = isAlt ? altRowStyle : dataStyle;
+      writeText(ws, r, 0, d.cuenta, ds);
+      writeText(ws, r, 1, d.nombre, ds);
+      writeText(ws, r, 2, d.fuente, ds);
+      writeNum(ws, r, 3, d.valor, ns);
+      writeText(ws, r, 4, d.razon, ds);
+      r++;
+    }
+    writeEmptyRow(ws, r++, detailCols);
+  }
+
   writeKV(ws, r++, "Gastos Funcionamiento Total:", data.gastosFuncionamientoTotal, detailCols);
   writeKV(ws, r++, "Gastos Deducidos:", data.gastosDeducidos, detailCols);
   writeKV(ws, r++, "Gastos Funcionamiento Neto:", data.gastosFuncionamientoNeto, detailCols);
@@ -1225,6 +1244,25 @@ function addLey617Sheet(wb: XLSX.WorkBook, data: Ley617Result): void {
       writeText(ws, r, 3, d.esValido ? "SI" : "NO", dc);
       writeText(ws, r, 4, d.esValido ? "" : "ACCION DE MEJORA", ds);
       for (let c = 5; c < detailCols; c++) writeText(ws, r, c, "", dataStyle);
+      r++;
+    }
+  }
+
+  // Alertas ICLD
+  if (data.alertasICLD && data.alertasICLD.length > 0) {
+    writeEmptyRow(ws, r++, detailCols);
+    writeSectionRow(ws, r++, "ALERTAS ICLD", detailCols);
+    writeHeaderRow(ws, r++, ["Rubro", "Nombre", "Fuente", "Alerta", "Valor"]);
+    for (let i = 0; i < data.alertasICLD.length; i++) {
+      const a = data.alertasICLD[i];
+      const isAlt = i % 2 === 1;
+      const ds = isAlt ? altRowStyle : dataStyle;
+      const ns = isAlt ? altRowNumStyle : numStyle;
+      writeText(ws, r, 0, a.cuenta, ds);
+      writeText(ws, r, 1, a.nombre, ds);
+      writeText(ws, r, 2, a.fuente, ds);
+      writeText(ws, r, 3, a.alerta, ds);
+      writeNum(ws, r, 4, a.valor, ns);
       r++;
     }
   }
@@ -1792,7 +1830,7 @@ function addTrazabilidadSheet(wb: XLSX.WorkBook, data: ExportData): void {
           "USADO",
           "API publica",
           tracePeriodLabel(periodo),
-          `datos.gov.co - e84r-mfgi | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
+          `datos.gov.co - 22ah-ddsj | WHERE c_digo_entidad='${chip}' AND vigencia='${periodo}'`,
         ],
         [
           "CUIPO Programacion Gastos",
