@@ -8,7 +8,7 @@
 interface CGNSaldosInput {
   activos: number;
   pasivos: number;
-  rows: { codigo: string; nombre: string; saldoFinal: number; movimientoDebito?: number }[];
+  rows: { codigo: string; nombre: string; saldoFinal: number; movDebito?: number }[];
 }
 
 export interface DeudaPublicaResult {
@@ -31,13 +31,13 @@ export interface DeudaPublicaResult {
 function sumCGNAccounts(
   rows: CGNSaldosInput["rows"],
   codes: string[],
-  field: "saldoFinal" | "movimientoDebito" = "saldoFinal"
+  field: "saldoFinal" | "movDebito" = "saldoFinal"
 ): number {
   let total = 0;
   for (const row of rows) {
     const code = (row.codigo || "").trim();
     if (codes.includes(code)) {
-      total += (field === "saldoFinal" ? row.saldoFinal : row.movimientoDebito) ?? 0;
+      total += (field === "saldoFinal" ? row.saldoFinal : row.movDebito) ?? 0;
     }
   }
   return total;
@@ -64,7 +64,7 @@ export function evaluateDeudaPublica(
 
   // 2. Servicio deuda: gastos financieros (5.1.11) + amortización (movimiento débito de 2.3)
   const gastosFinancieros = sumCGNAccounts(cgnSaldos.rows, ["5.1.11"]);
-  const amortizacion = sumCGNAccounts(cgnSaldos.rows, ["2.3"], "movimientoDebito");
+  const amortizacion = sumCGNAccounts(cgnSaldos.rows, ["2.3"], "movDebito");
   const servicioDeuda = gastosFinancieros + amortizacion;
 
   // 3. Ingresos corrientes and ahorro operacional
@@ -109,11 +109,11 @@ export function evaluateDeudaPublica(
 
   const statusSostenibilidad: "cumple" | "no_cumple" | "no_aplica" =
     ratioSostenibilidad === null ? "no_aplica" :
-    ratioSostenibilidad < UMBRAL_SOSTENIBILIDAD ? "cumple" : "no_cumple";
+    ratioSostenibilidad <= UMBRAL_SOSTENIBILIDAD ? "cumple" : "no_cumple";
 
   const statusSolvencia: "cumple" | "no_cumple" | "no_aplica" =
     ratioSolvencia === null ? "no_aplica" :
-    ratioSolvencia < UMBRAL_SOLVENCIA ? "cumple" : "no_cumple";
+    ratioSolvencia <= UMBRAL_SOLVENCIA ? "cumple" : "no_cumple";
 
   const statusGlobal: "cumple" | "no_cumple" | "no_aplica" =
     statusSostenibilidad === "no_aplica" && statusSolvencia === "no_aplica" ? "no_aplica" :

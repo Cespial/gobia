@@ -25,6 +25,7 @@ import {
   fetchEjecucionIngresos,
   fetchGastosPorSeccion,
   chipToDaneCode,
+  filterLeafRows,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
 } from "@/lib/datos-gov-cuipo";
@@ -364,19 +365,8 @@ export async function evaluateLey617(
   // -------------------------------------------------------------------------
   // 0. Leaf-row detection: filter out parent/aggregation rows to prevent
   //    double-counting (parent cuenta = sum of children cuentas).
-  //    A row is a "leaf" if no other row's cuenta starts with its cuenta + "."
   // -------------------------------------------------------------------------
-  const allIngCuentas = new Set(ingresosRows.map(r => (r.cuenta || "").trim()));
-  function isLeafIngreso(cuenta: string): boolean {
-    const trimmed = cuenta.trim();
-    if (!trimmed) return true; // rows without cuenta pass through
-    const prefix = trimmed + ".";
-    for (const c of allIngCuentas) {
-      if (c.startsWith(prefix)) return false;
-    }
-    return true;
-  }
-  const ingresosLeaf = ingresosRows.filter(r => isLeafIngreso((r.cuenta || "").trim()));
+  const ingresosLeaf = filterLeafRows(ingresosRows, r => r.cuenta || "");
 
   // -------------------------------------------------------------------------
   // 1. Calculate ICLD: bruto, validado, acciones de mejora, neto
@@ -583,18 +573,8 @@ export async function evaluateLey617(
   //    cod_vigencia_del_gasto in ('1','4') (vigencia actual + vigencias futuras).
   //    It returns individual account rows (with `cuenta`) for deduction matching.
   // -------------------------------------------------------------------------
-  // Leaf-row detection for gastos (same logic as ingresos)
-  const allGasCuentas = new Set(gastosPorSeccion.map(r => (r.cuenta || "").trim()));
-  function isLeafGasto(cuenta: string): boolean {
-    const trimmed = cuenta.trim();
-    if (!trimmed) return true;
-    const prefix = trimmed + ".";
-    for (const c of allGasCuentas) {
-      if (c.startsWith(prefix)) return false;
-    }
-    return true;
-  }
-  const gastosPorSeccionLeaf = gastosPorSeccion.filter(r => isLeafGasto((r.cuenta || "").trim()));
+  // Leaf-row detection for gastos
+  const gastosPorSeccionLeaf = filterLeafRows(gastosPorSeccion, r => r.cuenta || "");
 
   const seccionMap = new Map<
     string,

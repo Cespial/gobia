@@ -874,7 +874,19 @@ export async function buildValidationRun({
     equilibrio = eqData?.equilibrio ?? null;
   }
 
-  const [sgp, ley617Data, ley617OfficialData, idf, agua, cga, eficiencia, mapaInversiones] =
+  // Evaluate Ley 617 first so IDF can reuse the result (avoids double-fetch)
+  const ley617Data = await evaluateLey617(
+    municipio.chipCode,
+    effectivePeriodo,
+    undefined,
+    {
+      cuipoData: inputs.cuipoData
+        ? { ejecIngresos: inputs.cuipoData.ejecIngresos, ejecGastos: inputs.cuipoData.ejecGastos }
+        : undefined,
+    }
+  ).catch(() => null);
+
+  const [sgp, ley617OfficialData, idf, agua, cga, eficiencia, mapaInversiones] =
     await Promise.all([
       evaluateSGP(
         municipio.chipCode,
@@ -882,16 +894,6 @@ export async function buildValidationRun({
         municipio.deptCode,
         effectivePeriodo,
         progIngresosUpload,
-      ).catch(() => null),
-      evaluateLey617(
-        municipio.chipCode,
-        effectivePeriodo,
-        undefined,
-        {
-          cuipoData: inputs.cuipoData
-            ? { ejecIngresos: inputs.cuipoData.ejecIngresos, ejecGastos: inputs.cuipoData.ejecGastos }
-            : undefined,
-        }
       ).catch(() => null),
       fetchApi<{ ok: true; certifications: Ley617Certification[] }>(
         "ley617oficial",
@@ -902,6 +904,7 @@ export async function buildValidationRun({
         effectivePeriodo,
         inputs.cgnSaldos ? { activos: inputs.cgnSaldos.activos, pasivos: inputs.cgnSaldos.pasivos, rows: inputs.cgnSaldos.rows } : null,
         progIngresosUpload,
+        ley617Data,
       ).catch(() => null),
       evaluateAguaPotable(
         municipio.chipCode,

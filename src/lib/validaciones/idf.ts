@@ -20,6 +20,7 @@ import {
   sodaCuipoQuery,
   CUIPO_DATASETS,
   parseCuipoAmount,
+  filterLeafRows,
   type CuipoEjecIngresos,
   type CuipoEjecGastos,
   type CuipoProgGastos,
@@ -192,6 +193,7 @@ export async function calculateIDF(
   periodo: string,
   cgnSaldos?: { activos: number; pasivos: number; rows?: { codigo: string; nombre: string; saldoFinal: number }[] } | null,
   progIngresosUpload?: CuipoProgIngresosRow[] | null,
+  precomputedLey617?: import("@/lib/validaciones/ley617").Ley617Result | null,
 ): Promise<IDFResult> {
   // Fetch all required CUIPO data in parallel
   const [ejecIngresos, ejecGastos, progGastos, ley617Result] =
@@ -214,25 +216,17 @@ export async function calculateIDF(
         limit: 50000,
         order: "cuenta ASC",
       }),
-      evaluateLey617(chipCode, periodo).catch(() => null),
+      // Use precomputed Ley617 result when available (avoids double-fetch with different data sources)
+      precomputedLey617 !== undefined
+        ? Promise.resolve(precomputedLey617)
+        : evaluateLey617(chipCode, periodo).catch(() => null),
     ]);
 
   // ---------------------------------------------------------------------------
   // Leaf-row detection: only aggregate the most detailed level available
-  // CUIPO data includes parent rows (e.g. "1") AND leaf rows (e.g. "1.1.01.01.200.01").
-  // To avoid double-counting, we only sum leaf rows (rows whose cuenta is not
-  // a prefix of any other row's cuenta).
   // ---------------------------------------------------------------------------
-  const allIncomeCuentas = new Set(ejecIngresos.map((r) => r.cuenta || ""));
-  const allExpenseCuentas = new Set(ejecGastos.map((r) => r.cuenta || ""));
-
-  function isLeafCuenta(cuenta: string, allCuentas: Set<string>): boolean {
-    const prefix = cuenta + ".";
-    for (const c of allCuentas) {
-      if (c.startsWith(prefix)) return false;
-    }
-    return true;
-  }
+  const leafIngresos = filterLeafRows(ejecIngresos, r => r.cuenta || "");
+  const leafGastos = filterLeafRows(ejecGastos, r => r.cuenta || "");
 
   // ---------------------------------------------------------------------------
   // Aggregate income execution (leaf rows only)
@@ -244,9 +238,8 @@ export async function calculateIDF(
   let ingresosCredito = 0;
   let ingresosPropiosRecaudo = 0; // For programming capacity
 
-  for (const row of ejecIngresos) {
+  for (const row of leafIngresos) {
     const cuenta = row.cuenta || "";
-    if (!isLeafCuenta(cuenta, allIncomeCuentas)) continue;
 
     const recaudo = parseFloat(row.total_recaudo || "0");
 
@@ -282,9 +275,8 @@ export async function calculateIDF(
   let compromisosTotal = 0;
   let servicioDeuda = 0;
 
-  for (const row of ejecGastos) {
+  for (const row of leafGastos) {
     const cuenta = row.cuenta || "";
-    if (!isLeafCuenta(cuenta, allExpenseCuentas)) continue;
 
     const compromisos = parseFloat(row.compromisos || "0");
 
@@ -307,7 +299,7 @@ export async function calculateIDF(
   // ---------------------------------------------------------------------------
   // Aggregate programming data (leaf rows only)
   // ---------------------------------------------------------------------------
-  const allProgGasCuentas = new Set(progGastos.map((r) => r.cuenta || ""));
+  const leafProgGastos = filterLeafRows(progGastos, r => r.cuenta || "");
 
   const programacionPropios = sumProgramacionUploadByPrefixes(
     progIngresosUpload,
@@ -317,9 +309,7 @@ export async function calculateIDF(
   const presupuestoInicialPropios = programacionPropios.total ?? 0;
 
   let apropiacionDefinitivaTotal = 0;
-  for (const row of progGastos) {
-    const cuenta = row.cuenta || "";
-    if (!isLeafCuenta(cuenta, allProgGasCuentas)) continue;
+  for (const row of leafProgGastos) {
     apropiacionDefinitivaTotal += parseCuipoAmount(row.apropiacion_definitiva);
   }
 
